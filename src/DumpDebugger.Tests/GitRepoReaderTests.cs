@@ -52,6 +52,33 @@ public sealed class GitRepoReaderTests : IDisposable
     }
 
     [Fact]
+    public async Task TryGetBlameAsync_ReturnsAuthorAndSummary_ForTheCommitThatIntroducedTheLine()
+    {
+        var blame = await GitRepoReader.TryGetBlameAsync(_repoDir, _commitSha, "hello.cs", 3, CancellationToken.None);
+
+        Assert.NotNull(blame);
+        Assert.Equal(_commitSha, blame!.CommitSha);
+        Assert.Equal("Test", blame.Author);
+        Assert.Equal("initial", blame.Summary);
+    }
+
+    [Fact]
+    public async Task TryGetBlameAsync_ReturnsNull_ForUnknownPath()
+    {
+        var blame = await GitRepoReader.TryGetBlameAsync(_repoDir, _commitSha, "does-not-exist.cs", 1, CancellationToken.None);
+
+        Assert.Null(blame);
+    }
+
+    [Fact]
+    public async Task TryGetBlameAsync_ReturnsNull_ForUnknownCommit()
+    {
+        var blame = await GitRepoReader.TryGetBlameAsync(_repoDir, new string('0', 40), "hello.cs", 1, CancellationToken.None);
+
+        Assert.Null(blame);
+    }
+
+    [Fact]
     public async Task TryReadFileAtCommitAsync_ReturnsNull_ForNonRepoDirectory()
     {
         var notARepo = Directory.CreateTempSubdirectory("dumpdebugger-not-a-repo-").FullName;

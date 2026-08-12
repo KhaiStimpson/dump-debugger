@@ -11,4 +11,11 @@ public sealed record SourceLocation(
     string CommitSha,
     string RelativePath,
     int Line,
-    int Column);
+    int Column)
+{
+    /// <summary>A browsable link to this exact line at this exact commit, needing no local
+    /// repo clone — "clickable frames" fall back to this when no RepoContext is associated.
+    /// RepoUrl is already normalized to the github.com form by SourceLocationUrlParser, so this
+    /// is only correct for GitHub-hosted repos; other providers use a different blob URL shape.</summary>
+    public string ToGitHubBlobUrl() => $"{RepoUrl}/blob/{CommitSha}/{RelativePath}#L{Line}";
+}

@@ -47,7 +47,11 @@ public static class SourceSnippetProvider
                 continue;
             }
 
-            snippets.Add(new SourceSnippet(location.RelativePath, location.CommitSha, location.Line, Redactor.Redact(window)));
+            var blame = await GitRepoReader
+                .TryGetBlameAsync(repo.LocalPath, location.CommitSha, location.RelativePath, location.Line, ct)
+                .ConfigureAwait(false);
+
+            snippets.Add(new SourceSnippet(location.RelativePath, location.CommitSha, location.Line, Redactor.Redact(window), blame));
         }
 
         return snippets;
@@ -71,6 +75,11 @@ public static class SourceSnippetProvider
         {
             sb.AppendLine();
             sb.AppendLine($"### {snippet.RepoRelativePath} @ {snippet.CommitSha[..Math.Min(8, snippet.CommitSha.Length)]} (line {snippet.Line})");
+            if (snippet.Blame is { } blame)
+            {
+                sb.AppendLine($"(last changed by {blame.Author} on {blame.When:yyyy-MM-dd}: \"{blame.Summary}\")");
+            }
+
             sb.Append(Redactor.Redact(snippet.Code));
         }
 

@@ -7,4 +7,10 @@ namespace DumpDebugger.Core.Source;
 /// file content — reading a snippet for the LLM narrative, "open in editor" — rather than just
 /// a repo URL and commit.
 /// </summary>
-public sealed record RepoContext(string LocalPath);
+public sealed record RepoContext(string LocalPath)
+{
+    /// <summary>The absolute local path a resolved location corresponds to in this clone —
+    /// pure path arithmetic, no I/O, no check that the file (or even this commit) exists here.</summary>
+    public string ResolveLocalPath(SourceLocation location) =>
+        Path.Combine(LocalPath, location.RelativePath.Replace('/', Path.DirectorySeparatorChar));
+}

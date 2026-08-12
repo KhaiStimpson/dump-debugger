@@ -1,3 +1,4 @@
+using System.Windows.Input;
 using DumpDebugger.Core.Dump;
 
 namespace DumpDebugger_App.ViewModels;
@@ -11,7 +12,7 @@ public sealed record ThreadGroupRow(
     string StackGroupHash,
     int Count,
     string TopFrame,
-    string FullStack,
+    IReadOnlyList<FrameRow> Frames,
     IReadOnlyList<int> OSThreadIds,
     bool IsGc,
     bool IsFinalizer,
@@ -23,7 +24,8 @@ public sealed record ThreadGroupRow(
     public bool IsBlocked => MaxLockCount > 0;
 
 
-    public static IReadOnlyList<ThreadGroupRow> FromThreads(IReadOnlyList<ThreadInfo> threads) =>
+    public static IReadOnlyList<ThreadGroupRow> FromThreads(
+        IReadOnlyList<ThreadInfo> threads, ICommand openCommand, ICommand blameCommand) =>
         threads
             .GroupBy(t => t.StackGroupHash)
             .Select(g =>
@@ -32,9 +34,9 @@ public sealed record ThreadGroupRow(
                 var topFrame = first.Frames.Count > 0
                     ? $"{first.Frames[0].TypeName}.{first.Frames[0].MethodName}"
                     : "<no managed frames>";
-                var fullStack = string.Join(
-                    Environment.NewLine,
-                    first.Frames.Select(f => $"{f.TypeName}.{f.MethodName}"));
+                var frames = first.Frames
+                    .Select(f => new FrameRow($"{f.TypeName}.{f.MethodName}", f.Location, openCommand, blameCommand))
+                    .ToList();
 
                 // Prefer the operation context's frame (the "what this thread is doing" one);
                 // fall back to the top frame's own resolved location.
@@ -45,7 +47,7 @@ public sealed record ThreadGroupRow(
                     g.Key,
                     g.Count(),
                     topFrame,
-                    fullStack,
+                    frames,
                     g.Select(t => t.OSThreadId).ToList(),
                     g.Any(t => t.IsGc),
                     g.Any(t => t.IsFinalizer),

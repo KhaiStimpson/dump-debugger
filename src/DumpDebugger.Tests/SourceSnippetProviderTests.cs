@@ -38,6 +38,8 @@ public sealed class SourceSnippetProviderTests : IDisposable
         Assert.Contains("line 15", snippet.Code);
         Assert.Contains("line 9", snippet.Code); // within the +/-6 line window
         Assert.DoesNotContain("line 1\n", snippet.Code); // outside the window
+        Assert.NotNull(snippet.Blame);
+        Assert.Equal("Test", snippet.Blame!.Author);
     }
 
     [Fact]
@@ -69,6 +71,18 @@ public sealed class SourceSnippetProviderTests : IDisposable
         Assert.Contains("Order.cs", formatted);
         Assert.Contains("line 15", formatted);
         Assert.Contains(_commitSha[..8], formatted);
+    }
+
+    [Fact]
+    public void FormatForPrompt_IncludesBlameLine_WhenPresent()
+    {
+        var blame = new BlameInfo(_commitSha, "Jane Doe", new DateTimeOffset(2026, 1, 2, 0, 0, 0, TimeSpan.Zero), "fix the thing");
+        var snippet = new SourceSnippet("Order.cs", _commitSha, 15, "  15: line 15\n", blame);
+
+        var formatted = SourceSnippetProvider.FormatForPrompt([snippet]);
+
+        Assert.Contains("Jane Doe", formatted);
+        Assert.Contains("fix the thing", formatted);
     }
 
     private static FindingsDocument MakeFindingsDocument(SourceLocation location)
