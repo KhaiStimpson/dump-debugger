@@ -52,6 +52,9 @@ public sealed class WorkerSession : IAsyncDisposable
     public Task<IReadOnlyList<ThreadInfo>> GetThreadsAsync(CancellationToken ct = default) =>
         _client.GetThreadsAsync(ct);
 
+    public Task<GetLocksResponse> GetLocksAsync(CancellationToken ct = default) =>
+        _client.GetLocksAsync(ct);
+
     public async ValueTask DisposeAsync()
     {
         await _client.DisposeAsync().ConfigureAwait(false);

@@ -86,6 +86,32 @@ public sealed class WorkerClient : IAsyncDisposable
         }
     }
 
+    public async Task<GetLocksResponse> GetLocksAsync(CancellationToken ct = default)
+    {
+        var requestId = Guid.NewGuid().ToString("N");
+        await IpcFrame.WriteAsync(
+            _pipe,
+            new IpcEnvelope(IpcMessageKind.GetLocksRequest, requestId, IpcFrame.SerializePayload(new GetLocksRequest())),
+            ct).ConfigureAwait(false);
+
+        while (true)
+        {
+            var envelope = await IpcFrame.ReadAsync(_pipe, ct).ConfigureAwait(false)
+                ?? throw new IOException("Worker closed the pipe before responding.");
+
+            switch (envelope.Kind)
+            {
+                case IpcMessageKind.GetLocksResponse:
+                    var response = IpcFrame.DeserializePayload<GetLocksResponse>(envelope);
+                    return response ?? new GetLocksResponse([], []);
+
+                case IpcMessageKind.ErrorResponse:
+                    var error = IpcFrame.DeserializePayload<ErrorResponse>(envelope);
+                    throw new InvalidOperationException(error?.Message ?? "Worker reported an unknown error.");
+            }
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         await _pipe.DisposeAsync().ConfigureAwait(false);

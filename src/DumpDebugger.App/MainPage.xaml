@@ -35,6 +35,7 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="420" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="380" />
             </Grid.ColumnDefinitions>
 
             <ScrollViewer Grid.Column="0" Visibility="{x:Bind ViewModel.HasThreads, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}">
@@ -72,6 +73,14 @@
                     <TextBlock Text="{x:Bind ViewModel.SelectedThreadGroup.OSThreadIds, Mode=OneWay, Converter={StaticResource ThreadIdsConverter}}"
                                FontFamily="Cascadia Mono" TextWrapping="Wrap" Opacity="0.7" />
                     <TextBlock Text="{x:Bind ViewModel.SelectedThreadGroup.FullStack, Mode=OneWay}"
+                               FontFamily="Cascadia Mono" TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <ScrollViewer Grid.Column="2" Visibility="{x:Bind ViewModel.HasThreads, Mode=OneWay}">
+                <StackPanel Spacing="8">
+                    <TextBlock Text="Locks &amp; Deadlocks" Style="{StaticResource SubtitleTextBlockStyle}" />
+                    <TextBlock Text="{x:Bind ViewModel.LocksSummary, Mode=OneWay}"
                                FontFamily="Cascadia Mono" TextWrapping="Wrap" />
                 </StackPanel>
             </ScrollViewer>

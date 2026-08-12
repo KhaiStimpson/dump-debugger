@@ -38,6 +38,10 @@ try
                 case IpcMessageKind.GetThreadsRequest:
                     await HandleGetThreadsAsync(pipe, envelope, loaded);
                     break;
+
+                case IpcMessageKind.GetLocksRequest:
+                    await HandleGetLocksAsync(pipe, envelope, loaded);
+                    break;
             }
         }
         catch (Exception ex)
@@ -95,4 +99,25 @@ static async Task HandleGetThreadsAsync(NamedPipeServerStream pipe, IpcEnvelope 
         IpcMessageKind.GetThreadsResponse,
         envelope.RequestId,
         IpcFrame.SerializePayload(new GetThreadsResponse(threads))));
+}
+
+static async Task HandleGetLocksAsync(NamedPipeServerStream pipe, IpcEnvelope envelope, LoadedDump? loaded)
+{
+    if (loaded is null || loaded.Runtimes.Count == 0)
+    {
+        await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
+            IpcMessageKind.GetLocksResponse,
+            envelope.RequestId,
+            IpcFrame.SerializePayload(new GetLocksResponse([], []))));
+        return;
+    }
+
+    var runtime = loaded.Runtimes[0];
+    var syncBlocks = LockAnalyzer.EnumerateSyncBlocks(runtime);
+    var findings = LockAnalyzer.DetectDeadlocks(syncBlocks);
+
+    await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
+        IpcMessageKind.GetLocksResponse,
+        envelope.RequestId,
+        IpcFrame.SerializePayload(new GetLocksResponse(syncBlocks, findings))));
 }

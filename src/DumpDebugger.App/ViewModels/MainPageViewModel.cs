@@ -34,6 +34,9 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     public partial ThreadGroupRow? SelectedThreadGroup { get; set; }
 
+    [ObservableProperty]
+    public partial string LocksSummary { get; set; } = string.Empty;
+
     public ObservableCollection<ThreadGroupRow> ThreadGroups { get; } = [];
 
     [RelayCommand]
@@ -60,6 +63,7 @@ public partial class MainPageViewModel : ObservableObject
         HasThreads = false;
         DumpPath = path;
         MetadataSummary = null;
+        LocksSummary = string.Empty;
         ThreadGroups.Clear();
 
         if (_session is not null)
@@ -86,7 +90,13 @@ public partial class MainPageViewModel : ObservableObject
 
             HasThreads = ThreadGroups.Count > 0;
             SelectedThreadGroup = ThreadGroups.FirstOrDefault();
-            StatusText = $"Dump loaded. {threads.Count} threads in {ThreadGroups.Count} stack group(s).";
+
+            StatusText = "Enumerating locks...";
+            var locks = await session.GetLocksAsync();
+            LocksSummary = FormatLocks(locks);
+
+            var deadlockNote = locks.Findings.Count > 0 ? $" {locks.Findings.Count} deadlock finding(s)!" : string.Empty;
+            StatusText = $"Dump loaded. {threads.Count} threads in {ThreadGroups.Count} stack group(s)." + deadlockNote;
         }
         catch (Exception ex)
         {
@@ -119,6 +129,40 @@ public partial class MainPageViewModel : ObservableObject
             sb.AppendLine($"  - {runtime.Family} {runtime.Version}: " +
                            $"DAC {(runtime.IsManagedAnalysisAvailable ? "resolved" : "NOT resolved")} " +
                            $"(tier: {runtime.DacTier})");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string FormatLocks(GetLocksResponse locks)
+    {
+        var sb = new StringBuilder();
+
+        if (locks.Findings.Count == 0)
+        {
+            sb.AppendLine("No deadlocks detected.");
+        }
+        else
+        {
+            foreach (var finding in locks.Findings)
+            {
+                sb.AppendLine($"[{finding.Severity}] {finding.Title}");
+                sb.AppendLine(finding.Summary);
+                foreach (var evidence in finding.Evidence)
+                {
+                    sb.AppendLine($"  - {evidence.Kind} {evidence.Ref}: {evidence.Detail}");
+                }
+
+                sb.AppendLine();
+            }
+        }
+
+        sb.AppendLine($"Sync blocks (contended or held): {locks.SyncBlocks.Count}");
+        foreach (var syncBlock in locks.SyncBlocks)
+        {
+            sb.AppendLine($"  0x{syncBlock.ObjectAddress:x} [{syncBlock.ObjectTypeName}] " +
+                           $"owner=thread {syncBlock.OwnerOSThreadId?.ToString() ?? "none"} " +
+                           $"waiters={syncBlock.WaitingThreadCount} recursion={syncBlock.RecursionCount}");
         }
 
         return sb.ToString();

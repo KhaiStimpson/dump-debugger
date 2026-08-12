@@ -1,34 +1,26 @@
 using System.Diagnostics;
 using Microsoft.Diagnostics.NETCore.Client;
 
-// Minimal fixture generator for Phase 0 validation (PLAN.md §9 describes the full fixture
-// matrix; this is a stripped-down single-scenario version to prove the open/index/metadata
-// path end to end). Usage: DumpDebugger.DumpGen <output.dmp>
+// Minimal fixture generator (PLAN.md §9 describes the full fixture matrix; this is a
+// stripped-down subset covering the scenarios validated so far).
+// Usage: DumpDebugger.DumpGen <output.dmp> [--scenario simple|deadlock]
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("Usage: DumpDebugger.DumpGen <output.dmp>");
+    Console.Error.WriteLine("Usage: DumpDebugger.DumpGen <output.dmp> [--scenario simple|deadlock]");
     return 1;
 }
 
 var outputPath = Path.GetFullPath(args[0]);
+var scenario = args.Length >= 2 && args[0] == "--victim" ? args[1] : GetScenarioArg(args);
 
-if (args.Length >= 2 && args[1] == "--victim")
+if (args.Length >= 1 && args[0] == "--victim")
 {
-    // Running as the process to be dumped: allocate some heap state and idle.
-    var data = new List<string>();
-    for (var i = 0; i < 10_000; i++)
-    {
-        data.Add($"dump-debugger-fixture-object-{i}");
-    }
-
-    Console.WriteLine("READY");
-    Console.Out.Flush();
-    Thread.Sleep(Timeout.Infinite);
+    RunVictim(scenario);
     return 0;
 }
 
 var selfPath = Process.GetCurrentProcess().MainModule!.FileName!;
-var psi = new ProcessStartInfo(selfPath, $"\"{outputPath}\" --victim")
+var psi = new ProcessStartInfo(selfPath, $"--victim \"{scenario}\"")
 {
     UseShellExecute = false,
     RedirectStandardOutput = true,
@@ -43,8 +35,9 @@ if (ready != "READY")
     return 1;
 }
 
-// Give the runtime a moment to settle after startup before snapshotting.
-await Task.Delay(500);
+// Give the runtime a moment to settle (and, for "deadlock", let both threads actually block)
+// before snapshotting.
+await Task.Delay(1000);
 
 var client = new DiagnosticsClient(victim.Id);
 client.WriteDump(DumpType.Full, outputPath);
@@ -52,3 +45,74 @@ client.WriteDump(DumpType.Full, outputPath);
 victim.Kill();
 Console.WriteLine($"Wrote dump: {outputPath}");
 return 0;
+
+static string GetScenarioArg(string[] a) =>
+    a.Length >= 3 && a[1] == "--scenario" ? a[2] : "simple";
+
+static void RunVictim(string scenario)
+{
+    if (scenario == "deadlock")
+    {
+        RunDeadlockVictim();
+    }
+    else
+    {
+        RunSimpleVictim();
+    }
+}
+
+static void RunSimpleVictim()
+{
+    var data = new List<string>();
+    for (var i = 0; i < 10_000; i++)
+    {
+        data.Add($"dump-debugger-fixture-object-{i}");
+    }
+
+    Console.WriteLine("READY");
+    Console.Out.Flush();
+    Thread.Sleep(Timeout.Infinite);
+}
+
+static void RunDeadlockVictim()
+{
+    var lockA = new object();
+    var lockB = new object();
+    using var bothEntered = new Barrier(2);
+
+    var t1 = new Thread(() =>
+    {
+        lock (lockA)
+        {
+            bothEntered.SignalAndWait();
+            Thread.Sleep(200);
+            lock (lockB)
+            {
+                // unreachable in the deadlock case
+            }
+        }
+    }) { IsBackground = true, Name = "DeadlockThread1" };
+
+    var t2 = new Thread(() =>
+    {
+        lock (lockB)
+        {
+            bothEntered.SignalAndWait();
+            Thread.Sleep(200);
+            lock (lockA)
+            {
+                // unreachable in the deadlock case
+            }
+        }
+    }) { IsBackground = true, Name = "DeadlockThread2" };
+
+    t1.Start();
+    t2.Start();
+
+    // Both threads hold their first lock and are racing to enter the other's; give them time
+    // to actually deadlock before signalling readiness to snapshot.
+    Thread.Sleep(1000);
+    Console.WriteLine("READY");
+    Console.Out.Flush();
+    Thread.Sleep(Timeout.Infinite);
+}
