@@ -76,13 +76,13 @@ public partial class MainPageViewModel : ObservableObject
     public partial int LargeObjectCount { get; set; }
 
     [ObservableProperty]
-    public partial string? RepoLocalPath { get; set; }
+    public partial string? AssociatedReposSummary { get; set; }
 
     private FindingsDocument? _findingsDocument;
     private INarrativeProvider? _narrativeProvider;
     private bool _payloadReviewedThisSession;
     private IReadOnlyList<ThreadInfo> _lastThreads = [];
-    private RepoContext? _repoContext;
+    private List<RepoContext> _repoContexts = [];
 
     public ObservableCollection<ThreadGroupRow> ThreadGroups { get; } = [];
     public ObservableCollection<TypeStatRow> TypeStats { get; } = [];
@@ -132,11 +132,14 @@ public partial class MainPageViewModel : ObservableObject
         await LoadDumpAsync(file.Path);
     }
 
-    /// <summary>Associates a local clone of the dump's source repo with this workspace. Not
-    /// required for stack frames to link to source — Source Link resolves that automatically
-    /// from the dump's own PDBs (see DumpDebugger.Analysis.SourceLink) — this is only needed
-    /// for features that need actual file content or history: source snippets and blame, and
-    /// preferring a local editor over the browser when opening a frame.</summary>
+    /// <summary>Associates a local clone of one of the dump's source repos with this workspace.
+    /// Adds to the set rather than replacing it — a dump commonly spans modules from more than
+    /// one repo (the app plus an internal NuGet package it depends on), and each is matched to
+    /// the right SourceLocation by RepoContextMatcher. Not required for stack frames to link to
+    /// source in the first place — Source Link resolves that automatically from the dump's own
+    /// PDBs (see DumpDebugger.Analysis.SourceLink) — this is only needed for features that need
+    /// actual file content or history: source snippets and blame, and preferring a local editor
+    /// over the browser when opening a frame.</summary>
     [RelayCommand]
     private async Task AssociateRepoAsync()
     {
@@ -156,16 +159,29 @@ public partial class MainPageViewModel : ObservableObject
             return;
         }
 
-        _repoContext = new RepoContext(folder.Path);
-        RepoLocalPath = folder.Path;
-        WorkspaceService.SaveRepoContext(dumpPath, _repoContext);
-        StatusText = $"Associated repository: {folder.Path}";
+        var originUrl = await GitRepoReader.TryGetOriginUrlAsync(folder.Path, CancellationToken.None);
+        var repo = new RepoContext(folder.Path, originUrl);
+
+        _repoContexts.RemoveAll(r => string.Equals(r.LocalPath, repo.LocalPath, StringComparison.OrdinalIgnoreCase));
+        _repoContexts.Add(repo);
+        UpdateAssociatedReposSummary();
+        WorkspaceService.SaveRepoContexts(dumpPath, _repoContexts);
+
+        StatusText = originUrl is not null
+            ? $"Associated repository: {folder.Path} ({originUrl})"
+            : $"Associated repository: {folder.Path} — couldn't detect its remote URL, so it'll only " +
+              "be used while it's the only repo associated with this workspace.";
     }
 
-    /// <summary>"Clickable frames": opens a resolved location in a local editor (if a repo is
-    /// associated and VS Code is on PATH) or the browser at the exact commit (always available —
-    /// see SourceLocation.ToGitHubBlobUrl). Bound directly on each FrameRow/EvidenceRow rather
-    /// than reached via the page's ViewModel, so item templates stay plain x:Bind.</summary>
+    private void UpdateAssociatedReposSummary() =>
+        AssociatedReposSummary = _repoContexts.Count == 0
+            ? null
+            : string.Join(", ", _repoContexts.Select(r => Path.GetFileName(r.LocalPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))));
+
+    /// <summary>"Clickable frames": opens a resolved location in a local editor (if a matching
+    /// repo is associated and VS Code is on PATH) or the browser at the exact commit (always
+    /// available — see SourceLocation.ToGitHubBlobUrl). Bound directly on each FrameRow/EvidenceRow
+    /// rather than reached via the page's ViewModel, so item templates stay plain x:Bind.</summary>
     [RelayCommand]
     private void OpenSourceLocation(SourceLocation? location)
     {
@@ -174,11 +190,12 @@ public partial class MainPageViewModel : ObservableObject
             return;
         }
 
-        SourceLocationLauncher.Open(location, _repoContext);
+        SourceLocationLauncher.Open(location, RepoContextMatcher.Find(_repoContexts, location));
     }
 
     /// <summary>Blames the resolved line as of its build commit and shows who last touched it —
-    /// needs a repo association (blame reads history, not just one file's content at a commit).</summary>
+    /// needs a matching repo association (blame reads history, not just one file's content at a
+    /// commit).</summary>
     [RelayCommand]
     private async Task ShowBlameAsync(SourceLocation? location)
     {
@@ -188,15 +205,18 @@ public partial class MainPageViewModel : ObservableObject
         }
 
         string text;
-        var repoContext = _repoContext;
-        if (repoContext is null)
+        var repo = RepoContextMatcher.Find(_repoContexts, location);
+        if (repo is null)
         {
-            text = "No repository associated. Use \"Associate Repo…\" first so blame can be read from your local clone.";
+            text = _repoContexts.Count == 0
+                ? "No repository associated. Use \"Associate Repo…\" first so blame can be read from your local clone."
+                : $"None of the associated repositories match {location.RepoUrl}. Associate the repo this " +
+                  "location came from with \"Associate Repo…\".";
         }
         else
         {
             var blame = await GitRepoReader.TryGetBlameAsync(
-                repoContext.LocalPath, location.CommitSha, location.RelativePath, location.Line, CancellationToken.None);
+                repo.LocalPath, location.CommitSha, location.RelativePath, location.Line, CancellationToken.None);
             text = blame is null
                 ? $"No blame available for {location.RelativePath}:{location.Line}.\n\n" +
                   "This commit may not be local yet (try fetching in the associated repo), or the path may have moved since."
@@ -284,8 +304,8 @@ public partial class MainPageViewModel : ObservableObject
                 return;
             }
 
-            IReadOnlyList<SourceSnippet> sourceContext = _repoContext is not null
-                ? await SourceSnippetProvider.BuildAsync(_findingsDocument, _repoContext, CancellationToken.None)
+            IReadOnlyList<SourceSnippet> sourceContext = _repoContexts.Count > 0
+                ? await SourceSnippetProvider.BuildAsync(_findingsDocument, _repoContexts, CancellationToken.None)
                 : [];
 
             var payloadJson = Redactor.Redact(JsonSerializer.Serialize(
@@ -387,8 +407,8 @@ public partial class MainPageViewModel : ObservableObject
         HasDeadlockGraph = false;
         SelectedTabIndex = 0;
         _lastThreads = [];
-        _repoContext = WorkspaceService.TryLoadRepoContext(path);
-        RepoLocalPath = _repoContext?.LocalPath;
+        _repoContexts = WorkspaceService.LoadRepoContexts(path).ToList();
+        UpdateAssociatedReposSummary();
 
         if (_session is not null)
         {

@@ -50,32 +50,34 @@ public static class WorkspaceService
         File.WriteAllText(Path.Combine(dir, FindingsFileName), json);
     }
 
-    /// <summary>The repo association a user made for this dump (see MainPageViewModel's
-    /// AssociateRepoCommand), persisted so it survives reopening the workspace.</summary>
-    public static RepoContext? TryLoadRepoContext(string dumpPath)
+    /// <summary>The repo associations made for this dump (see MainPageViewModel's
+    /// AssociateRepoCommand), persisted so they survive reopening the workspace. A workspace can
+    /// have more than one — a dump commonly spans modules from different repos (the app plus an
+    /// internal NuGet package) — matched per SourceLocation by RepoContextMatcher.</summary>
+    public static IReadOnlyList<RepoContext> LoadRepoContexts(string dumpPath)
     {
         var path = Path.Combine(GetWorkspaceDirectory(dumpPath), RepoContextFileName);
         if (!File.Exists(path))
         {
-            return null;
+            return [];
         }
 
         try
         {
             var json = File.ReadAllText(path);
-            return JsonSerializer.Deserialize<RepoContext>(json, JsonOptions);
+            return JsonSerializer.Deserialize<IReadOnlyList<RepoContext>>(json, JsonOptions) ?? [];
         }
         catch
         {
-            return null;
+            return []; // Corrupt, or an older single-object repo.json from before multi-repo support.
         }
     }
 
-    public static void SaveRepoContext(string dumpPath, RepoContext context)
+    public static void SaveRepoContexts(string dumpPath, IReadOnlyList<RepoContext> contexts)
     {
         var dir = GetWorkspaceDirectory(dumpPath);
         Directory.CreateDirectory(dir);
-        var json = JsonSerializer.Serialize(context, JsonOptions);
+        var json = JsonSerializer.Serialize(contexts, JsonOptions);
         File.WriteAllText(Path.Combine(dir, RepoContextFileName), json);
     }
 }

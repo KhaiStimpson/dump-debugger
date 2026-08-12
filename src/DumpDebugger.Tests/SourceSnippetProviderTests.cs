@@ -29,8 +29,9 @@ public sealed class SourceSnippetProviderTests : IDisposable
     {
         var location = new SourceLocation("https://github.com/org/repo", _commitSha, "Order.cs", 15, 1);
         var findings = MakeFindingsDocument(location);
+        RepoContext[] repos = [new RepoContext(_repoDir, "https://github.com/org/repo")];
 
-        var snippets = await SourceSnippetProvider.BuildAsync(findings, new RepoContext(_repoDir), CancellationToken.None);
+        var snippets = await SourceSnippetProvider.BuildAsync(findings, repos, CancellationToken.None);
 
         var snippet = Assert.Single(snippets);
         Assert.Equal("Order.cs", snippet.RepoRelativePath);
@@ -43,14 +44,52 @@ public sealed class SourceSnippetProviderTests : IDisposable
     }
 
     [Fact]
+    public async Task BuildAsync_PicksTheRepoWhoseUrlMatches_OutOfSeveralAssociated()
+    {
+        var location = new SourceLocation("https://github.com/org/repo", _commitSha, "Order.cs", 15, 1);
+        var findings = MakeFindingsDocument(location);
+
+        // A second, unrelated repo is associated too (e.g. an internal NuGet package's repo) —
+        // its path doesn't even exist, so picking the wrong one would fail loudly, not quietly.
+        RepoContext[] repos =
+        [
+            new RepoContext("/nonexistent/other-repo", "https://github.com/org/other-repo"),
+            new RepoContext(_repoDir, "https://github.com/org/repo"),
+        ];
+
+        var snippets = await SourceSnippetProvider.BuildAsync(findings, repos, CancellationToken.None);
+
+        var snippet = Assert.Single(snippets);
+        Assert.Equal("Order.cs", snippet.RepoRelativePath);
+    }
+
+    [Fact]
+    public async Task BuildAsync_SkipsLocation_WhenNoAssociatedRepoMatchesAmongSeveral()
+    {
+        var location = new SourceLocation("https://github.com/org/repo", _commitSha, "Order.cs", 15, 1);
+        var findings = MakeFindingsDocument(location);
+
+        RepoContext[] repos =
+        [
+            new RepoContext("/nonexistent/a", "https://github.com/org/a"),
+            new RepoContext("/nonexistent/b", "https://github.com/org/b"),
+        ];
+
+        var snippets = await SourceSnippetProvider.BuildAsync(findings, repos, CancellationToken.None);
+
+        Assert.Empty(snippets);
+    }
+
+    [Fact]
     public async Task BuildAsync_SkipsLocationsWithNoResolvableEvidence()
     {
         var findings = new FindingsDocument(
             FindingsDocument.CurrentSchemaVersion,
             new FindingsDumpSummary("dump.dmp", "net8.0", "x64", null, false),
             [new Finding("f1", "TestAnalyzer", Severity.Info, Confidence.High, "Title", "Summary", [], [])]);
+        RepoContext[] repos = [new RepoContext(_repoDir, "https://github.com/org/repo")];
 
-        var snippets = await SourceSnippetProvider.BuildAsync(findings, new RepoContext(_repoDir), CancellationToken.None);
+        var snippets = await SourceSnippetProvider.BuildAsync(findings, repos, CancellationToken.None);
 
         Assert.Empty(snippets);
     }

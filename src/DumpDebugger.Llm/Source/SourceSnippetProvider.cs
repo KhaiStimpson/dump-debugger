@@ -11,6 +11,10 @@ namespace DumpDebugger.Llm;
 /// lets the narrative cite real code instead of guessing from a bare type/method name — the
 /// "LLM narrative enrichment" half of the feature; the location resolution itself needs no
 /// RepoContext at all (see SourceLocationResolver).
+///
+/// Takes every repo associated with the workspace, not just one: a dump commonly has evidence
+/// from more than one repo (the app plus an internal NuGet package it depends on), and
+/// RepoContextMatcher picks the right clone per location.
 /// </summary>
 public static class SourceSnippetProvider
 {
@@ -18,7 +22,7 @@ public static class SourceSnippetProvider
     private const int MaxSnippets = 8;
 
     public static async Task<IReadOnlyList<SourceSnippet>> BuildAsync(
-        FindingsDocument findings, RepoContext repo, CancellationToken ct)
+        FindingsDocument findings, IReadOnlyList<RepoContext> repos, CancellationToken ct)
     {
         var locations = findings.Findings
             .SelectMany(f => f.Evidence)
@@ -33,12 +37,18 @@ public static class SourceSnippetProvider
         {
             ct.ThrowIfCancellationRequested();
 
+            var repo = RepoContextMatcher.Find(repos, location);
+            if (repo is null)
+            {
+                continue; // No associated repo matches this location's RepoUrl — skip silently.
+            }
+
             var content = await GitRepoReader
                 .TryReadFileAtCommitAsync(repo.LocalPath, location.CommitSha, location.RelativePath, ct)
                 .ConfigureAwait(false);
             if (content is null)
             {
-                continue; // Commit not local, path renamed, wrong repo associated — skip silently.
+                continue; // Commit not local, path renamed since — skip silently.
             }
 
             var window = ExtractWindow(content, location.Line);

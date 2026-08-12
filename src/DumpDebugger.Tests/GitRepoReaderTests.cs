@@ -27,6 +27,24 @@ public sealed class GitRepoReaderTests : IDisposable
     }
 
     [Fact]
+    public async Task TryGetOriginUrlAsync_ReturnsNormalizedUrl_WhenOriginConfigured()
+    {
+        RunGit(_repoDir, "remote add origin git@github.com:khaistimpson/dump-debugger.git");
+
+        var url = await GitRepoReader.TryGetOriginUrlAsync(_repoDir, CancellationToken.None);
+
+        Assert.Equal("https://github.com/khaistimpson/dump-debugger", url);
+    }
+
+    [Fact]
+    public async Task TryGetOriginUrlAsync_ReturnsNull_WhenNoOriginConfigured()
+    {
+        var url = await GitRepoReader.TryGetOriginUrlAsync(_repoDir, CancellationToken.None);
+
+        Assert.Null(url);
+    }
+
+    [Fact]
     public async Task TryReadFileAtCommitAsync_ReturnsFileContentAtThatCommit()
     {
         var content = await GitRepoReader.TryReadFileAtCommitAsync(_repoDir, _commitSha, "hello.cs", CancellationToken.None);

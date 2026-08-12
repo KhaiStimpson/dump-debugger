@@ -22,7 +22,7 @@ public class SourceLocationTests
     [Fact]
     public void ResolveLocalPath_CombinesRepoRootWithRelativePath()
     {
-        var repo = new RepoContext("/home/dev/repos/dump-debugger");
+        var repo = new RepoContext("/home/dev/repos/dump-debugger", "https://github.com/org/repo");
         var location = new SourceLocation("https://github.com/org/repo", new string('a', 40), "src/Foo.cs", 1, 1);
 
         var resolved = repo.ResolveLocalPath(location);

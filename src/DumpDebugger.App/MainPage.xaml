@@ -50,7 +50,7 @@
                 <Button Content="🔗 Associate Repo…"
                         Command="{x:Bind ViewModel.AssociateRepoCommand}"
                         Visibility="{x:Bind ViewModel.HasThreads, Mode=OneWay}"
-                        ToolTipService.ToolTip="{x:Bind ViewModel.RepoLocalPath, Mode=OneWay}" />
+                        ToolTipService.ToolTip="{x:Bind ViewModel.AssociatedReposSummary, Mode=OneWay}" />
                 <ProgressRing IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" Width="20" Height="20" />
 
                 <StackPanel Orientation="Horizontal" Spacing="4" Margin="18,0,0,0"

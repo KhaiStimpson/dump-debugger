@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using DumpDebugger.Core.Source;
 
 namespace DumpDebugger.Llm;
 
@@ -41,6 +42,48 @@ public static class GitRepoReader
             await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
 
             return process.ExitCode == 0 ? stdout : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Detects a local clone's identity for multi-repo matching (see RepoContextMatcher):
+    /// reads its "origin" remote and normalizes it to the same "https://host/owner/repo" shape a
+    /// SourceLocation's RepoUrl uses. Null if there's no "origin" remote or `git` isn't on PATH —
+    /// the repo still gets associated, it just can only be matched by "it's the only one" (see
+    /// RepoContextMatcher's single-repo fallback) until the user re-associates with a remote set.</summary>
+    public static async Task<string?> TryGetOriginUrlAsync(string repoLocalPath, CancellationToken ct)
+    {
+        try
+        {
+            var psi = new ProcessStartInfo("git")
+            {
+                WorkingDirectory = repoLocalPath,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+            };
+            psi.ArgumentList.Add("remote");
+            psi.ArgumentList.Add("get-url");
+            psi.ArgumentList.Add("origin");
+
+            using var process = Process.Start(psi);
+            if (process is null)
+            {
+                return null;
+            }
+
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
+
+            var stdout = await process.StandardOutput.ReadToEndAsync(timeoutCts.Token).ConfigureAwait(false);
+            await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
+
+            var trimmed = stdout.Trim();
+            return process.ExitCode == 0 && trimmed.Length > 0 ? RepoUrlNormalizer.Normalize(trimmed) : null;
         }
         catch
         {

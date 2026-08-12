@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using DumpDebugger.Core.Source;
 
 namespace DumpDebugger.Analysis.SourceLink;
 
@@ -8,7 +9,9 @@ namespace DumpDebugger.Analysis.SourceLink;
 /// DevOps URL shapes, it looks for the one thing every provider's raw-content URL has in
 /// common — a bare 40-character commit SHA path segment — and splits on that. GitHub raw URLs
 /// get one extra normalization (raw.githubusercontent.com -> github.com) so RepoUrl is a link a
-/// human can actually open, not just a stable identifier.
+/// human can actually open, not just a stable identifier — then routed through the same
+/// RepoUrlNormalizer a RepoContext's `git remote` URL is normalized with, so the two compare
+/// equal for RepoContextMatcher.
 /// </summary>
 public static partial class SourceLocationUrlParser
 {
@@ -27,9 +30,8 @@ public static partial class SourceLocationUrlParser
         relativePath = url[(match.Index + match.Length)..].TrimStart('/');
 
         var prefix = url[..match.Index];
-        repoUrl = prefix
-            .Replace("raw.githubusercontent.com", "github.com", StringComparison.OrdinalIgnoreCase)
-            .TrimEnd('/');
+        repoUrl = RepoUrlNormalizer.Normalize(
+            prefix.Replace("raw.githubusercontent.com", "github.com", StringComparison.OrdinalIgnoreCase));
 
         return !string.IsNullOrEmpty(relativePath);
     }
