@@ -43,26 +43,48 @@
         <Pivot Grid.Row="3" Visibility="{x:Bind ViewModel.HasThreads, Mode=OneWay}">
 
             <PivotItem Header="Triage">
-                <ListView ItemsSource="{x:Bind ViewModel.Findings}">
-                    <ListView.ItemTemplate>
-                        <DataTemplate x:DataType="vm:FindingRow">
-                            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                    BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,4">
-                                <StackPanel Spacing="4">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <Border Background="{ThemeResource SystemFillColorCriticalBrush}"
-                                                CornerRadius="4" Padding="6,2">
-                                            <TextBlock Text="{x:Bind Severity}" Foreground="White" FontSize="12" />
-                                        </Border>
-                                        <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" />
+                <Grid RowSpacing="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
+                        <Button Content="Explain (AI)…"
+                                Command="{x:Bind ViewModel.ExplainCommand}"
+                                IsEnabled="{x:Bind ViewModel.IsExplaining, Mode=OneWay, Converter={StaticResource InverseBoolConverter}}" />
+                        <ProgressRing IsActive="{x:Bind ViewModel.IsExplaining, Mode=OneWay}" Width="20" Height="20" />
+                    </StackPanel>
+
+                    <Border Grid.Row="1"
+                            Visibility="{x:Bind ViewModel.HasNarrative, Mode=OneWay}"
+                            BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
+                            BorderThickness="1" CornerRadius="8" Padding="12">
+                        <TextBlock Text="{x:Bind ViewModel.NarrativeText, Mode=OneWay}" TextWrapping="Wrap" />
+                    </Border>
+
+                    <ListView Grid.Row="2" ItemsSource="{x:Bind ViewModel.Findings}">
+                        <ListView.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FindingRow">
+                                <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,4">
+                                    <StackPanel Spacing="4">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Border Background="{ThemeResource SystemFillColorCriticalBrush}"
+                                                    CornerRadius="4" Padding="6,2">
+                                                <TextBlock Text="{x:Bind Severity}" Foreground="White" FontSize="12" />
+                                            </Border>
+                                            <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" />
+                                        </StackPanel>
+                                        <TextBlock Text="{x:Bind Summary}" TextWrapping="Wrap" Opacity="0.85" />
+                                        <TextBlock Text="{x:Bind EvidenceText}" FontFamily="Cascadia Mono" FontSize="12" TextWrapping="Wrap" Opacity="0.7" />
                                     </StackPanel>
-                                    <TextBlock Text="{x:Bind Summary}" TextWrapping="Wrap" Opacity="0.85" />
-                                    <TextBlock Text="{x:Bind EvidenceText}" FontFamily="Cascadia Mono" FontSize="12" TextWrapping="Wrap" Opacity="0.7" />
-                                </StackPanel>
-                            </Border>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
+                                </Border>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Grid>
             </PivotItem>
 
             <PivotItem Header="Overview">

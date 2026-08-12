@@ -1,11 +1,14 @@
 using System.Collections.ObjectModel;
 using System.Text;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DumpDebugger.Core.Dump;
 using DumpDebugger.Core.Findings;
 using DumpDebugger.Core.Ipc;
+using DumpDebugger.Llm;
 using DumpDebugger_App.Services;
+using Microsoft.UI.Xaml.Controls;
 using WinRT.Interop;
 
 namespace DumpDebugger_App.ViewModels;
@@ -41,7 +44,18 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     public partial bool HasFindings { get; set; }
 
+    [ObservableProperty]
+    public partial bool IsExplaining { get; set; }
+
+    [ObservableProperty]
+    public partial string? NarrativeText { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasNarrative { get; set; }
+
     private FindingsDocument? _findingsDocument;
+    private INarrativeProvider? _narrativeProvider;
+    private bool _payloadReviewedThisSession;
 
     public ObservableCollection<ThreadGroupRow> ThreadGroups { get; } = [];
     public ObservableCollection<TypeStatRow> TypeStats { get; } = [];
@@ -89,6 +103,106 @@ public partial class MainPageViewModel : ObservableObject
         StatusText = $"Report exported to {file.Path}";
     }
 
+    [RelayCommand]
+    private async Task ExplainAsync()
+    {
+        if (_findingsDocument is null)
+        {
+            return;
+        }
+
+        IsExplaining = true;
+        HasNarrative = false;
+        NarrativeText = null;
+
+        try
+        {
+            _narrativeProvider ??= await NarrativeProviderFactory.DetectAsync();
+            if (!_narrativeProvider.IsAvailable)
+            {
+                NarrativeText = $"AI narrative is unavailable: {_narrativeProvider.Description}";
+                HasNarrative = true;
+                return;
+            }
+
+            var payloadJson = Redactor.Redact(JsonSerializer.Serialize(
+                _findingsDocument,
+                new JsonSerializerOptions { WriteIndented = true }));
+
+            // PLAN.md §2.5: show the exact (redacted) payload before the first send this session.
+            if (!_payloadReviewedThisSession)
+            {
+                var confirmed = await ShowPayloadReviewAsync(payloadJson, _narrativeProvider.Description);
+                if (!confirmed)
+                {
+                    return;
+                }
+
+                _payloadReviewedThisSession = true;
+            }
+
+            var narrative = await _narrativeProvider.SummarizeAsync(_findingsDocument, CancellationToken.None);
+
+            var sb = new StringBuilder();
+            sb.AppendLine(narrative.Summary);
+            if (narrative.Hypotheses.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Hypotheses:");
+                foreach (var h in narrative.Hypotheses)
+                {
+                    sb.AppendLine($"  - {h}");
+                }
+            }
+
+            if (narrative.NextSteps.Count > 0)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Next steps:");
+                foreach (var step in narrative.NextSteps)
+                {
+                    sb.AppendLine($"  - {step}");
+                }
+            }
+
+            NarrativeText = sb.ToString();
+            HasNarrative = true;
+        }
+        catch (Exception ex)
+        {
+            NarrativeText = $"Failed to generate narrative: {ex.Message}";
+            HasNarrative = true;
+        }
+        finally
+        {
+            IsExplaining = false;
+        }
+    }
+
+    private static async Task<bool> ShowPayloadReviewAsync(string payloadJson, string providerDescription)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = $"Send this to {providerDescription}?",
+            Content = new ScrollViewer
+            {
+                Content = new TextBlock
+                {
+                    Text = payloadJson,
+                    FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono"),
+                    TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+                },
+                MaxHeight = 400,
+            },
+            PrimaryButtonText = "Send",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = App.Window.Content.XamlRoot,
+        };
+
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
     private async Task LoadDumpAsync(string path)
     {
         IsBusy = true;
@@ -103,6 +217,8 @@ public partial class MainPageViewModel : ObservableObject
         Findings.Clear();
         HasFindings = false;
         _findingsDocument = null;
+        NarrativeText = null;
+        HasNarrative = false;
 
         if (_session is not null)
         {
