@@ -13,23 +13,55 @@ var pipeName = args[0];
 using var pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
 await pipe.WaitForConnectionAsync();
 
-while (pipe.IsConnected)
+// The dump stays loaded for the life of the pipe connection so later requests (threads,
+// memory, etc. in later phases) don't have to re-open it. Disposed when the pipe closes.
+LoadedDump? loaded = null;
+
+try
 {
-    var envelope = await IpcFrame.ReadAsync(pipe);
-    if (envelope is null)
+    while (pipe.IsConnected)
     {
-        break;
-    }
+        var envelope = await IpcFrame.ReadAsync(pipe);
+        if (envelope is null)
+        {
+            break;
+        }
 
-    if (envelope.Kind != IpcMessageKind.OpenDumpRequest)
-    {
-        continue;
-    }
+        try
+        {
+            switch (envelope.Kind)
+            {
+                case IpcMessageKind.OpenDumpRequest:
+                    await HandleOpenDumpAsync(pipe, envelope, v => loaded = v);
+                    break;
 
+                case IpcMessageKind.GetThreadsRequest:
+                    await HandleGetThreadsAsync(pipe, envelope, loaded);
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
+                IpcMessageKind.ErrorResponse,
+                envelope.RequestId,
+                IpcFrame.SerializePayload(new ErrorResponse(ex.Message, ex.ToString()))));
+        }
+    }
+}
+finally
+{
+    loaded?.Dispose();
+}
+
+return 0;
+
+static async Task HandleOpenDumpAsync(NamedPipeServerStream pipe, IpcEnvelope envelope, Action<LoadedDump> onLoaded)
+{
     var request = IpcFrame.DeserializePayload<OpenDumpRequest>(envelope);
     if (request is null)
     {
-        continue;
+        return;
     }
 
     await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
@@ -37,22 +69,30 @@ while (pipe.IsConnected)
         envelope.RequestId,
         IpcFrame.SerializePayload(new ProgressNotification("Loading dump", 0.1, request.DumpPath))));
 
-    try
-    {
-        using var loaded = DumpLoader.Load(request.DumpPath, allowSymbolServer: false);
+    var loaded = DumpLoader.Load(request.DumpPath, allowSymbolServer: false);
+    onLoaded(loaded);
 
-        await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
-            IpcMessageKind.OpenDumpResponse,
-            envelope.RequestId,
-            IpcFrame.SerializePayload(new OpenDumpResponse(loaded.Metadata))));
-    }
-    catch (Exception ex)
-    {
-        await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
-            IpcMessageKind.ErrorResponse,
-            envelope.RequestId,
-            IpcFrame.SerializePayload(new ErrorResponse(ex.Message, ex.ToString()))));
-    }
+    await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
+        IpcMessageKind.OpenDumpResponse,
+        envelope.RequestId,
+        IpcFrame.SerializePayload(new OpenDumpResponse(loaded.Metadata))));
 }
 
-return 0;
+static async Task HandleGetThreadsAsync(NamedPipeServerStream pipe, IpcEnvelope envelope, LoadedDump? loaded)
+{
+    if (loaded is null || loaded.Runtimes.Count == 0)
+    {
+        await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
+            IpcMessageKind.GetThreadsResponse,
+            envelope.RequestId,
+            IpcFrame.SerializePayload(new GetThreadsResponse([]))));
+        return;
+    }
+
+    var threads = ThreadEnumerator.Enumerate(loaded.Runtimes[0]);
+
+    await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
+        IpcMessageKind.GetThreadsResponse,
+        envelope.RequestId,
+        IpcFrame.SerializePayload(new GetThreadsResponse(threads))));
+}

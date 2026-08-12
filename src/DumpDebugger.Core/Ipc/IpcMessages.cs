@@ -11,6 +11,8 @@ public enum IpcMessageKind
 {
     OpenDumpRequest,
     OpenDumpResponse,
+    GetThreadsRequest,
+    GetThreadsResponse,
     ProgressNotification,
     CancelRequest,
     ErrorResponse,
@@ -24,6 +26,11 @@ public sealed record IpcEnvelope(
 public sealed record OpenDumpRequest(string DumpPath);
 
 public sealed record OpenDumpResponse(DumpMetadata Metadata);
+
+/// <summary>No parameters: the worker keeps the most recently opened dump loaded for the life of the pipe connection.</summary>
+public sealed record GetThreadsRequest;
+
+public sealed record GetThreadsResponse(IReadOnlyList<ThreadInfo> Threads);
 
 public sealed record ProgressNotification(string Stage, double FractionComplete, string? Detail);
 

@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -10,6 +11,8 @@ namespace DumpDebugger_App.ViewModels;
 
 public partial class MainPageViewModel : ObservableObject
 {
+    private WorkerSession? _session;
+
     [ObservableProperty]
     public partial bool IsBusy { get; set; }
 
@@ -24,6 +27,14 @@ public partial class MainPageViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool HasError { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasThreads { get; set; }
+
+    [ObservableProperty]
+    public partial ThreadGroupRow? SelectedThreadGroup { get; set; }
+
+    public ObservableCollection<ThreadGroupRow> ThreadGroups { get; } = [];
 
     [RelayCommand]
     private async Task OpenDumpAsync()
@@ -46,17 +57,36 @@ public partial class MainPageViewModel : ObservableObject
     {
         IsBusy = true;
         HasError = false;
+        HasThreads = false;
         DumpPath = path;
         MetadataSummary = null;
+        ThreadGroups.Clear();
+
+        if (_session is not null)
+        {
+            await _session.DisposeAsync();
+            _session = null;
+        }
 
         var progress = new Progress<ProgressNotification>(note =>
             StatusText = $"{note.Stage}... ({note.FractionComplete:P0}) {note.Detail}");
 
         try
         {
-            var metadata = await DumpOpenService.OpenAsync(path, progress);
+            var (session, metadata) = await WorkerSession.OpenAsync(path, progress);
+            _session = session;
             MetadataSummary = Format(metadata);
-            StatusText = "Dump loaded.";
+
+            StatusText = "Enumerating threads...";
+            var threads = await session.GetThreadsAsync();
+            foreach (var row in ThreadGroupRow.FromThreads(threads))
+            {
+                ThreadGroups.Add(row);
+            }
+
+            HasThreads = ThreadGroups.Count > 0;
+            SelectedThreadGroup = ThreadGroups.FirstOrDefault();
+            StatusText = $"Dump loaded. {threads.Count} threads in {ThreadGroups.Count} stack group(s).";
         }
         catch (Exception ex)
         {
