@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using DumpDebugger.Core.Dump;
+using DumpDebugger.Core.Findings;
 using DumpDebugger.Core.Ipc;
 
 namespace DumpDebugger_App.Services;
@@ -57,6 +58,9 @@ public sealed class WorkerSession : IAsyncDisposable
 
     public Task<GetMemoryResponse> GetMemoryAsync(CancellationToken ct = default) =>
         _client.GetMemoryAsync(ct);
+
+    public Task<FindingsDocument> GetFindingsAsync(CancellationToken ct = default) =>
+        _client.GetFindingsAsync(ct);
 
     public async ValueTask DisposeAsync()
     {

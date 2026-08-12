@@ -3,6 +3,7 @@ using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DumpDebugger.Core.Dump;
+using DumpDebugger.Core.Findings;
 using DumpDebugger.Core.Ipc;
 using DumpDebugger_App.Services;
 using WinRT.Interop;
@@ -37,9 +38,15 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     public partial string LocksSummary { get; set; } = string.Empty;
 
+    [ObservableProperty]
+    public partial bool HasFindings { get; set; }
+
+    private FindingsDocument? _findingsDocument;
+
     public ObservableCollection<ThreadGroupRow> ThreadGroups { get; } = [];
     public ObservableCollection<TypeStatRow> TypeStats { get; } = [];
     public ObservableCollection<LargeObjectRow> LargeObjects { get; } = [];
+    public ObservableCollection<FindingRow> Findings { get; } = [];
 
     [RelayCommand]
     private async Task OpenDumpAsync()
@@ -58,6 +65,30 @@ public partial class MainPageViewModel : ObservableObject
         await LoadDumpAsync(file.Path);
     }
 
+    [RelayCommand]
+    private async Task ExportReportAsync()
+    {
+        if (_findingsDocument is null)
+        {
+            return;
+        }
+
+        var picker = new Windows.Storage.Pickers.FileSavePicker();
+        InitializeWithWindow.Initialize(picker, App.WindowHandle);
+        picker.FileTypeChoices.Add("Markdown", [".md"]);
+        picker.SuggestedFileName = "dump-debugger-report";
+
+        var file = await picker.PickSaveFileAsync();
+        if (file is null)
+        {
+            return;
+        }
+
+        var markdown = ReportWriter.ToMarkdown(_findingsDocument);
+        await Windows.Storage.FileIO.WriteTextAsync(file, markdown);
+        StatusText = $"Report exported to {file.Path}";
+    }
+
     private async Task LoadDumpAsync(string path)
     {
         IsBusy = true;
@@ -69,6 +100,9 @@ public partial class MainPageViewModel : ObservableObject
         ThreadGroups.Clear();
         TypeStats.Clear();
         LargeObjects.Clear();
+        Findings.Clear();
+        HasFindings = false;
+        _findingsDocument = null;
 
         if (_session is not null)
         {
@@ -112,6 +146,15 @@ public partial class MainPageViewModel : ObservableObject
             {
                 LargeObjects.Add(LargeObjectRow.From(row));
             }
+
+            StatusText = "Building triage...";
+            _findingsDocument = await session.GetFindingsAsync();
+            foreach (var finding in _findingsDocument.Findings)
+            {
+                Findings.Add(FindingRow.From(finding));
+            }
+
+            HasFindings = Findings.Count > 0;
 
             StatusText = $"Dump loaded. {threads.Count} threads in {ThreadGroups.Count} stack group(s), " +
                           $"{memory.TypeStats.Count} heap types, {memory.LargeObjects.Count} large objects." + deadlockNote;

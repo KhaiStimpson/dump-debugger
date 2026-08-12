@@ -1,5 +1,6 @@
 using System.IO.Pipes;
 using DumpDebugger.Core.Dump;
+using DumpDebugger.Core.Findings;
 using DumpDebugger.Core.Ipc;
 
 namespace DumpDebugger_App.Services;
@@ -130,6 +131,32 @@ public sealed class WorkerClient : IAsyncDisposable
                 case IpcMessageKind.GetMemoryResponse:
                     var response = IpcFrame.DeserializePayload<GetMemoryResponse>(envelope);
                     return response ?? new GetMemoryResponse([], []);
+
+                case IpcMessageKind.ErrorResponse:
+                    var error = IpcFrame.DeserializePayload<ErrorResponse>(envelope);
+                    throw new InvalidOperationException(error?.Message ?? "Worker reported an unknown error.");
+            }
+        }
+    }
+
+    public async Task<FindingsDocument> GetFindingsAsync(CancellationToken ct = default)
+    {
+        var requestId = Guid.NewGuid().ToString("N");
+        await IpcFrame.WriteAsync(
+            _pipe,
+            new IpcEnvelope(IpcMessageKind.GetFindingsRequest, requestId, IpcFrame.SerializePayload(new GetFindingsRequest())),
+            ct).ConfigureAwait(false);
+
+        while (true)
+        {
+            var envelope = await IpcFrame.ReadAsync(_pipe, ct).ConfigureAwait(false)
+                ?? throw new IOException("Worker closed the pipe before responding.");
+
+            switch (envelope.Kind)
+            {
+                case IpcMessageKind.GetFindingsResponse:
+                    var response = IpcFrame.DeserializePayload<GetFindingsResponse>(envelope);
+                    return response?.Document ?? throw new IOException("Worker sent an empty GetFindingsResponse.");
 
                 case IpcMessageKind.ErrorResponse:
                     var error = IpcFrame.DeserializePayload<ErrorResponse>(envelope);

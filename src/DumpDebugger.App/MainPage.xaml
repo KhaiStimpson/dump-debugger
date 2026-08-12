@@ -24,6 +24,9 @@
                     Command="{x:Bind ViewModel.OpenDumpCommand}"
                     IsEnabled="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource InverseBoolConverter}}" />
             <ProgressRing IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" Width="24" Height="24" />
+            <Button Content="Export Report…"
+                    Command="{x:Bind ViewModel.ExportReportCommand}"
+                    Visibility="{x:Bind ViewModel.HasFindings, Mode=OneWay}" />
         </StackPanel>
 
         <TextBlock Grid.Row="2"
@@ -38,6 +41,29 @@
         </ScrollViewer>
 
         <Pivot Grid.Row="3" Visibility="{x:Bind ViewModel.HasThreads, Mode=OneWay}">
+
+            <PivotItem Header="Triage">
+                <ListView ItemsSource="{x:Bind ViewModel.Findings}">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="vm:FindingRow">
+                            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,4">
+                                <StackPanel Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Border Background="{ThemeResource SystemFillColorCriticalBrush}"
+                                                CornerRadius="4" Padding="6,2">
+                                            <TextBlock Text="{x:Bind Severity}" Foreground="White" FontSize="12" />
+                                        </Border>
+                                        <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" />
+                                    </StackPanel>
+                                    <TextBlock Text="{x:Bind Summary}" TextWrapping="Wrap" Opacity="0.85" />
+                                    <TextBlock Text="{x:Bind EvidenceText}" FontFamily="Cascadia Mono" FontSize="12" TextWrapping="Wrap" Opacity="0.7" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </PivotItem>
 
             <PivotItem Header="Overview">
                 <ScrollViewer>

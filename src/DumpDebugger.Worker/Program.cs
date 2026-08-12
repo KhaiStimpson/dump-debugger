@@ -46,6 +46,10 @@ try
                 case IpcMessageKind.GetMemoryRequest:
                     await HandleGetMemoryAsync(pipe, envelope, loaded);
                     break;
+
+                case IpcMessageKind.GetFindingsRequest:
+                    await HandleGetFindingsAsync(pipe, envelope, loaded);
+                    break;
             }
         }
         catch (Exception ex)
@@ -145,4 +149,36 @@ static async Task HandleGetMemoryAsync(NamedPipeServerStream pipe, IpcEnvelope e
         IpcMessageKind.GetMemoryResponse,
         envelope.RequestId,
         IpcFrame.SerializePayload(new GetMemoryResponse(typeStats, largeObjects))));
+}
+
+static async Task HandleGetFindingsAsync(NamedPipeServerStream pipe, IpcEnvelope envelope, LoadedDump? loaded)
+{
+    if (loaded is null || loaded.Runtimes.Count == 0)
+    {
+        var empty = DumpDebugger.Core.Findings.FindingsDocument.FromMetadata(
+            loaded?.Metadata ?? throw new InvalidOperationException("No dump open."), []);
+        await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
+            IpcMessageKind.GetFindingsResponse,
+            envelope.RequestId,
+            IpcFrame.SerializePayload(new GetFindingsResponse(empty))));
+        return;
+    }
+
+    var runtime = loaded.Runtimes[0];
+    var syncBlocks = LockAnalyzer.EnumerateSyncBlocks(runtime);
+    var lockFindings = LockAnalyzer.DetectDeadlocks(syncBlocks);
+    var typeStats = MemoryAnalyzer.GetTypeStats(runtime);
+    var memoryFindings = MemoryAnalyzer.DetectTypeDominance(typeStats);
+
+    var ranked = lockFindings.Concat(memoryFindings)
+        .OrderByDescending(f => f.Severity)
+        .ThenByDescending(f => f.Confidence)
+        .ToList();
+
+    var document = DumpDebugger.Core.Findings.FindingsDocument.FromMetadata(loaded.Metadata, ranked);
+
+    await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
+        IpcMessageKind.GetFindingsResponse,
+        envelope.RequestId,
+        IpcFrame.SerializePayload(new GetFindingsResponse(document))));
 }

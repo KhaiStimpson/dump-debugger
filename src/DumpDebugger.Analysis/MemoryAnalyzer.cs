@@ -1,4 +1,5 @@
 using DumpDebugger.Core.Dump;
+using DumpDebugger.Core.Findings;
 using Microsoft.Diagnostics.Runtime;
 
 namespace DumpDebugger.Analysis;
@@ -113,6 +114,43 @@ public static class MemoryAnalyzer
         ClrElementType.Float => field.Read<float>(address, false).ToString("G"),
         _ => null,
     };
+
+    /// <summary>
+    /// Phase 4 (PLAN.md §4.3 "Type dominance"): flag when a small number of types account for
+    /// most of the heap — the simplest, cheapest-to-compute memory finding, and a natural
+    /// first Triage entry alongside deadlocks.
+    /// </summary>
+    public static IReadOnlyList<Finding> DetectTypeDominance(IReadOnlyList<TypeStat> typeStats)
+    {
+        var totalSize = typeStats.Aggregate(0UL, (sum, t) => sum + t.TotalSize);
+        if (totalSize == 0)
+        {
+            return [];
+        }
+
+        var findings = new List<Finding>();
+        foreach (var stat in typeStats.Take(3))
+        {
+            var fraction = (double)stat.TotalSize / totalSize;
+            if (fraction < 0.30)
+            {
+                continue;
+            }
+
+            findings.Add(new Finding(
+                Id: $"memory.type-dominance.{stat.TypeName}",
+                Analyzer: nameof(MemoryAnalyzer),
+                Severity: fraction >= 0.5 ? Severity.Warning : Severity.Info,
+                Confidence: Confidence.High,
+                Title: $"{stat.TypeName} accounts for {fraction:P0} of the heap",
+                Summary: $"{stat.Count} instances of {stat.TypeName} total " +
+                          $"{stat.TotalSize / 1024.0 / 1024.0:F1} MB, {fraction:P0} of all live heap bytes.",
+                Evidence: [new EvidenceItem("type", stat.TypeName, $"{stat.Count} instances, {stat.TotalSize} bytes")],
+                Links: [new FindingLink("View memory", "memory")]));
+        }
+
+        return findings;
+    }
 
     private static string Truncate(string value) =>
         value.Length <= MaxStringPreviewLength ? value : value[..MaxStringPreviewLength] + "…";

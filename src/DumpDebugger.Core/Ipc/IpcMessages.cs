@@ -17,6 +17,8 @@ public enum IpcMessageKind
     GetLocksResponse,
     GetMemoryRequest,
     GetMemoryResponse,
+    GetFindingsRequest,
+    GetFindingsResponse,
     ProgressNotification,
     CancelRequest,
     ErrorResponse,
@@ -47,6 +49,11 @@ public sealed record GetMemoryRequest;
 public sealed record GetMemoryResponse(
     IReadOnlyList<TypeStat> TypeStats,
     IReadOnlyList<LargeObjectInfo> LargeObjects);
+
+/// <summary>Phase 4 (PLAN.md §3.2 "Triage"): all findings across analyzers, ranked, as one document.</summary>
+public sealed record GetFindingsRequest;
+
+public sealed record GetFindingsResponse(Findings.FindingsDocument Document);
 
 public sealed record ProgressNotification(string Stage, double FractionComplete, string? Detail);
 
