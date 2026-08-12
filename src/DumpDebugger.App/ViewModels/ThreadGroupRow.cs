@@ -17,7 +17,8 @@ public sealed record ThreadGroupRow(
     bool IsFinalizer,
     int MaxLockCount,
     string? ExceptionType,
-    string? OperationContext)
+    string? OperationContext,
+    string? SourceLocationText)
 {
     public bool IsBlocked => MaxLockCount > 0;
 
@@ -35,6 +36,11 @@ public sealed record ThreadGroupRow(
                     Environment.NewLine,
                     first.Frames.Select(f => $"{f.TypeName}.{f.MethodName}"));
 
+                // Prefer the operation context's frame (the "what this thread is doing" one);
+                // fall back to the top frame's own resolved location.
+                var location = first.OperationContext?.Location
+                    ?? (first.Frames.Count > 0 ? first.Frames[0].Location : null);
+
                 return new ThreadGroupRow(
                     g.Key,
                     g.Count(),
@@ -47,7 +53,8 @@ public sealed record ThreadGroupRow(
                     g.Select(t => t.CurrentExceptionType).FirstOrDefault(e => e is not null),
                     first.OperationContext is null
                         ? null
-                        : $"[{first.OperationContext.Source}] {first.OperationContext.Description}");
+                        : $"[{first.OperationContext.Source}] {first.OperationContext.Description}",
+                    location is null ? null : $"{location.RelativePath}:{location.Line}");
             })
             .OrderByDescending(r => r.Count)
             .ToList();

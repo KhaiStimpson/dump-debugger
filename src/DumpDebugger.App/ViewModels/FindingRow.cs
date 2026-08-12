@@ -12,5 +12,6 @@ public sealed record FindingRow(
         finding.Severity.ToString(),
         finding.Title,
         finding.Summary,
-        string.Join(Environment.NewLine, finding.Evidence.Select(e => $"  - {e.Kind} {e.Ref}: {e.Detail}")));
+        string.Join(Environment.NewLine, finding.Evidence.Select(e =>
+            $"  - {e.Kind} {e.Ref}: {e.Detail}" + (e.Location is { } loc ? $" ({loc.RelativePath}:{loc.Line})" : ""))));
 }

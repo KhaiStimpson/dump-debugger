@@ -11,6 +11,6 @@ public sealed class NullNarrativeProvider : INarrativeProvider
 
     public string Description => "Disabled (no Claude Code CLI or ANTHROPIC_API_KEY found)";
 
-    public Task<Narrative> SummarizeAsync(FindingsDocument findings, CancellationToken ct) =>
+    public Task<Narrative> SummarizeAsync(FindingsDocument findings, IReadOnlyList<SourceSnippet> sourceContext, CancellationToken ct) =>
         throw new InvalidOperationException("NullNarrativeProvider is never available; check IsAvailable first.");
 }

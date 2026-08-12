@@ -1,3 +1,5 @@
+using DumpDebugger.Core.Source;
+
 namespace DumpDebugger.Core.Findings;
 
 public enum Severity
@@ -15,10 +17,14 @@ public enum Confidence
     High,
 }
 
+/// <param name="Location">Where in the repository this evidence points, when Source Link
+/// resolved a source location for it (see DumpDebugger.Analysis.SourceLink). Optional: most
+/// evidence kinds (object addresses, sync blocks) have no single associated source line.</param>
 public sealed record EvidenceItem(
     string Kind,
     string Ref,
-    string Detail);
+    string Detail,
+    SourceLocation? Location = null);
 
 public sealed record FindingLink(
     string Label,

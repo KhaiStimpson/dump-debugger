@@ -32,9 +32,9 @@ public sealed class AnthropicApiNarrativeProvider : INarrativeProvider
         return string.IsNullOrWhiteSpace(key) ? null : new AnthropicApiNarrativeProvider(key);
     }
 
-    public async Task<Narrative> SummarizeAsync(FindingsDocument findings, CancellationToken ct)
+    public async Task<Narrative> SummarizeAsync(FindingsDocument findings, IReadOnlyList<SourceSnippet> sourceContext, CancellationToken ct)
     {
-        var payload = Redactor.Redact(JsonSerializer.Serialize(findings));
+        var payload = Redactor.Redact(JsonSerializer.Serialize(findings)) + SourceSnippetProvider.FormatForPrompt(sourceContext);
 
         using var request = new HttpRequestMessage(HttpMethod.Post, ApiUrl);
         request.Headers.Add("x-api-key", _apiKey);
@@ -61,8 +61,12 @@ public sealed class AnthropicApiNarrativeProvider : INarrativeProvider
         "You are analyzing a .NET memory dump's findings document (produced by deterministic " +
         "analyzers, not by you). Findings are authoritative: do not invent evidence, attribute " +
         "every claim to a finding id, and say \"the dump does not show this\" rather than " +
-        "speculating beyond the data. Respond with ONLY a single JSON object of this exact " +
-        "shape, no markdown fencing, no other text: " +
+        "speculating beyond the data. You may also be given source code snippets read directly " +
+        "from the repository at the exact commit the dump's build was compiled from (resolved " +
+        "via Source Link data embedded in the dump's PDBs) — these are ground truth for what " +
+        "the code actually does at that point; cite them by file:line when they inform a claim, " +
+        "and don't speculate about code you were not shown. Respond with ONLY a single JSON " +
+        "object of this exact shape, no markdown fencing, no other text: " +
         "{\"summary\":\"...\",\"hypotheses\":[\"...\"],\"nextSteps\":[\"...\"]}";
 
     private static Narrative ParseNarrative(string resultText)

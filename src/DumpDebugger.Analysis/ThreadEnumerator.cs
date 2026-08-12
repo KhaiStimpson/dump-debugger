@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using DumpDebugger.Analysis.SourceLink;
 using DumpDebugger.Core.Dump;
 using Microsoft.Diagnostics.Runtime;
 
@@ -18,6 +19,10 @@ public static class ThreadEnumerator
     {
         var threads = new List<ThreadInfo>();
 
+        // Shared across every thread/frame in this dump so PortablePdbSourceMapper's per-module
+        // PDB cache actually pays for itself instead of re-parsing the same PDB per frame.
+        using var sourceResolver = new SourceLocationResolver();
+
         foreach (var clrThread in runtime.Threads)
         {
             var frames = new List<StackFrameInfo>();
@@ -25,7 +30,8 @@ public static class ThreadEnumerator
             {
                 if (frame.Kind == ClrStackFrameKind.ManagedMethod && frame.Method is not null)
                 {
-                    frames.Add(new StackFrameInfo(frame.Method.Name ?? "<unknown>", frame.Method.Type?.Name));
+                    var location = sourceResolver.TryResolve(frame.Method, frame.InstructionPointer);
+                    frames.Add(new StackFrameInfo(frame.Method.Name ?? "<unknown>", frame.Method.Type?.Name, location));
                 }
                 else
                 {

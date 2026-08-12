@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using DumpDebugger.Core.Dump;
 using DumpDebugger.Core.Findings;
 using DumpDebugger.Core.Ipc;
+using DumpDebugger.Core.Source;
 using DumpDebugger.Llm;
 using DumpDebugger_App.Services;
 using Microsoft.UI.Xaml.Controls;
@@ -74,10 +75,14 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     public partial int LargeObjectCount { get; set; }
 
+    [ObservableProperty]
+    public partial string? RepoLocalPath { get; set; }
+
     private FindingsDocument? _findingsDocument;
     private INarrativeProvider? _narrativeProvider;
     private bool _payloadReviewedThisSession;
     private IReadOnlyList<ThreadInfo> _lastThreads = [];
+    private RepoContext? _repoContext;
 
     public ObservableCollection<ThreadGroupRow> ThreadGroups { get; } = [];
     public ObservableCollection<TypeStatRow> TypeStats { get; } = [];
@@ -127,6 +132,36 @@ public partial class MainPageViewModel : ObservableObject
         await LoadDumpAsync(file.Path);
     }
 
+    /// <summary>Associates a local clone of the dump's source repo with this workspace. Not
+    /// required for stack frames to link to source — Source Link resolves that automatically
+    /// from the dump's own PDBs (see DumpDebugger.Analysis.SourceLink) — this is only needed
+    /// for features that need actual file content: source snippets in the AI narrative, and (in
+    /// future) an "open in editor" action.</summary>
+    [RelayCommand]
+    private async Task AssociateRepoAsync()
+    {
+        var dumpPath = DumpPath;
+        if (dumpPath is null)
+        {
+            return;
+        }
+
+        var picker = new Windows.Storage.Pickers.FolderPicker();
+        InitializeWithWindow.Initialize(picker, App.WindowHandle);
+        picker.FileTypeFilter.Add("*");
+
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder is null)
+        {
+            return;
+        }
+
+        _repoContext = new RepoContext(folder.Path);
+        RepoLocalPath = folder.Path;
+        WorkspaceService.SaveRepoContext(dumpPath, _repoContext);
+        StatusText = $"Associated repository: {folder.Path}";
+    }
+
     [RelayCommand]
     private async Task ExportReportAsync()
     {
@@ -173,9 +208,14 @@ public partial class MainPageViewModel : ObservableObject
                 return;
             }
 
+            IReadOnlyList<SourceSnippet> sourceContext = _repoContext is not null
+                ? await SourceSnippetProvider.BuildAsync(_findingsDocument, _repoContext, CancellationToken.None)
+                : [];
+
             var payloadJson = Redactor.Redact(JsonSerializer.Serialize(
                 _findingsDocument,
-                new JsonSerializerOptions { WriteIndented = true }));
+                new JsonSerializerOptions { WriteIndented = true }))
+                + SourceSnippetProvider.FormatForPrompt(sourceContext);
 
             // PLAN.md §2.5: show the exact (redacted) payload before the first send this session.
             if (!_payloadReviewedThisSession)
@@ -189,7 +229,7 @@ public partial class MainPageViewModel : ObservableObject
                 _payloadReviewedThisSession = true;
             }
 
-            var narrative = await _narrativeProvider.SummarizeAsync(_findingsDocument, CancellationToken.None);
+            var narrative = await _narrativeProvider.SummarizeAsync(_findingsDocument, sourceContext, CancellationToken.None);
 
             var sb = new StringBuilder();
             sb.AppendLine(narrative.Summary);
@@ -271,6 +311,8 @@ public partial class MainPageViewModel : ObservableObject
         HasDeadlockGraph = false;
         SelectedTabIndex = 0;
         _lastThreads = [];
+        _repoContext = WorkspaceService.TryLoadRepoContext(path);
+        RepoLocalPath = _repoContext?.LocalPath;
 
         if (_session is not null)
         {

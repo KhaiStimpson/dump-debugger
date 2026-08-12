@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DumpDebugger.Core.Findings;
+using DumpDebugger.Core.Source;
 
 namespace DumpDebugger_App.Services;
 
@@ -12,6 +13,7 @@ namespace DumpDebugger_App.Services;
 public static class WorkspaceService
 {
     private const string FindingsFileName = "findings.json";
+    private const string RepoContextFileName = "repo.json";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -46,5 +48,34 @@ public static class WorkspaceService
         Directory.CreateDirectory(dir);
         var json = JsonSerializer.Serialize(document, JsonOptions);
         File.WriteAllText(Path.Combine(dir, FindingsFileName), json);
+    }
+
+    /// <summary>The repo association a user made for this dump (see MainPageViewModel's
+    /// AssociateRepoCommand), persisted so it survives reopening the workspace.</summary>
+    public static RepoContext? TryLoadRepoContext(string dumpPath)
+    {
+        var path = Path.Combine(GetWorkspaceDirectory(dumpPath), RepoContextFileName);
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<RepoContext>(json, JsonOptions);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static void SaveRepoContext(string dumpPath, RepoContext context)
+    {
+        var dir = GetWorkspaceDirectory(dumpPath);
+        Directory.CreateDirectory(dir);
+        var json = JsonSerializer.Serialize(context, JsonOptions);
+        File.WriteAllText(Path.Combine(dir, RepoContextFileName), json);
     }
 }

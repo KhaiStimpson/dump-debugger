@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DumpDebugger.Core\DumpDebugger.Core.csproj" />
     <ProjectReference Include="..\DumpDebugger.Analysis\DumpDebugger.Analysis.csproj" />
+    <ProjectReference Include="..\DumpDebugger.Llm\DumpDebugger.Llm.csproj" />
   </ItemGroup>
 
 </Project>

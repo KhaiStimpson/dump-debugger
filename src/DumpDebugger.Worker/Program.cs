@@ -169,8 +169,10 @@ static async Task HandleGetFindingsAsync(NamedPipeServerStream pipe, IpcEnvelope
     var lockFindings = LockAnalyzer.DetectDeadlocks(syncBlocks);
     var typeStats = MemoryAnalyzer.GetTypeStats(runtime);
     var memoryFindings = MemoryAnalyzer.DetectTypeDominance(typeStats);
+    var threads = ThreadEnumerator.Enumerate(runtime);
+    var hotPathFindings = HotPathAnalyzer.Analyze(threads);
 
-    var ranked = lockFindings.Concat(memoryFindings)
+    var ranked = lockFindings.Concat(memoryFindings).Concat(hotPathFindings)
         .OrderByDescending(f => f.Severity)
         .ThenByDescending(f => f.Confidence)
         .ToList();
