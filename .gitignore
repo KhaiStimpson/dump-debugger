@@ -1,6 +1,43 @@
+# Build output
 bin/
 obj/
-*.user
+out/
+AppX/
+AppPackages/
+BundleArtifacts/
+Generated Files/
+
+# Visual Studio / Rider / VS Code
 .vs/
+.vscode/
+.idea/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+
+# NuGet
+*.nupkg
+**/packages/*
+!**/packages/build/
+.nuget/
+
+# MSIX / packaging
+*.msix
+*.msixbundle
+*.appx
+*.appxbundle
+*.cer
+*.pfx
+
+# Test results
+TestResults/
+*.trx
+
+# Dump Debugger fixtures — generated locally by DumpDebugger.DumpGen, not committed
 fixtures/*.dmp
 fixtures/*.workspace/
+
+# OS
+Thumbs.db
+.DS_Store
