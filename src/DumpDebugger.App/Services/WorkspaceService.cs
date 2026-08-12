@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DumpDebugger.Core.Findings;
+using DumpDebugger.Core.Source;
 
 namespace DumpDebugger_App.Services;
 
@@ -12,6 +13,7 @@ namespace DumpDebugger_App.Services;
 public static class WorkspaceService
 {
     private const string FindingsFileName = "findings.json";
+    private const string RepoContextFileName = "repo.json";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -46,5 +48,36 @@ public static class WorkspaceService
         Directory.CreateDirectory(dir);
         var json = JsonSerializer.Serialize(document, JsonOptions);
         File.WriteAllText(Path.Combine(dir, FindingsFileName), json);
+    }
+
+    /// <summary>The repo associations made for this dump (see MainPageViewModel's
+    /// AssociateRepoCommand), persisted so they survive reopening the workspace. A workspace can
+    /// have more than one — a dump commonly spans modules from different repos (the app plus an
+    /// internal NuGet package) — matched per SourceLocation by RepoContextMatcher.</summary>
+    public static IReadOnlyList<RepoContext> LoadRepoContexts(string dumpPath)
+    {
+        var path = Path.Combine(GetWorkspaceDirectory(dumpPath), RepoContextFileName);
+        if (!File.Exists(path))
+        {
+            return [];
+        }
+
+        try
+        {
+            var json = File.ReadAllText(path);
+            return JsonSerializer.Deserialize<IReadOnlyList<RepoContext>>(json, JsonOptions) ?? [];
+        }
+        catch
+        {
+            return []; // Corrupt, or an older single-object repo.json from before multi-repo support.
+        }
+    }
+
+    public static void SaveRepoContexts(string dumpPath, IReadOnlyList<RepoContext> contexts)
+    {
+        var dir = GetWorkspaceDirectory(dumpPath);
+        Directory.CreateDirectory(dir);
+        var json = JsonSerializer.Serialize(contexts, JsonOptions);
+        File.WriteAllText(Path.Combine(dir, RepoContextFileName), json);
     }
 }

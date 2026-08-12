@@ -40,7 +40,10 @@ public static class ReportWriter
                 sb.AppendLine("**Evidence:**");
                 foreach (var evidence in finding.Evidence)
                 {
-                    sb.AppendLine($"- `{evidence.Kind}` {evidence.Ref}: {evidence.Detail}");
+                    var link = evidence.Location is { } loc
+                        ? $" ([{loc.RelativePath}:{loc.Line}]({loc.ToGitHubBlobUrl()}))"
+                        : "";
+                    sb.AppendLine($"- `{evidence.Kind}` {evidence.Ref}: {evidence.Detail}{link}");
                 }
 
                 sb.AppendLine();

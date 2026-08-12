@@ -10,5 +10,8 @@ public interface INarrativeProvider
 
     string Description { get; } // "Claude Code CLI (subscription)" | "Anthropic API key" | "Disabled"
 
-    Task<Narrative> SummarizeAsync(FindingsDocument findings, CancellationToken ct);
+    /// <param name="sourceContext">Code snippets read from the associated repo at each finding's
+    /// build commit (see SourceSnippetProvider) — empty when no repo is associated, or when
+    /// nothing in the findings resolved a source location. Never raw memory, same as findings.</param>
+    Task<Narrative> SummarizeAsync(FindingsDocument findings, IReadOnlyList<SourceSnippet> sourceContext, CancellationToken ct);
 }

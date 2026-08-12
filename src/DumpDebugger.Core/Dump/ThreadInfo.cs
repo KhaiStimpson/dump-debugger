@@ -1,8 +1,11 @@
+using DumpDebugger.Core.Source;
+
 namespace DumpDebugger.Core.Dump;
 
 public sealed record StackFrameInfo(
     string MethodName,
-    string? TypeName);
+    string? TypeName,
+    SourceLocation? Location = null);
 
 public sealed record ThreadInfo(
     int OSThreadId,

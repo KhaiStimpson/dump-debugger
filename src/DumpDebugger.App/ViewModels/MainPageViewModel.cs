@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using DumpDebugger.Core.Dump;
 using DumpDebugger.Core.Findings;
 using DumpDebugger.Core.Ipc;
+using DumpDebugger.Core.Source;
 using DumpDebugger.Llm;
 using DumpDebugger_App.Services;
 using Microsoft.UI.Xaml.Controls;
@@ -74,10 +75,14 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     public partial int LargeObjectCount { get; set; }
 
+    [ObservableProperty]
+    public partial string? AssociatedReposSummary { get; set; }
+
     private FindingsDocument? _findingsDocument;
     private INarrativeProvider? _narrativeProvider;
     private bool _payloadReviewedThisSession;
     private IReadOnlyList<ThreadInfo> _lastThreads = [];
+    private List<RepoContext> _repoContexts = [];
 
     public ObservableCollection<ThreadGroupRow> ThreadGroups { get; } = [];
     public ObservableCollection<TypeStatRow> TypeStats { get; } = [];
@@ -96,7 +101,7 @@ public partial class MainPageViewModel : ObservableObject
 
     private void ResortStackGroups()
     {
-        var rows = ThreadGroupRow.FromThreads(_lastThreads);
+        var rows = ThreadGroupRow.FromThreads(_lastThreads, OpenSourceLocationCommand, ShowBlameCommand);
         var ordered = SortStackGroupsByLockCount
             ? rows.OrderByDescending(r => r.MaxLockCount).ThenByDescending(r => r.Count)
             : rows.OrderByDescending(r => r.Count);
@@ -125,6 +130,132 @@ public partial class MainPageViewModel : ObservableObject
         }
 
         await LoadDumpAsync(file.Path);
+    }
+
+    /// <summary>Associates a local clone of one of the dump's source repos with this workspace.
+    /// Adds to the set rather than replacing it — a dump commonly spans modules from more than
+    /// one repo (the app plus an internal NuGet package it depends on), and each is matched to
+    /// the right SourceLocation by RepoContextMatcher. Not required for stack frames to link to
+    /// source in the first place — Source Link resolves that automatically from the dump's own
+    /// PDBs (see DumpDebugger.Analysis.SourceLink) — this is only needed for features that need
+    /// actual file content or history: source snippets and blame, and preferring a local editor
+    /// over the browser when opening a frame.</summary>
+    [RelayCommand]
+    private async Task AssociateRepoAsync()
+    {
+        var dumpPath = DumpPath;
+        if (dumpPath is null)
+        {
+            return;
+        }
+
+        var picker = new Windows.Storage.Pickers.FolderPicker();
+        InitializeWithWindow.Initialize(picker, App.WindowHandle);
+        picker.FileTypeFilter.Add("*");
+
+        var folder = await picker.PickSingleFolderAsync();
+        if (folder is null)
+        {
+            return;
+        }
+
+        var originUrl = await GitRepoReader.TryGetOriginUrlAsync(folder.Path, CancellationToken.None);
+        var repo = new RepoContext(folder.Path, originUrl);
+
+        _repoContexts.RemoveAll(r => string.Equals(r.LocalPath, repo.LocalPath, StringComparison.OrdinalIgnoreCase));
+        _repoContexts.Add(repo);
+        UpdateAssociatedReposSummary();
+        WorkspaceService.SaveRepoContexts(dumpPath, _repoContexts);
+
+        StatusText = originUrl is not null
+            ? $"Associated repository: {folder.Path} ({originUrl})"
+            : $"Associated repository: {folder.Path} — couldn't detect its remote URL, so it'll only " +
+              "be used while it's the only repo associated with this workspace.";
+    }
+
+    private void UpdateAssociatedReposSummary() =>
+        AssociatedReposSummary = _repoContexts.Count == 0
+            ? null
+            : string.Join(", ", _repoContexts.Select(r => Path.GetFileName(r.LocalPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))));
+
+    /// <summary>"Clickable frames": opens a resolved location in a local editor (if a matching
+    /// repo is associated and VS Code is on PATH) or the browser at the exact commit (always
+    /// available — see SourceLocation.ToGitHubBlobUrl). Bound directly on each FrameRow/EvidenceRow
+    /// rather than reached via the page's ViewModel, so item templates stay plain x:Bind.</summary>
+    [RelayCommand]
+    private void OpenSourceLocation(SourceLocation? location)
+    {
+        if (location is null)
+        {
+            return;
+        }
+
+        SourceLocationLauncher.Open(location, RepoContextMatcher.Find(_repoContexts, location));
+    }
+
+    /// <summary>Blames the resolved line as of its build commit and shows who last touched it —
+    /// needs a matching repo association (blame reads history, not just one file's content at a
+    /// commit).</summary>
+    [RelayCommand]
+    private async Task ShowBlameAsync(SourceLocation? location)
+    {
+        if (location is null)
+        {
+            return;
+        }
+
+        string text;
+        var repo = RepoContextMatcher.Find(_repoContexts, location);
+        if (repo is null)
+        {
+            text = _repoContexts.Count == 0
+                ? "No repository associated. Use \"Associate Repo…\" first so blame can be read from your local clone."
+                : $"None of the associated repositories match {location.RepoUrl}. Associate the repo this " +
+                  "location came from with \"Associate Repo…\".";
+        }
+        else
+        {
+            var blame = await GitRepoReader.TryGetBlameAsync(
+                repo.LocalPath, location.CommitSha, location.RelativePath, location.Line, CancellationToken.None);
+            text = blame is null
+                ? $"No blame available for {location.RelativePath}:{location.Line}.\n\n" +
+                  "This commit may not be local yet (try fetching in the associated repo), or the path may have moved since."
+                : $"{location.RelativePath}:{location.Line}\n\n" +
+                  $"Last changed by {blame.Author}\n" +
+                  $"{blame.When:yyyy-MM-dd HH:mm} ({DaysAgoText(blame.When)})\n" +
+                  $"Commit {blame.CommitSha[..Math.Min(8, blame.CommitSha.Length)]}: {blame.Summary}";
+        }
+
+        await ShowBlameDialogAsync(text);
+    }
+
+    private static string DaysAgoText(DateTimeOffset when)
+    {
+        var days = (int)(DateTimeOffset.UtcNow - when).TotalDays;
+        return days switch
+        {
+            <= 0 => "today",
+            1 => "1 day ago",
+            _ => $"{days} days ago",
+        };
+    }
+
+    private static async Task ShowBlameDialogAsync(string text)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = "Blame",
+            Content = new TextBlock
+            {
+                Text = text,
+                FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Cascadia Mono"),
+                TextWrapping = Microsoft.UI.Xaml.TextWrapping.Wrap,
+            },
+            CloseButtonText = "Close",
+            XamlRoot = App.Window.Content.XamlRoot,
+        };
+
+        await dialog.ShowAsync();
     }
 
     [RelayCommand]
@@ -173,9 +304,14 @@ public partial class MainPageViewModel : ObservableObject
                 return;
             }
 
+            IReadOnlyList<SourceSnippet> sourceContext = _repoContexts.Count > 0
+                ? await SourceSnippetProvider.BuildAsync(_findingsDocument, _repoContexts, CancellationToken.None)
+                : [];
+
             var payloadJson = Redactor.Redact(JsonSerializer.Serialize(
                 _findingsDocument,
-                new JsonSerializerOptions { WriteIndented = true }));
+                new JsonSerializerOptions { WriteIndented = true }))
+                + SourceSnippetProvider.FormatForPrompt(sourceContext);
 
             // PLAN.md §2.5: show the exact (redacted) payload before the first send this session.
             if (!_payloadReviewedThisSession)
@@ -189,7 +325,7 @@ public partial class MainPageViewModel : ObservableObject
                 _payloadReviewedThisSession = true;
             }
 
-            var narrative = await _narrativeProvider.SummarizeAsync(_findingsDocument, CancellationToken.None);
+            var narrative = await _narrativeProvider.SummarizeAsync(_findingsDocument, sourceContext, CancellationToken.None);
 
             var sb = new StringBuilder();
             sb.AppendLine(narrative.Summary);
@@ -271,6 +407,8 @@ public partial class MainPageViewModel : ObservableObject
         HasDeadlockGraph = false;
         SelectedTabIndex = 0;
         _lastThreads = [];
+        _repoContexts = WorkspaceService.LoadRepoContexts(path).ToList();
+        UpdateAssociatedReposSummary();
 
         if (_session is not null)
         {
@@ -291,7 +429,7 @@ public partial class MainPageViewModel : ObservableObject
             StatusText = "Enumerating threads...";
             var threads = await session.GetThreadsAsync();
             _lastThreads = threads;
-            foreach (var row in ThreadGroupRow.FromThreads(threads))
+            foreach (var row in ThreadGroupRow.FromThreads(threads, OpenSourceLocationCommand, ShowBlameCommand))
             {
                 ThreadGroups.Add(row);
             }
@@ -327,7 +465,7 @@ public partial class MainPageViewModel : ObservableObject
             _findingsDocument = await session.GetFindingsAsync();
             foreach (var finding in _findingsDocument.Findings)
             {
-                Findings.Add(FindingRow.From(finding));
+                Findings.Add(FindingRow.From(finding, OpenSourceLocationCommand, ShowBlameCommand));
             }
 
             HasFindings = Findings.Count > 0;

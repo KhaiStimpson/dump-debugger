@@ -15,27 +15,24 @@ namespace DumpDebugger.Analysis;
 /// </summary>
 public static class OperationContextAnalyzer
 {
-    private static readonly string[] FrameworkNamespacePrefixes =
-        ["System.", "Microsoft.", "netstandard", "Internal.", "<"];
-
     public static OperationContextInfo? Infer(ClrThread thread, ThreadInfo threadInfo)
     {
+        // Computed once and reused for both branches below: it's also the best available
+        // source-code location for an HttpContext-described thread, since "which HttpContext
+        // field held the request" isn't itself a single line of source worth linking to.
+        var appFrame = threadInfo.Frames.FirstOrDefault(f =>
+            f.TypeName is not null && !FrameworkFrames.IsFrameworkType(f.TypeName));
+
         var httpDescription = TryDescribeHttpContext(thread);
         if (httpDescription is not null)
         {
-            return new OperationContextInfo(threadInfo.OSThreadId, "HttpContext", httpDescription);
+            return new OperationContextInfo(threadInfo.OSThreadId, "HttpContext", httpDescription, appFrame?.Location);
         }
 
-        var frame = threadInfo.Frames.FirstOrDefault(f =>
-            f.TypeName is not null && !IsFrameworkType(f.TypeName));
-
-        return frame is null
+        return appFrame is null
             ? null
-            : new OperationContextInfo(threadInfo.OSThreadId, "GenericFrame", $"{frame.TypeName}.{frame.MethodName}");
+            : new OperationContextInfo(threadInfo.OSThreadId, "GenericFrame", $"{appFrame.TypeName}.{appFrame.MethodName}", appFrame.Location);
     }
-
-    private static bool IsFrameworkType(string typeName) =>
-        FrameworkNamespacePrefixes.Any(prefix => typeName.StartsWith(prefix, StringComparison.Ordinal));
 
     private static string? TryDescribeHttpContext(ClrThread thread)
     {
