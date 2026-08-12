@@ -15,6 +15,8 @@ public enum IpcMessageKind
     GetThreadsResponse,
     GetLocksRequest,
     GetLocksResponse,
+    GetMemoryRequest,
+    GetMemoryResponse,
     ProgressNotification,
     CancelRequest,
     ErrorResponse,
@@ -39,6 +41,12 @@ public sealed record GetLocksRequest;
 public sealed record GetLocksResponse(
     IReadOnlyList<SyncBlockInfo> SyncBlocks,
     IReadOnlyList<Findings.Finding> Findings);
+
+public sealed record GetMemoryRequest;
+
+public sealed record GetMemoryResponse(
+    IReadOnlyList<TypeStat> TypeStats,
+    IReadOnlyList<LargeObjectInfo> LargeObjects);
 
 public sealed record ProgressNotification(string Stage, double FractionComplete, string? Detail);
 

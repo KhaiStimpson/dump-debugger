@@ -42,6 +42,10 @@ try
                 case IpcMessageKind.GetLocksRequest:
                     await HandleGetLocksAsync(pipe, envelope, loaded);
                     break;
+
+                case IpcMessageKind.GetMemoryRequest:
+                    await HandleGetMemoryAsync(pipe, envelope, loaded);
+                    break;
             }
         }
         catch (Exception ex)
@@ -120,4 +124,25 @@ static async Task HandleGetLocksAsync(NamedPipeServerStream pipe, IpcEnvelope en
         IpcMessageKind.GetLocksResponse,
         envelope.RequestId,
         IpcFrame.SerializePayload(new GetLocksResponse(syncBlocks, findings))));
+}
+
+static async Task HandleGetMemoryAsync(NamedPipeServerStream pipe, IpcEnvelope envelope, LoadedDump? loaded)
+{
+    if (loaded is null || loaded.Runtimes.Count == 0)
+    {
+        await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
+            IpcMessageKind.GetMemoryResponse,
+            envelope.RequestId,
+            IpcFrame.SerializePayload(new GetMemoryResponse([], []))));
+        return;
+    }
+
+    var runtime = loaded.Runtimes[0];
+    var typeStats = MemoryAnalyzer.GetTypeStats(runtime);
+    var largeObjects = MemoryAnalyzer.GetLargeObjects(runtime);
+
+    await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
+        IpcMessageKind.GetMemoryResponse,
+        envelope.RequestId,
+        IpcFrame.SerializePayload(new GetMemoryResponse(typeStats, largeObjects))));
 }

@@ -38,6 +38,8 @@ public partial class MainPageViewModel : ObservableObject
     public partial string LocksSummary { get; set; } = string.Empty;
 
     public ObservableCollection<ThreadGroupRow> ThreadGroups { get; } = [];
+    public ObservableCollection<TypeStatRow> TypeStats { get; } = [];
+    public ObservableCollection<LargeObjectRow> LargeObjects { get; } = [];
 
     [RelayCommand]
     private async Task OpenDumpAsync()
@@ -65,6 +67,8 @@ public partial class MainPageViewModel : ObservableObject
         MetadataSummary = null;
         LocksSummary = string.Empty;
         ThreadGroups.Clear();
+        TypeStats.Clear();
+        LargeObjects.Clear();
 
         if (_session is not null)
         {
@@ -96,7 +100,21 @@ public partial class MainPageViewModel : ObservableObject
             LocksSummary = FormatLocks(locks);
 
             var deadlockNote = locks.Findings.Count > 0 ? $" {locks.Findings.Count} deadlock finding(s)!" : string.Empty;
-            StatusText = $"Dump loaded. {threads.Count} threads in {ThreadGroups.Count} stack group(s)." + deadlockNote;
+
+            StatusText = "Walking heap...";
+            var memory = await session.GetMemoryAsync();
+            foreach (var row in memory.TypeStats.Take(50))
+            {
+                TypeStats.Add(TypeStatRow.From(row));
+            }
+
+            foreach (var row in memory.LargeObjects.Take(50))
+            {
+                LargeObjects.Add(LargeObjectRow.From(row));
+            }
+
+            StatusText = $"Dump loaded. {threads.Count} threads in {ThreadGroups.Count} stack group(s), " +
+                          $"{memory.TypeStats.Count} heap types, {memory.LargeObjects.Count} large objects." + deadlockNote;
         }
         catch (Exception ex)
         {

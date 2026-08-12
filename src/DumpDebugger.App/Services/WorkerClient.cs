@@ -112,6 +112,32 @@ public sealed class WorkerClient : IAsyncDisposable
         }
     }
 
+    public async Task<GetMemoryResponse> GetMemoryAsync(CancellationToken ct = default)
+    {
+        var requestId = Guid.NewGuid().ToString("N");
+        await IpcFrame.WriteAsync(
+            _pipe,
+            new IpcEnvelope(IpcMessageKind.GetMemoryRequest, requestId, IpcFrame.SerializePayload(new GetMemoryRequest())),
+            ct).ConfigureAwait(false);
+
+        while (true)
+        {
+            var envelope = await IpcFrame.ReadAsync(_pipe, ct).ConfigureAwait(false)
+                ?? throw new IOException("Worker closed the pipe before responding.");
+
+            switch (envelope.Kind)
+            {
+                case IpcMessageKind.GetMemoryResponse:
+                    var response = IpcFrame.DeserializePayload<GetMemoryResponse>(envelope);
+                    return response ?? new GetMemoryResponse([], []);
+
+                case IpcMessageKind.ErrorResponse:
+                    var error = IpcFrame.DeserializePayload<ErrorResponse>(envelope);
+                    throw new InvalidOperationException(error?.Message ?? "Worker reported an unknown error.");
+            }
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         await _pipe.DisposeAsync().ConfigureAwait(false);
