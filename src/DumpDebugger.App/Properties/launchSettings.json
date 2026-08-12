@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "DumpDebugger.App (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "DumpDebugger.App (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

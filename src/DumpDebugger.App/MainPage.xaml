@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="DumpDebugger_App.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:DumpDebugger_App"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Padding="24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Dump Debugger" Style="{StaticResource TitleTextBlockStyle}" />
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12">
+            <Button Content="Open Dump…"
+                    Command="{x:Bind ViewModel.OpenDumpCommand}"
+                    IsEnabled="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource InverseBoolConverter}}" />
+            <ProgressRing IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" Width="24" Height="24" />
+        </StackPanel>
+
+        <TextBlock Grid.Row="2"
+                    Text="{x:Bind ViewModel.StatusText, Mode=OneWay}"
+                    Foreground="{x:Bind ViewModel.HasError, Mode=OneWay, Converter={StaticResource ErrorBrushConverter}}"
+                    TextWrapping="Wrap" />
+
+        <ScrollViewer Grid.Row="3">
+            <TextBlock Text="{x:Bind ViewModel.MetadataSummary, Mode=OneWay}"
+                        FontFamily="Cascadia Mono"
+                        TextWrapping="Wrap" />
+        </ScrollViewer>
+    </Grid>
+</Page>

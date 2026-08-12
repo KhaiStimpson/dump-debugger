@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DumpDebugger.Analysis/DumpDebugger.Analysis.csproj" />
+    <Project Path="src/DumpDebugger.App/DumpDebugger.App.csproj" />
+    <Project Path="src/DumpDebugger.Core/DumpDebugger.Core.csproj" />
+    <Project Path="src/DumpDebugger.DumpGen/DumpDebugger.DumpGen.csproj" />
+    <Project Path="src/DumpDebugger.Llm/DumpDebugger.Llm.csproj" />
+    <Project Path="src/DumpDebugger.Tests/DumpDebugger.Tests.csproj" />
+    <Project Path="src/DumpDebugger.Worker/DumpDebugger.Worker.csproj" />
+  </Folder>
+</Solution>
