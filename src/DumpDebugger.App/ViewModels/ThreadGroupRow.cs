@@ -16,7 +16,8 @@ public sealed record ThreadGroupRow(
     bool IsGc,
     bool IsFinalizer,
     int MaxLockCount,
-    string? ExceptionType)
+    string? ExceptionType,
+    string? OperationContext)
 {
     public static IReadOnlyList<ThreadGroupRow> FromThreads(IReadOnlyList<ThreadInfo> threads) =>
         threads
@@ -40,7 +41,10 @@ public sealed record ThreadGroupRow(
                     g.Any(t => t.IsGc),
                     g.Any(t => t.IsFinalizer),
                     g.Max(t => t.LockCount),
-                    g.Select(t => t.CurrentExceptionType).FirstOrDefault(e => e is not null));
+                    g.Select(t => t.CurrentExceptionType).FirstOrDefault(e => e is not null),
+                    first.OperationContext is null
+                        ? null
+                        : $"[{first.OperationContext.Source}] {first.OperationContext.Description}");
             })
             .OrderByDescending(r => r.Count)
             .ToList();

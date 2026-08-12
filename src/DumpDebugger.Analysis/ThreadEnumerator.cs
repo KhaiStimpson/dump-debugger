@@ -33,7 +33,7 @@ public static class ThreadEnumerator
                 }
             }
 
-            threads.Add(new ThreadInfo(
+            var threadInfo = new ThreadInfo(
                 OSThreadId: (int)clrThread.OSThreadId,
                 ManagedThreadId: clrThread.ManagedThreadId,
                 IsAlive: clrThread.IsAlive,
@@ -42,7 +42,10 @@ public static class ThreadEnumerator
                 LockCount: (int)clrThread.LockCount,
                 CurrentExceptionType: clrThread.CurrentException?.Type?.Name,
                 Frames: frames,
-                StackGroupHash: HashFrames(frames)));
+                StackGroupHash: HashFrames(frames),
+                OperationContext: null);
+
+            threads.Add(threadInfo with { OperationContext = OperationContextAnalyzer.Infer(clrThread, threadInfo) });
         }
 
         return threads;

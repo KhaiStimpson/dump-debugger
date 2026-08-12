@@ -15,6 +15,7 @@
             <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter" />
             <converters:ErrorBrushConverter x:Key="ErrorBrushConverter" />
             <converters:ThreadIdsConverter x:Key="ThreadIdsConverter" />
+            <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

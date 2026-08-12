@@ -13,4 +13,5 @@ public sealed record ThreadInfo(
     int LockCount,
     string? CurrentExceptionType,
     IReadOnlyList<StackFrameInfo> Frames,
-    string StackGroupHash);
+    string StackGroupHash,
+    OperationContextInfo? OperationContext);

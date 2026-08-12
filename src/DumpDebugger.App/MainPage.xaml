@@ -107,6 +107,9 @@
                             <TextBlock Text="Stack (representative thread)" Style="{StaticResource SubtitleTextBlockStyle}" />
                             <TextBlock Text="{x:Bind ViewModel.SelectedThreadGroup.OSThreadIds, Mode=OneWay, Converter={StaticResource ThreadIdsConverter}}"
                                        FontFamily="Cascadia Mono" TextWrapping="Wrap" Opacity="0.7" />
+                            <TextBlock Text="{x:Bind ViewModel.SelectedThreadGroup.OperationContext, Mode=OneWay}"
+                                       FontWeight="SemiBold" TextWrapping="Wrap"
+                                       Visibility="{x:Bind ViewModel.SelectedThreadGroup.OperationContext, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}" />
                             <TextBlock Text="{x:Bind ViewModel.SelectedThreadGroup.FullStack, Mode=OneWay}"
                                        FontFamily="Cascadia Mono" TextWrapping="Wrap" />
                         </StackPanel>
