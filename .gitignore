@@ -3,3 +3,4 @@ obj/
 *.user
 .vs/
 fixtures/*.dmp
+fixtures/*.workspace/

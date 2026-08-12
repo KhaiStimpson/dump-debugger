@@ -226,6 +226,7 @@ public partial class MainPageViewModel : ObservableObject
             _session = null;
         }
 
+        var hadWorkspace = WorkspaceService.TryLoadCachedFindings(path) is not null;
         var progress = new Progress<ProgressNotification>(note =>
             StatusText = $"{note.Stage}... ({note.FractionComplete:P0}) {note.Detail}");
 
@@ -272,8 +273,14 @@ public partial class MainPageViewModel : ObservableObject
 
             HasFindings = Findings.Count > 0;
 
+            // PLAN.md §3.1: persist findings to a workspace sidecar folder so a future reopen
+            // of this dump has them available without recomputation.
+            WorkspaceService.SaveFindings(path, _findingsDocument);
+
+            var workspaceNote = hadWorkspace ? " (workspace reused)" : " (new workspace created)";
             StatusText = $"Dump loaded. {threads.Count} threads in {ThreadGroups.Count} stack group(s), " +
-                          $"{memory.TypeStats.Count} heap types, {memory.LargeObjects.Count} large objects." + deadlockNote;
+                          $"{memory.TypeStats.Count} heap types, {memory.LargeObjects.Count} large objects." +
+                          deadlockNote + workspaceNote;
         }
         catch (Exception ex)
         {
