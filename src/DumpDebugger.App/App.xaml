@@ -10,12 +10,62 @@
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
                 <!-- Other merged dictionaries here -->
+                <ResourceDictionary>
+                    <ResourceDictionary.ThemeDictionaries>
+                        <!-- Workbench palette (Variant A mockup): teal accent, semantic severity colors. -->
+                        <ResourceDictionary x:Key="Light">
+                            <Color x:Key="WorkbenchAccentColor">#0E7C86</Color>
+                            <Color x:Key="WorkbenchAccentSoftColor">#E3F1F2</Color>
+                            <Color x:Key="WorkbenchCriticalColor">#C4382E</Color>
+                            <Color x:Key="WorkbenchCriticalSoftColor">#FBE9E7</Color>
+                            <Color x:Key="WorkbenchWarningColor">#B8791A</Color>
+                            <Color x:Key="WorkbenchWarningSoftColor">#FBF1DE</Color>
+                            <Color x:Key="WorkbenchInfoColor">#3B6FA0</Color>
+                            <Color x:Key="WorkbenchInfoSoftColor">#E9F0F8</Color>
+                            <Color x:Key="WorkbenchLineColor">#DEE4E8</Color>
+                            <Color x:Key="WorkbenchSurface2Color">#F8FAFB</Color>
+                            <Color x:Key="WorkbenchCanvasColor">#F2F4F6</Color>
+                        </ResourceDictionary>
+                        <ResourceDictionary x:Key="Dark">
+                            <Color x:Key="WorkbenchAccentColor">#3BC7D1</Color>
+                            <Color x:Key="WorkbenchAccentSoftColor">#17333A</Color>
+                            <Color x:Key="WorkbenchCriticalColor">#E2685D</Color>
+                            <Color x:Key="WorkbenchCriticalSoftColor">#35201F</Color>
+                            <Color x:Key="WorkbenchWarningColor">#E0A94A</Color>
+                            <Color x:Key="WorkbenchWarningSoftColor">#362A16</Color>
+                            <Color x:Key="WorkbenchInfoColor">#6FA3D6</Color>
+                            <Color x:Key="WorkbenchInfoSoftColor">#1C2733</Color>
+                            <Color x:Key="WorkbenchLineColor">#2A333B</Color>
+                            <Color x:Key="WorkbenchSurface2Color">#141A20</Color>
+                            <Color x:Key="WorkbenchCanvasColor">#10151A</Color>
+                        </ResourceDictionary>
+                    </ResourceDictionary.ThemeDictionaries>
+                </ResourceDictionary>
             </ResourceDictionary.MergedDictionaries>
+
+            <SolidColorBrush x:Key="WorkbenchAccentBrush" Color="{ThemeResource WorkbenchAccentColor}" />
+            <SolidColorBrush x:Key="WorkbenchAccentSoftBrush" Color="{ThemeResource WorkbenchAccentSoftColor}" />
+            <SolidColorBrush x:Key="WorkbenchCriticalBrush" Color="{ThemeResource WorkbenchCriticalColor}" />
+            <SolidColorBrush x:Key="WorkbenchCriticalSoftBrush" Color="{ThemeResource WorkbenchCriticalSoftColor}" />
+            <SolidColorBrush x:Key="WorkbenchWarningBrush" Color="{ThemeResource WorkbenchWarningColor}" />
+            <SolidColorBrush x:Key="WorkbenchWarningSoftBrush" Color="{ThemeResource WorkbenchWarningSoftColor}" />
+            <SolidColorBrush x:Key="WorkbenchInfoBrush" Color="{ThemeResource WorkbenchInfoColor}" />
+            <SolidColorBrush x:Key="WorkbenchInfoSoftBrush" Color="{ThemeResource WorkbenchInfoSoftColor}" />
+            <SolidColorBrush x:Key="WorkbenchLineBrush" Color="{ThemeResource WorkbenchLineColor}" />
+            <SolidColorBrush x:Key="WorkbenchSurface2Brush" Color="{ThemeResource WorkbenchSurface2Color}" />
+            <SolidColorBrush x:Key="WorkbenchCanvasBrush" Color="{ThemeResource WorkbenchCanvasColor}" />
+
             <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
             <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter" />
             <converters:ErrorBrushConverter x:Key="ErrorBrushConverter" />
             <converters:ThreadIdsConverter x:Key="ThreadIdsConverter" />
             <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+            <converters:SeverityToBrushConverter x:Key="SeverityToBrushConverter" />
+            <converters:SeverityToSoftBrushConverter x:Key="SeverityToSoftBrushConverter" />
+            <converters:TabIndexToVisibilityConverter x:Key="TabIndexToVisibilityConverter" />
+            <converters:TabIndexToBrushConverter x:Key="TabIndexToBrushConverter" />
+            <converters:TabIndexToForegroundConverter x:Key="TabIndexToForegroundConverter" />
+            <converters:TabIndexToWeightConverter x:Key="TabIndexToWeightConverter" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

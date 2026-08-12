@@ -53,14 +53,62 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     public partial bool HasNarrative { get; set; }
 
+    [ObservableProperty]
+    public partial int SelectedTabIndex { get; set; }
+
+    [ObservableProperty]
+    public partial bool SortStackGroupsByLockCount { get; set; }
+
+    [ObservableProperty]
+    public partial DeadlockGraphViewModel? DeadlockGraph { get; set; }
+
+    [ObservableProperty]
+    public partial bool HasDeadlockGraph { get; set; }
+
+    [ObservableProperty]
+    public partial int ThreadGroupCount { get; set; }
+
+    [ObservableProperty]
+    public partial int TypeStatCount { get; set; }
+
+    [ObservableProperty]
+    public partial int LargeObjectCount { get; set; }
+
     private FindingsDocument? _findingsDocument;
     private INarrativeProvider? _narrativeProvider;
     private bool _payloadReviewedThisSession;
+    private IReadOnlyList<ThreadInfo> _lastThreads = [];
 
     public ObservableCollection<ThreadGroupRow> ThreadGroups { get; } = [];
     public ObservableCollection<TypeStatRow> TypeStats { get; } = [];
     public ObservableCollection<LargeObjectRow> LargeObjects { get; } = [];
     public ObservableCollection<FindingRow> Findings { get; } = [];
+
+    [RelayCommand]
+    private void SelectTab(string index) => SelectedTabIndex = int.Parse(index);
+
+    [RelayCommand]
+    private void SetStackGroupSort(string byLockCount)
+    {
+        SortStackGroupsByLockCount = byLockCount == "true";
+        ResortStackGroups();
+    }
+
+    private void ResortStackGroups()
+    {
+        var rows = ThreadGroupRow.FromThreads(_lastThreads);
+        var ordered = SortStackGroupsByLockCount
+            ? rows.OrderByDescending(r => r.MaxLockCount).ThenByDescending(r => r.Count)
+            : rows.OrderByDescending(r => r.Count);
+
+        ThreadGroups.Clear();
+        foreach (var row in ordered)
+        {
+            ThreadGroups.Add(row);
+        }
+
+        SelectedThreadGroup = ThreadGroups.FirstOrDefault();
+    }
 
     [RelayCommand]
     private async Task OpenDumpAsync()
@@ -219,6 +267,10 @@ public partial class MainPageViewModel : ObservableObject
         _findingsDocument = null;
         NarrativeText = null;
         HasNarrative = false;
+        DeadlockGraph = null;
+        HasDeadlockGraph = false;
+        SelectedTabIndex = 0;
+        _lastThreads = [];
 
         if (_session is not null)
         {
@@ -238,6 +290,7 @@ public partial class MainPageViewModel : ObservableObject
 
             StatusText = "Enumerating threads...";
             var threads = await session.GetThreadsAsync();
+            _lastThreads = threads;
             foreach (var row in ThreadGroupRow.FromThreads(threads))
             {
                 ThreadGroups.Add(row);
@@ -249,6 +302,8 @@ public partial class MainPageViewModel : ObservableObject
             StatusText = "Enumerating locks...";
             var locks = await session.GetLocksAsync();
             LocksSummary = FormatLocks(locks);
+            DeadlockGraph = DeadlockGraphViewModel.From(locks);
+            HasDeadlockGraph = DeadlockGraph is not null;
 
             var deadlockNote = locks.Findings.Count > 0 ? $" {locks.Findings.Count} deadlock finding(s)!" : string.Empty;
 
@@ -263,6 +318,10 @@ public partial class MainPageViewModel : ObservableObject
             {
                 LargeObjects.Add(LargeObjectRow.From(row));
             }
+
+            TypeStatCount = memory.TypeStats.Count;
+            LargeObjectCount = memory.LargeObjects.Count;
+            ThreadGroupCount = ThreadGroups.Count;
 
             StatusText = "Building triage...";
             _findingsDocument = await session.GetFindingsAsync();

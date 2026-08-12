@@ -19,6 +19,9 @@ public sealed record ThreadGroupRow(
     string? ExceptionType,
     string? OperationContext)
 {
+    public bool IsBlocked => MaxLockCount > 0;
+
+
     public static IReadOnlyList<ThreadGroupRow> FromThreads(IReadOnlyList<ThreadInfo> threads) =>
         threads
             .GroupBy(t => t.StackGroupHash)

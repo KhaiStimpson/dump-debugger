@@ -9,193 +9,327 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <Grid Padding="24" RowSpacing="16">
+    <Page.Resources>
+        <Style x:Key="TabButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="CornerRadius" Value="0" />
+            <Setter Property="Padding" Value="4,9" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+        <Style x:Key="SectionLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.6" />
+            <Setter Property="CharacterSpacing" Value="30" />
+        </Style>
+    </Page.Resources>
+
+    <Grid Background="{ThemeResource WorkbenchCanvasBrush}">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="Dump Debugger" Style="{StaticResource TitleTextBlockStyle}" />
+        <!-- Toolbar -->
+        <Grid Grid.Row="0" Padding="16,12" Background="{ThemeResource WorkbenchSurface2Brush}"
+              BorderBrush="{ThemeResource WorkbenchLineBrush}" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Button Content="Open Dump…"
+                        Command="{x:Bind ViewModel.OpenDumpCommand}"
+                        Background="{ThemeResource WorkbenchAccentBrush}" Foreground="White"
+                        IsEnabled="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource InverseBoolConverter}}" />
+                <Button Content="Export Report"
+                        Command="{x:Bind ViewModel.ExportReportCommand}"
+                        Visibility="{x:Bind ViewModel.HasFindings, Mode=OneWay}" />
+                <Button Content="✨ Explain (AI)"
+                        Command="{x:Bind ViewModel.ExplainCommand}"
+                        Visibility="{x:Bind ViewModel.HasFindings, Mode=OneWay}"
+                        IsEnabled="{x:Bind ViewModel.IsExplaining, Mode=OneWay, Converter={StaticResource InverseBoolConverter}}" />
+                <ProgressRing IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" Width="20" Height="20" />
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12">
-            <Button Content="Open Dump…"
-                    Command="{x:Bind ViewModel.OpenDumpCommand}"
-                    IsEnabled="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource InverseBoolConverter}}" />
-            <ProgressRing IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" Width="24" Height="24" />
-            <Button Content="Export Report…"
-                    Command="{x:Bind ViewModel.ExportReportCommand}"
-                    Visibility="{x:Bind ViewModel.HasFindings, Mode=OneWay}" />
-        </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="4" Margin="18,0,0,0"
+                            Visibility="{x:Bind ViewModel.HasThreads, Mode=OneWay}">
+                    <TextBlock Text="Sort threads:" VerticalAlignment="Center" FontSize="12" Opacity="0.65" Margin="0,0,4,0" />
+                    <Button Content="By count" FontSize="12" Padding="10,5" CornerRadius="14"
+                            Command="{x:Bind ViewModel.SetStackGroupSortCommand}" CommandParameter="false">
+                        <Button.Background>
+                            <SolidColorBrush Color="{ThemeResource WorkbenchAccentSoftColor}" />
+                        </Button.Background>
+                    </Button>
+                    <Button Content="By lock count" FontSize="12" Padding="10,5" CornerRadius="14"
+                            Command="{x:Bind ViewModel.SetStackGroupSortCommand}" CommandParameter="true" />
+                </StackPanel>
+            </StackPanel>
+        </Grid>
 
-        <TextBlock Grid.Row="2"
+        <TextBlock Grid.Row="1"
                     Text="{x:Bind ViewModel.StatusText, Mode=OneWay}"
                     Foreground="{x:Bind ViewModel.HasError, Mode=OneWay, Converter={StaticResource ErrorBrushConverter}}"
-                    TextWrapping="Wrap" />
+                    TextWrapping="Wrap" Padding="16,8,16,0" FontSize="12" />
 
-        <ScrollViewer Grid.Row="3" Visibility="{x:Bind ViewModel.HasThreads, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+        <!-- Empty state -->
+        <ScrollViewer Grid.Row="2" Visibility="{x:Bind ViewModel.HasThreads, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}">
             <TextBlock Text="{x:Bind ViewModel.MetadataSummary, Mode=OneWay}"
-                       FontFamily="Cascadia Mono"
-                       TextWrapping="Wrap" />
+                       FontFamily="Cascadia Mono" TextWrapping="Wrap" Margin="16" />
         </ScrollViewer>
 
-        <Pivot Grid.Row="3" Visibility="{x:Bind ViewModel.HasThreads, Mode=OneWay}">
+        <!-- Workbench -->
+        <Grid Grid.Row="2" Visibility="{x:Bind ViewModel.HasThreads, Mode=OneWay}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="380" />
+            </Grid.ColumnDefinitions>
 
-            <PivotItem Header="Triage">
-                <Grid RowSpacing="12">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
+            <!-- Canvas -->
+            <ScrollViewer Grid.Column="0" Padding="24">
+                <StackPanel Spacing="10">
+                    <StackPanel Visibility="{x:Bind ViewModel.HasDeadlockGraph, Mode=OneWay}" Spacing="14">
+                        <TextBlock Text="WAIT-FOR GRAPH · LOCKS &amp; DEADLOCKS" Style="{StaticResource SectionLabelStyle}" />
+                        <Canvas Width="620" Height="290" HorizontalAlignment="Center">
+                            <Path Data="M 90,66 C 60,150 210,180 260,214" Stroke="{ThemeResource WorkbenchCriticalBrush}"
+                                  StrokeThickness="1.6" StrokeDashArray="5,4" />
+                            <Path Data="M 530,66 C 560,150 410,180 360,214" Stroke="{ThemeResource WorkbenchCriticalBrush}"
+                                  StrokeThickness="1.6" StrokeDashArray="5,4" />
 
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12">
-                        <Button Content="Explain (AI)…"
-                                Command="{x:Bind ViewModel.ExplainCommand}"
-                                IsEnabled="{x:Bind ViewModel.IsExplaining, Mode=OneWay, Converter={StaticResource InverseBoolConverter}}" />
-                        <ProgressRing IsActive="{x:Bind ViewModel.IsExplaining, Mode=OneWay}" Width="20" Height="20" />
+                            <Border Canvas.Left="0" Canvas.Top="0" Width="176" Height="70"
+                                    Background="{ThemeResource WorkbenchCriticalSoftBrush}" BorderBrush="{ThemeResource WorkbenchCriticalBrush}"
+                                    BorderThickness="1.5" CornerRadius="8" Padding="11,8">
+                                <StackPanel>
+                                    <TextBlock Text="THREAD" FontSize="10" Opacity="0.6" FontWeight="SemiBold" />
+                                    <TextBlock Text="{x:Bind ViewModel.DeadlockGraph.Thread1Id, Mode=OneWay}" FontSize="14" FontWeight="Bold" />
+                                    <TextBlock Text="{x:Bind ViewModel.DeadlockGraph.Lock1Address, Mode=OneWay}" FontFamily="Cascadia Mono" FontSize="11" Opacity="0.75" />
+                                </StackPanel>
+                            </Border>
+                            <Border Canvas.Left="444" Canvas.Top="0" Width="176" Height="70"
+                                    Background="{ThemeResource WorkbenchCriticalSoftBrush}" BorderBrush="{ThemeResource WorkbenchCriticalBrush}"
+                                    BorderThickness="1.5" CornerRadius="8" Padding="11,8">
+                                <StackPanel>
+                                    <TextBlock Text="THREAD" FontSize="10" Opacity="0.6" FontWeight="SemiBold" />
+                                    <TextBlock Text="{x:Bind ViewModel.DeadlockGraph.Thread2Id, Mode=OneWay}" FontSize="14" FontWeight="Bold" />
+                                    <TextBlock Text="{x:Bind ViewModel.DeadlockGraph.Lock2Address, Mode=OneWay}" FontFamily="Cascadia Mono" FontSize="11" Opacity="0.75" />
+                                </StackPanel>
+                            </Border>
+                            <Border Canvas.Left="60" Canvas.Top="220" Width="176" Height="66"
+                                    Background="{ThemeResource WorkbenchSurface2Brush}" BorderBrush="{ThemeResource WorkbenchLineBrush}"
+                                    BorderThickness="1.2" CornerRadius="8" Padding="11,8">
+                                <StackPanel>
+                                    <TextBlock Text="{x:Bind ViewModel.DeadlockGraph.Lock1TypeName, Mode=OneWay}" FontSize="10" Opacity="0.6" FontWeight="SemiBold" />
+                                    <TextBlock Text="{x:Bind ViewModel.DeadlockGraph.Lock1Address, Mode=OneWay}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" />
+                                    <TextBlock Text="{x:Bind ViewModel.DeadlockGraph.Lock1Waiters, Mode=OneWay}" FontSize="11" Opacity="0.75" />
+                                </StackPanel>
+                            </Border>
+                            <Border Canvas.Left="384" Canvas.Top="220" Width="176" Height="66"
+                                    Background="{ThemeResource WorkbenchSurface2Brush}" BorderBrush="{ThemeResource WorkbenchLineBrush}"
+                                    BorderThickness="1.2" CornerRadius="8" Padding="11,8">
+                                <StackPanel>
+                                    <TextBlock Text="{x:Bind ViewModel.DeadlockGraph.Lock2TypeName, Mode=OneWay}" FontSize="10" Opacity="0.6" FontWeight="SemiBold" />
+                                    <TextBlock Text="{x:Bind ViewModel.DeadlockGraph.Lock2Address, Mode=OneWay}" FontFamily="Cascadia Mono" FontSize="12.5" FontWeight="SemiBold" />
+                                    <TextBlock Text="{x:Bind ViewModel.DeadlockGraph.Lock2Waiters, Mode=OneWay}" FontSize="11" Opacity="0.75" />
+                                </StackPanel>
+                            </Border>
+                        </Canvas>
                     </StackPanel>
 
-                    <Border Grid.Row="1"
-                            Visibility="{x:Bind ViewModel.HasNarrative, Mode=OneWay}"
-                            BorderBrush="{ThemeResource AccentFillColorDefaultBrush}"
-                            BorderThickness="1" CornerRadius="8" Padding="12">
-                        <TextBlock Text="{x:Bind ViewModel.NarrativeText, Mode=OneWay}" TextWrapping="Wrap" />
-                    </Border>
-
-                    <ListView Grid.Row="2" ItemsSource="{x:Bind ViewModel.Findings}">
-                        <ListView.ItemTemplate>
-                            <DataTemplate x:DataType="vm:FindingRow">
-                                <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                                        BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,4">
-                                    <StackPanel Spacing="4">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <Border Background="{ThemeResource SystemFillColorCriticalBrush}"
-                                                    CornerRadius="4" Padding="6,2">
-                                                <TextBlock Text="{x:Bind Severity}" Foreground="White" FontSize="12" />
-                                            </Border>
-                                            <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" />
-                                        </StackPanel>
-                                        <TextBlock Text="{x:Bind Summary}" TextWrapping="Wrap" Opacity="0.85" />
-                                        <TextBlock Text="{x:Bind EvidenceText}" FontFamily="Cascadia Mono" FontSize="12" TextWrapping="Wrap" Opacity="0.7" />
-                                    </StackPanel>
+                    <TextBlock Text="THREADS, GROUPED BY STACK" Style="{StaticResource SectionLabelStyle}" Margin="0,10,0,0" />
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.ThreadGroups}" MaxWidth="620" HorizontalAlignment="Stretch">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ThreadGroupRow">
+                                <Border BorderBrush="{ThemeResource WorkbenchLineBrush}" BorderThickness="1" CornerRadius="7"
+                                        Background="{ThemeResource WorkbenchSurface2Brush}" Padding="10,9" Margin="0,0,0,7">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" Background="{ThemeResource WorkbenchAccentBrush}" CornerRadius="6"
+                                                MinWidth="28" Height="22" Padding="6,0">
+                                            <TextBlock Text="{x:Bind Count}" Foreground="White" FontSize="11.5" FontWeight="Bold"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                        <TextBlock Grid.Column="1" Text="{x:Bind TopFrame}" FontFamily="Cascadia Mono" FontSize="12.5"
+                                                   VerticalAlignment="Center" Margin="10,0" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Grid.Column="2" Text="blocked" FontSize="11" Opacity="0.6" VerticalAlignment="Center"
+                                                   Foreground="{ThemeResource WorkbenchCriticalBrush}"
+                                                   Visibility="{x:Bind IsBlocked}" />
+                                    </Grid>
                                 </Border>
                             </DataTemplate>
-                        </ListView.ItemTemplate>
-                    </ListView>
-                </Grid>
-            </PivotItem>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </ScrollViewer>
 
-            <PivotItem Header="Overview">
-                <ScrollViewer>
-                    <TextBlock Text="{x:Bind ViewModel.MetadataSummary, Mode=OneWay}"
-                               FontFamily="Cascadia Mono" TextWrapping="Wrap" />
-                </ScrollViewer>
-            </PivotItem>
+            <!-- Sidebar -->
+            <Grid Grid.Column="1" BorderBrush="{ThemeResource WorkbenchLineBrush}" BorderThickness="1,0,0,0"
+                  Background="{ThemeResource WorkbenchSurface2Brush}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-            <PivotItem Header="Threads">
-                <Grid ColumnSpacing="16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="420" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
+                <Border Grid.Row="0" Margin="14" Padding="12,11" CornerRadius="8"
+                        Background="{ThemeResource WorkbenchAccentSoftBrush}">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="✨ AI SUMMARY" FontSize="10.5" FontWeight="Bold"
+                                   Foreground="{ThemeResource WorkbenchAccentBrush}" CharacterSpacing="20" />
+                        <TextBlock Text="{x:Bind ViewModel.NarrativeText, Mode=OneWay}"
+                                   FontSize="12.5" TextWrapping="Wrap" LineHeight="19"
+                                   Visibility="{x:Bind ViewModel.HasNarrative, Mode=OneWay}" />
+                        <TextBlock Text="Click Explain (AI) above to generate a grounded narrative from these findings."
+                                   FontSize="12" TextWrapping="Wrap" Opacity="0.7"
+                                   Visibility="{x:Bind ViewModel.HasNarrative, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
+                    </StackPanel>
+                </Border>
 
-                    <Grid Grid.Column="0" RowSpacing="8">
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Padding="14,0" Spacing="14"
+                            BorderBrush="{ThemeResource WorkbenchLineBrush}" BorderThickness="0,0,0,1">
+                    <Button Style="{StaticResource TabButtonStyle}"
+                            BorderBrush="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToBrushConverter}, ConverterParameter=0}"
+                            Foreground="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToForegroundConverter}, ConverterParameter=0}"
+                            Command="{x:Bind ViewModel.SelectTabCommand}" CommandParameter="0">
+                        <TextBlock Text="Triage" FontWeight="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToWeightConverter}, ConverterParameter=0}" />
+                    </Button>
+                    <Button Style="{StaticResource TabButtonStyle}"
+                            BorderBrush="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToBrushConverter}, ConverterParameter=1}"
+                            Foreground="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToForegroundConverter}, ConverterParameter=1}"
+                            Command="{x:Bind ViewModel.SelectTabCommand}" CommandParameter="1">
+                        <TextBlock Text="Threads" FontWeight="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToWeightConverter}, ConverterParameter=1}" />
+                    </Button>
+                    <Button Style="{StaticResource TabButtonStyle}"
+                            BorderBrush="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToBrushConverter}, ConverterParameter=2}"
+                            Foreground="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToForegroundConverter}, ConverterParameter=2}"
+                            Command="{x:Bind ViewModel.SelectTabCommand}" CommandParameter="2">
+                        <TextBlock Text="Locks" FontWeight="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToWeightConverter}, ConverterParameter=2}" />
+                    </Button>
+                    <Button Style="{StaticResource TabButtonStyle}"
+                            BorderBrush="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToBrushConverter}, ConverterParameter=3}"
+                            Foreground="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToForegroundConverter}, ConverterParameter=3}"
+                            Command="{x:Bind ViewModel.SelectTabCommand}" CommandParameter="3">
+                        <TextBlock Text="Memory" FontWeight="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToWeightConverter}, ConverterParameter=3}" />
+                    </Button>
+                </StackPanel>
+
+                <!-- Tab content -->
+                <Grid Grid.Row="2">
+
+                    <!-- Triage -->
+                    <ScrollViewer Padding="14" Visibility="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToVisibilityConverter}, ConverterParameter=0}">
+                        <ItemsControl ItemsSource="{x:Bind ViewModel.Findings}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:FindingRow">
+                                    <Border BorderBrush="{ThemeResource WorkbenchLineBrush}" BorderThickness="1"
+                                            Background="{ThemeResource WorkbenchSurface2Brush}" CornerRadius="8" Padding="12" Margin="0,0,0,10">
+                                        <StackPanel Spacing="5">
+                                            <Border Background="{x:Bind Severity, Converter={StaticResource SeverityToBrushConverter}}"
+                                                    CornerRadius="4" Padding="7,2" HorizontalAlignment="Left">
+                                                <TextBlock Text="{x:Bind Severity}" Foreground="White" FontSize="10" FontWeight="Bold" />
+                                            </Border>
+                                            <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" FontSize="13.5" TextWrapping="Wrap" />
+                                            <TextBlock Text="{x:Bind Summary}" FontSize="12" Opacity="0.8" TextWrapping="Wrap" LineHeight="17" />
+                                            <TextBlock Text="{x:Bind EvidenceText}" FontFamily="Cascadia Mono" FontSize="11"
+                                                       Opacity="0.7" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <!-- Threads -->
+                    <Grid Padding="14"
+                          Visibility="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToVisibilityConverter}, ConverterParameter=1}">
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Text="Threads (grouped by stack)" Style="{StaticResource SubtitleTextBlockStyle}" />
-                        <ListView Grid.Row="1"
+                        <ListView Grid.Row="0" MaxHeight="220"
                                   ItemsSource="{x:Bind ViewModel.ThreadGroups}"
                                   SelectedItem="{x:Bind ViewModel.SelectedThreadGroup, Mode=TwoWay}">
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ThreadGroupRow">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" Padding="4">
-                                        <Border Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                                CornerRadius="8" Padding="6,2" MinWidth="32">
-                                            <TextBlock Text="{x:Bind Count}" HorizontalAlignment="Center" Foreground="White" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8" Padding="2">
+                                        <Border Background="{ThemeResource WorkbenchAccentBrush}" CornerRadius="8" Padding="6,2" MinWidth="26">
+                                            <TextBlock Text="{x:Bind Count}" HorizontalAlignment="Center" Foreground="White" FontSize="11" />
                                         </Border>
-                                        <TextBlock Text="{x:Bind TopFrame}" TextTrimming="CharacterEllipsis" MaxWidth="320" />
+                                        <TextBlock Text="{x:Bind TopFrame}" FontFamily="Cascadia Mono" FontSize="12" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
+                        <TextBlock Grid.Row="1" Text="STACK · REPRESENTATIVE THREAD" Style="{StaticResource SectionLabelStyle}" Margin="2,10,0,6" />
+                        <ScrollViewer Grid.Row="2">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{x:Bind ViewModel.SelectedThreadGroup.OSThreadIds, Mode=OneWay, Converter={StaticResource ThreadIdsConverter}}"
+                                           FontFamily="Cascadia Mono" FontSize="11.5" Opacity="0.7" TextWrapping="Wrap" />
+                                <TextBlock Text="{x:Bind ViewModel.SelectedThreadGroup.OperationContext, Mode=OneWay}"
+                                           FontWeight="SemiBold" FontSize="12.5" TextWrapping="Wrap"
+                                           Visibility="{x:Bind ViewModel.SelectedThreadGroup.OperationContext, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}" />
+                                <TextBlock Text="{x:Bind ViewModel.SelectedThreadGroup.FullStack, Mode=OneWay}"
+                                           FontFamily="Cascadia Mono" FontSize="11.5" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </ScrollViewer>
                     </Grid>
 
-                    <ScrollViewer Grid.Column="1">
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="Stack (representative thread)" Style="{StaticResource SubtitleTextBlockStyle}" />
-                            <TextBlock Text="{x:Bind ViewModel.SelectedThreadGroup.OSThreadIds, Mode=OneWay, Converter={StaticResource ThreadIdsConverter}}"
-                                       FontFamily="Cascadia Mono" TextWrapping="Wrap" Opacity="0.7" />
-                            <TextBlock Text="{x:Bind ViewModel.SelectedThreadGroup.OperationContext, Mode=OneWay}"
-                                       FontWeight="SemiBold" TextWrapping="Wrap"
-                                       Visibility="{x:Bind ViewModel.SelectedThreadGroup.OperationContext, Mode=OneWay, Converter={StaticResource NullToVisibilityConverter}}" />
-                            <TextBlock Text="{x:Bind ViewModel.SelectedThreadGroup.FullStack, Mode=OneWay}"
-                                       FontFamily="Cascadia Mono" TextWrapping="Wrap" />
-                        </StackPanel>
+                    <!-- Locks -->
+                    <ScrollViewer Padding="14" Visibility="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToVisibilityConverter}, ConverterParameter=2}">
+                        <TextBlock Text="{x:Bind ViewModel.LocksSummary, Mode=OneWay}" FontFamily="Cascadia Mono" FontSize="12" TextWrapping="Wrap" />
                     </ScrollViewer>
-                </Grid>
-            </PivotItem>
 
-            <PivotItem Header="Locks &amp; Deadlocks">
-                <ScrollViewer>
-                    <TextBlock Text="{x:Bind ViewModel.LocksSummary, Mode=OneWay}"
-                               FontFamily="Cascadia Mono" TextWrapping="Wrap" />
-                </ScrollViewer>
-            </PivotItem>
-
-            <PivotItem Header="Memory">
-                <Grid ColumnSpacing="16">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="420" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-
-                    <Grid Grid.Column="0" RowSpacing="8">
+                    <!-- Memory -->
+                    <Grid Padding="14"
+                          Visibility="{x:Bind ViewModel.SelectedTabIndex, Mode=OneWay, Converter={StaticResource TabIndexToVisibilityConverter}, ConverterParameter=3}">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Text="Type statistics (top 50 by total size)" Style="{StaticResource SubtitleTextBlockStyle}" />
-                        <ListView Grid.Row="1" ItemsSource="{x:Bind ViewModel.TypeStats}">
+                        <TextBlock Grid.Row="0" Text="TYPE STATISTICS" Style="{StaticResource SectionLabelStyle}" Margin="0,0,0,6" />
+                        <ListView Grid.Row="1" MaxHeight="260" VerticalAlignment="Top" ItemsSource="{x:Bind ViewModel.TypeStats}">
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="vm:TypeStatRow">
-                                    <StackPanel Orientation="Horizontal" Spacing="8" Padding="4">
-                                        <TextBlock Text="{x:Bind TotalSizeDisplay}" Width="80" />
-                                        <TextBlock Text="{x:Bind Count}" Width="60" Opacity="0.7" />
-                                        <TextBlock Text="{x:Bind TypeName}" TextTrimming="CharacterEllipsis" MaxWidth="240" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{x:Bind TotalSizeDisplay}" Width="64" FontSize="11.5" />
+                                        <TextBlock Text="{x:Bind Count}" Width="44" Opacity="0.6" FontSize="11.5" />
+                                        <TextBlock Text="{x:Bind TypeName}" FontFamily="Cascadia Mono" FontSize="11.5" TextTrimming="CharacterEllipsis" />
                                     </StackPanel>
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
-                    </Grid>
-
-                    <Grid Grid.Column="1" RowSpacing="8">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                        </Grid.RowDefinitions>
-                        <TextBlock Grid.Row="0" Text="Large objects (identified)" Style="{StaticResource SubtitleTextBlockStyle}" />
-                        <ListView Grid.Row="1" ItemsSource="{x:Bind ViewModel.LargeObjects}">
+                        <TextBlock Grid.Row="2" Text="LARGE OBJECTS" Style="{StaticResource SectionLabelStyle}" Margin="0,10,0,6" />
+                        <ListView Grid.Row="3" MaxHeight="220" ItemsSource="{x:Bind ViewModel.LargeObjects}">
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="vm:LargeObjectRow">
-                                    <StackPanel Spacing="2" Padding="4">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <TextBlock Text="{x:Bind SizeDisplay}" FontWeight="SemiBold" />
-                                            <TextBlock Text="{x:Bind TypeName}" TextTrimming="CharacterEllipsis" MaxWidth="500" />
-                                            <TextBlock Text="{x:Bind Address}" Opacity="0.6" FontFamily="Cascadia Mono" />
-                                        </StackPanel>
-                                        <TextBlock Text="{x:Bind Identity}" Opacity="0.8" TextWrapping="Wrap" FontFamily="Cascadia Mono" FontSize="12" />
+                                    <StackPanel Spacing="1">
+                                        <TextBlock Text="{x:Bind SizeDisplay}" FontWeight="SemiBold" FontSize="11.5" />
+                                        <TextBlock Text="{x:Bind TypeName}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{x:Bind Identity}" FontFamily="Cascadia Mono" FontSize="10.5" Opacity="0.7" TextWrapping="Wrap" />
                                     </StackPanel>
                                 </DataTemplate>
                             </ListView.ItemTemplate>
                         </ListView>
                     </Grid>
                 </Grid>
-            </PivotItem>
 
-        </Pivot>
+                <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="14" Padding="14,8"
+                            BorderBrush="{ThemeResource WorkbenchLineBrush}" BorderThickness="0,1,0,0">
+                    <TextBlock FontFamily="Cascadia Mono" FontSize="10.5" Opacity="0.65">
+                        <Run Text="{x:Bind ViewModel.ThreadGroupCount, Mode=OneWay}" /><Run Text=" groups" />
+                    </TextBlock>
+                    <TextBlock FontFamily="Cascadia Mono" FontSize="10.5" Opacity="0.65">
+                        <Run Text="{x:Bind ViewModel.TypeStatCount, Mode=OneWay}" /><Run Text=" types" />
+                    </TextBlock>
+                    <TextBlock FontFamily="Cascadia Mono" FontSize="10.5" Opacity="0.65">
+                        <Run Text="{x:Bind ViewModel.LargeObjectCount, Mode=OneWay}" /><Run Text=" large obj" />
+                    </TextBlock>
+                </StackPanel>
+            </Grid>
+        </Grid>
     </Grid>
 </Page>
