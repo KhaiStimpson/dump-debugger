@@ -1,6 +1,6 @@
 using System.IO.Pipes;
-using DumpDebugger.Analysis;
-using DumpDebugger.Core.Ipc;
+using DumpDebugger.Core.Rpc;
+using DumpDebugger.Worker;
 
 if (args.Length < 1)
 {
@@ -10,175 +10,13 @@ if (args.Length < 1)
 
 var pipeName = args[0];
 
-using var pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+await using var pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
 await pipe.WaitForConnectionAsync();
 
-// The dump stays loaded for the life of the pipe connection so later requests (threads,
-// memory, etc. in later phases) don't have to re-open it. Disposed when the pipe closes.
-LoadedDump? loaded = null;
-
-try
-{
-    while (pipe.IsConnected)
-    {
-        var envelope = await IpcFrame.ReadAsync(pipe);
-        if (envelope is null)
-        {
-            break;
-        }
-
-        try
-        {
-            switch (envelope.Kind)
-            {
-                case IpcMessageKind.OpenDumpRequest:
-                    await HandleOpenDumpAsync(pipe, envelope, v => loaded = v);
-                    break;
-
-                case IpcMessageKind.GetThreadsRequest:
-                    await HandleGetThreadsAsync(pipe, envelope, loaded);
-                    break;
-
-                case IpcMessageKind.GetLocksRequest:
-                    await HandleGetLocksAsync(pipe, envelope, loaded);
-                    break;
-
-                case IpcMessageKind.GetMemoryRequest:
-                    await HandleGetMemoryAsync(pipe, envelope, loaded);
-                    break;
-
-                case IpcMessageKind.GetFindingsRequest:
-                    await HandleGetFindingsAsync(pipe, envelope, loaded);
-                    break;
-            }
-        }
-        catch (Exception ex)
-        {
-            await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
-                IpcMessageKind.ErrorResponse,
-                envelope.RequestId,
-                IpcFrame.SerializePayload(new ErrorResponse(ex.Message, ex.ToString()))));
-        }
-    }
-}
-finally
-{
-    loaded?.Dispose();
-}
-
+// One dump per worker process: it stays loaded for the life of the pipe connection so every
+// query after "dump.open" reuses it. The host kills the process when the dump is closed.
+using var handlers = new WorkerHandlers();
+var connection = new RpcConnection(pipe, handlers.HandleAsync);
+connection.Start();
+await connection.Completion;
 return 0;
-
-static async Task HandleOpenDumpAsync(NamedPipeServerStream pipe, IpcEnvelope envelope, Action<LoadedDump> onLoaded)
-{
-    var request = IpcFrame.DeserializePayload<OpenDumpRequest>(envelope);
-    if (request is null)
-    {
-        return;
-    }
-
-    await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
-        IpcMessageKind.ProgressNotification,
-        envelope.RequestId,
-        IpcFrame.SerializePayload(new ProgressNotification("Loading dump", 0.1, request.DumpPath))));
-
-    var loaded = DumpLoader.Load(request.DumpPath, allowSymbolServer: false);
-    onLoaded(loaded);
-
-    await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
-        IpcMessageKind.OpenDumpResponse,
-        envelope.RequestId,
-        IpcFrame.SerializePayload(new OpenDumpResponse(loaded.Metadata))));
-}
-
-static async Task HandleGetThreadsAsync(NamedPipeServerStream pipe, IpcEnvelope envelope, LoadedDump? loaded)
-{
-    if (loaded is null || loaded.Runtimes.Count == 0)
-    {
-        await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
-            IpcMessageKind.GetThreadsResponse,
-            envelope.RequestId,
-            IpcFrame.SerializePayload(new GetThreadsResponse([]))));
-        return;
-    }
-
-    var threads = ThreadEnumerator.Enumerate(loaded.Runtimes[0]);
-
-    await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
-        IpcMessageKind.GetThreadsResponse,
-        envelope.RequestId,
-        IpcFrame.SerializePayload(new GetThreadsResponse(threads))));
-}
-
-static async Task HandleGetLocksAsync(NamedPipeServerStream pipe, IpcEnvelope envelope, LoadedDump? loaded)
-{
-    if (loaded is null || loaded.Runtimes.Count == 0)
-    {
-        await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
-            IpcMessageKind.GetLocksResponse,
-            envelope.RequestId,
-            IpcFrame.SerializePayload(new GetLocksResponse([], []))));
-        return;
-    }
-
-    var runtime = loaded.Runtimes[0];
-    var syncBlocks = LockAnalyzer.EnumerateSyncBlocks(runtime);
-    var findings = LockAnalyzer.DetectDeadlocks(syncBlocks);
-
-    await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
-        IpcMessageKind.GetLocksResponse,
-        envelope.RequestId,
-        IpcFrame.SerializePayload(new GetLocksResponse(syncBlocks, findings))));
-}
-
-static async Task HandleGetMemoryAsync(NamedPipeServerStream pipe, IpcEnvelope envelope, LoadedDump? loaded)
-{
-    if (loaded is null || loaded.Runtimes.Count == 0)
-    {
-        await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
-            IpcMessageKind.GetMemoryResponse,
-            envelope.RequestId,
-            IpcFrame.SerializePayload(new GetMemoryResponse([], []))));
-        return;
-    }
-
-    var runtime = loaded.Runtimes[0];
-    var typeStats = MemoryAnalyzer.GetTypeStats(runtime);
-    var largeObjects = MemoryAnalyzer.GetLargeObjects(runtime);
-
-    await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
-        IpcMessageKind.GetMemoryResponse,
-        envelope.RequestId,
-        IpcFrame.SerializePayload(new GetMemoryResponse(typeStats, largeObjects))));
-}
-
-static async Task HandleGetFindingsAsync(NamedPipeServerStream pipe, IpcEnvelope envelope, LoadedDump? loaded)
-{
-    if (loaded is null || loaded.Runtimes.Count == 0)
-    {
-        var empty = DumpDebugger.Core.Findings.FindingsDocument.FromMetadata(
-            loaded?.Metadata ?? throw new InvalidOperationException("No dump open."), []);
-        await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
-            IpcMessageKind.GetFindingsResponse,
-            envelope.RequestId,
-            IpcFrame.SerializePayload(new GetFindingsResponse(empty))));
-        return;
-    }
-
-    var runtime = loaded.Runtimes[0];
-    var syncBlocks = LockAnalyzer.EnumerateSyncBlocks(runtime);
-    var lockFindings = LockAnalyzer.DetectDeadlocks(syncBlocks);
-    var typeStats = MemoryAnalyzer.GetTypeStats(runtime);
-    var memoryFindings = MemoryAnalyzer.DetectTypeDominance(typeStats);
-
-    var ranked = lockFindings.Concat(memoryFindings)
-        .OrderByDescending(f => f.Severity)
-        .ThenByDescending(f => f.Confidence)
-        .ToList();
-
-    var document = DumpDebugger.Core.Findings.FindingsDocument.FromMetadata(loaded.Metadata, ranked);
-
-    await IpcFrame.WriteAsync(pipe, new IpcEnvelope(
-        IpcMessageKind.GetFindingsResponse,
-        envelope.RequestId,
-        IpcFrame.SerializePayload(new GetFindingsResponse(document))));
-}

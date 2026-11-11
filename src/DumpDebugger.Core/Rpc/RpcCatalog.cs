@@ -1,0 +1,57 @@
+using DumpDebugger.Core.Contracts;
+using DumpDebugger.Core.Dump;
+
+namespace DumpDebugger.Core.Rpc;
+
+public enum RpcTarget
+{
+    /// <summary>Handled by DumpDebugger.Host itself (dialogs, workspace, recents, compare).</summary>
+    Host,
+
+    /// <summary>Forwarded verbatim to the architecture-matched worker that has the dump open.</summary>
+    Worker,
+}
+
+public sealed record RpcMethodInfo(string Name, Type Params, Type Result, RpcTarget Target);
+
+public sealed record RpcNotificationInfo(string Name, Type Payload);
+
+/// <summary>
+/// Every method and notification that crosses the WebView2 bridge, with its params/result
+/// contract. This is the single source of truth: the host dispatcher routes by
+/// <see cref="RpcTarget"/>, and DumpDebugger.TsGen turns it into the typed
+/// <c>RpcMethods</c>/<c>RpcNotifications</c> maps in <c>web/src/contracts.gen.ts</c>.
+/// </summary>
+public static class RpcCatalog
+{
+    public static readonly IReadOnlyList<RpcMethodInfo> Methods =
+    [
+        Host<NoParams, AppInfo>("app.info"),
+        Host<TitlebarRegions, Ack>("window.setTitlebar"),
+        Host<NoParams, PickedFile>("dump.pick"),
+        Host<OpenDumpParams, DumpMetadata>("dump.open"),
+        Host<NoParams, Ack>("dump.close"),
+
+        Worker<NoParams, IReadOnlyList<ThreadInfo>>("threads.list"),
+    ];
+
+    public static readonly IReadOnlyList<RpcNotificationInfo> Notifications =
+    [
+        new("dump.progress", typeof(ProgressNotification)),
+        new("worker.status", typeof(WorkerStatus)),
+    ];
+
+    /// <summary>Contract types the web app uses directly that no method signature reaches.</summary>
+    public static readonly IReadOnlyList<Type> ExtraExportedTypes = [];
+
+    private static readonly Dictionary<string, RpcMethodInfo> ByName =
+        Methods.ToDictionary(m => m.Name, StringComparer.Ordinal);
+
+    public static RpcMethodInfo? Find(string name) => ByName.GetValueOrDefault(name);
+
+    private static RpcMethodInfo Host<TParams, TResult>(string name) =>
+        new(name, typeof(TParams), typeof(TResult), RpcTarget.Host);
+
+    private static RpcMethodInfo Worker<TParams, TResult>(string name) =>
+        new(name, typeof(TParams), typeof(TResult), RpcTarget.Worker);
+}

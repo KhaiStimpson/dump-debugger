@@ -1,0 +1,81 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    WinUI 3 window whose whole client area is a WebView2 running the React app in web/.
+    It owns native concerns only: the window and titlebar, file dialogs and drag-drop, and
+    the bridge into DumpDebugger.Session (worker lifecycle, workspace, recents, compare).
+
+    Unpackaged and self-contained by default so the built exe runs directly. Pass
+    -p:Packaged=true to produce an MSIX instead (see README "Package").
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>DumpDebugger.Host</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <Platforms>x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>2.0.0</Version>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Packaged)' != 'true'">
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <EnableMsixTooling>false</EnableMsixTooling>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Packaged)' == 'true'">
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <WindowsPackageType>MSIX</WindowsPackageType>
+    <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
+    <AppxBundle>Never</AppxBundle>
+    <AppxPackageSigningEnabled Condition="'$(PackageCertificateThumbprint)' == '' and '$(PackageCertificateKeyFile)' == ''">false</AppxPackageSigningEnabled>
+    <AppxPackageSigningEnabled Condition="'$(PackageCertificateThumbprint)' != '' or '$(PackageCertificateKeyFile)' != ''">true</AppxPackageSigningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\**\*.png;Assets\AppIcon.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Manifest Include="$(ApplicationManifest)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2526" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="2.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DumpDebugger.Core\DumpDebugger.Core.csproj" />
+    <ProjectReference Include="..\DumpDebugger.Session\DumpDebugger.Session.csproj" />
+  </ItemGroup>
+
+  <!--
+    Bundled assets. The web app (web/dist, built with `npm run build` in web/) is served from
+    <out>\web through a WebView2 virtual host. Workers are built separately for win-x86 and
+    win-x64 (ClrMD must match the dump's bitness) and copied to <out>\Workers\<rid>.
+    Nothing is built here, only copied, so a missing piece fails loudly at runtime instead.
+  -->
+  <PropertyGroup>
+    <WebDist>$(MSBuildThisFileDirectory)..\..\web\dist</WebDist>
+    <WorkerBin>$(MSBuildThisFileDirectory)..\DumpDebugger.Worker\bin\$(Configuration)\net10.0</WorkerBin>
+    <DumpGenBin>$(MSBuildThisFileDirectory)..\DumpDebugger.DumpGen\bin\$(Configuration)\net10.0</DumpGenBin>
+  </PropertyGroup>
+
+  <Target Name="CopyBundledAssets" AfterTargets="Build">
+    <ItemGroup>
+      <WebFiles Include="$(WebDist)\**\*.*" />
+      <WorkerX64Files Include="$(WorkerBin)\win-x64\**\*.*" />
+      <WorkerX86Files Include="$(WorkerBin)\win-x86\**\*.*" />
+      <DumpGenFiles Include="$(DumpGenBin)\**\*.*" />
+    </ItemGroup>
+    <Warning Condition="!Exists('$(WebDist)\index.html')" Text="web/dist is missing; run 'npm run build' in web/ before building the host." />
+    <Copy SourceFiles="@(WebFiles)" DestinationFolder="$(OutDir)web\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(WorkerX64Files)" DestinationFolder="$(OutDir)Workers\win-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(WorkerX86Files)" DestinationFolder="$(OutDir)Workers\win-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(DumpGenFiles)" DestinationFolder="$(OutDir)Tools\DumpGen\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

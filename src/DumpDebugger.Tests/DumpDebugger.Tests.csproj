@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,6 +21,12 @@
   <ItemGroup>
     <ProjectReference Include="..\DumpDebugger.Core\DumpDebugger.Core.csproj" />
     <ProjectReference Include="..\DumpDebugger.Analysis\DumpDebugger.Analysis.csproj" />
+    <ProjectReference Include="..\DumpDebugger.Session\DumpDebugger.Session.csproj" />
+    <ProjectReference Include="..\..\tools\DumpDebugger.TsGen\DumpDebugger.TsGen.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Golden\**\*" CopyToOutputDirectory="Never" />
   </ItemGroup>
 
 </Project>

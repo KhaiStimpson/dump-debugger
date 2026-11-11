@@ -1,0 +1,32 @@
+/* Design tokens — lifted verbatim from docs/redesign/design.html :root (Design system tab).
+   Mirrored for canvas/graph rendering in src/styles/tokens.ts. */
+:root {
+  --bg-0: #0b0d10;
+  --bg-1: #111419;
+  --bg-2: #171b21;
+  --bg-3: #1e232b;
+  --bg-4: #262c35;
+  --line: #252a32;
+  --line-2: #323944;
+  --fg-0: #eef0f3;
+  --fg-1: #c5cad3;
+  --fg-2: #8b93a1;
+  --fg-3: #5e6673;
+  --accent: #2dd4bf;
+  --accent-dim: #2dd4bf22;
+  --accent-ink: #04201c;
+  --crit: #f2555a;
+  --crit-dim: #f2555a1f;
+  --warn: #f5a524;
+  --warn-dim: #f5a5241f;
+  --info: #60a5fa;
+  --info-dim: #60a5fa1f;
+  --ok: #3ccf91;
+  --ok-dim: #3ccf911f;
+  --code: #d6b4ff;
+  --sans: 'Segoe UI Variable Text', 'Segoe UI Variable', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --mono: 'Cascadia Code', 'JetBrains Mono', 'Consolas', ui-monospace, monospace;
+  --r-1: 4px;
+  --r-2: 6px;
+  --r-3: 10px;
+}

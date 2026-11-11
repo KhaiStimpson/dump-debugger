@@ -1,7 +1,7 @@
 # Dump Debugger — Redesign Roadmap
 
 Companion to [`design.html`](design.html) (vision, IA, design system, interactive mockups).
-Status: **draft, not started.** Date: 2026-11-11.
+Status: **in progress** (branch `redesign`). Date: 2026-11-11.
 
 ## Decisions
 
@@ -31,11 +31,11 @@ Kept: `Core`, `Analysis`, `Worker`, `DumpGen`. Replaced: `App` → `Host` + `web
 Each phase ends shippable.
 
 ### R0 — Foundation
-- [ ] `DumpDebugger.Host`: WinUI 3 window hosting WebView2, serving bundled `web/dist` via virtual host mapping
-- [ ] `web/`: Vite + React + TS, `tokens.css` from the design system, ESLint/Prettier
-- [ ] JSON-RPC bridge (request/response + server-push notifications) between web and host
-- [ ] TS types generated from Core contracts (e.g. via a source generator or `NJsonSchema`)
-- [ ] Delete `DumpDebugger.App` and `DumpDebugger.Llm`, and update the solution and README
+- [x] `DumpDebugger.Host`: WinUI 3 window hosting WebView2, serving bundled `web/dist` via virtual host mapping
+- [x] `web/`: Vite + React + TS, `tokens.css` from the design system, ESLint/Prettier
+- [x] JSON-RPC bridge (request/response + server-push notifications) between web and host
+- [x] TS types generated from Core contracts (e.g. via a source generator or `NJsonSchema`)
+- [x] Delete `DumpDebugger.App` and `DumpDebugger.Llm`, and update the solution and README
 - **Done when:** the host opens the fixture dump and the web app lists its threads through the bridge.
 
 ### R1 — Engine contract v2
@@ -102,3 +102,7 @@ Each analyzer ships with authored explanations, a DumpGen scenario and a golden 
 - **Root-path cost.** Use a depth cap, cancellation and a lazily built reverse-reference index.
 - **Overclaiming in plain English.** Text is templated from evidence and always carries confidence.
 - **Line numbers need PDBs.** Fall back to method + IL offset, and make the symbol path a setting.
+
+## Implementation notes & deviations
+
+- **R0.** Host-side logic lives in a new UI-free library, `DumpDebugger.Session` (worker lifecycle, bridge dispatcher, workspace), so the bridge is tested headlessly; `DumpDebugger.Host` is only the window. The same JSON-RPC message shape is used on both hops (web ⇄ host over `postMessage`, host ⇄ worker over the named pipe); worker methods are forwarded with params untouched. TS types come from a small reflection generator (`tools/DumpDebugger.TsGen`) over Core's `RpcCatalog` rather than NJsonSchema: it also emits the typed method/notification maps, which a schema generator wouldn't. The host is unpackaged + self-contained by default; MSIX is opt-in (`-p:Packaged=true`). Vite 6 rather than 7 because Vite 7 needs Node ≥ 20.19. Screenshots are taken from the real app through WebView2's CDP port (`web/scripts/shot.mjs`).
