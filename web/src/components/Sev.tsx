@@ -4,7 +4,7 @@ import { cap } from '../format';
 const sevClass: Record<Severity, string> = { critical: 'crit', warning: 'warn', info: 'info', ok: 'ok' };
 const sevLabel: Record<Severity, string> = { critical: 'Critical', warning: 'Warning', info: 'Info', ok: 'Healthy' };
 
-/** Severity pill. Status is never color alone: it always carries its text label. */
+/** Severity label. Status is never color alone: it always carries its text label. */
 export function Sev({ severity, confidence, label }: { severity: Severity; confidence?: Confidence; label?: string }) {
   return (
     <span className={`sev ${sevClass[severity]}`}>

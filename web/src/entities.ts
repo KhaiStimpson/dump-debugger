@@ -87,12 +87,3 @@ export const chipClass: Record<EntityKind, string> = {
   request: 'rq',
   finding: 'f',
 };
-
-export const chipKind: Record<EntityKind, string> = {
-  thread: 'thr',
-  lock: 'lock',
-  object: 'obj',
-  type: 'type',
-  request: 'req',
-  finding: 'finding',
-};

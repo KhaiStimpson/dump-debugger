@@ -9,8 +9,8 @@ import { AsyncStacks } from './AsyncStacks';
 import { useApp } from '../state/store';
 
 const groupings: { id: ThreadGrouping; label: string }[] = [
-  { id: 'stack', label: 'Group by stack' },
-  { id: 'request', label: 'Request' },
+  { id: 'stack', label: 'By stack' },
+  { id: 'request', label: 'By request' },
   { id: 'flat', label: 'Flat' },
 ];
 
@@ -22,7 +22,7 @@ const filters: { id: ThreadStateFilter; label: string }[] = [
   { id: 'idle', label: 'Idle' },
 ];
 
-const ROW = 37;
+const ROW = 28;
 
 /**
  * What was every thread doing? Groups keyed on the first application frame, so 200 threads
@@ -148,10 +148,10 @@ export function Threads() {
     <div className="view on threads">
       <div className="threads-main">
         {header}
-        <div className="thead lbl">
-          <span>#</span>
+        <div className="thead">
+          <span>{groupBy === 'flat' ? 'Thread' : 'Count'}</span>
           <span>Where (first app frame)</span>
-          <span>Doing</span>
+          <span>Request</span>
           <span>State</span>
         </div>
         <div className="scroll" ref={parent} role="listbox" aria-label="Thread groups" tabIndex={0}>
@@ -180,7 +180,7 @@ export function Threads() {
                     {g.where}
                   </span>
                   <span className="op" title={g.request ?? undefined}>
-                    {g.request ? <Request route={g.request} /> : '—'}
+                    {g.request ? <Request route={g.request} /> : ''}
                   </span>
                   <StatePill state={g.state} label={g.stateLabel} />
                 </div>

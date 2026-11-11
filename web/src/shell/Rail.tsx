@@ -12,11 +12,12 @@ const items: { view: View; label: string; key: string }[] = [
   { view: 'compare', label: 'Compare', key: 'C' },
 ];
 
-/** Fixed left rail of views. Views that need an open dump are disabled until one is. */
+/** Fixed left sidebar of views. Views that need an open dump are disabled until one is. */
 export function Rail() {
   const { view } = useRoute();
   const dump = useApp((s) => s.dump);
-  const critical = useApp((s) => s.diagnosis?.verdict.severity === 'critical');
+  const critical = useApp((s) => s.diagnosis?.findings.filter((f) => f.severity === 'critical').length ?? 0);
+  const threads = useApp((s) => s.diagnosis?.dump.threadCount);
   const active = view === 'analyzing' ? 'home' : view;
 
   const button = (v: View, label: string, key: string) => {
@@ -26,13 +27,18 @@ export function Rail() {
         key={v}
         className={active === v ? 'on' : ''}
         title={`${label}  (G ${key})`}
-        aria-label={label}
         aria-current={active === v ? 'page' : undefined}
         disabled={needsDump && !dump}
         onClick={() => navigate(v)}
       >
         {icons[v as keyof typeof icons]}
-        {v === 'diagnosis' && critical && <span className="badge" aria-label="critical finding" />}
+        {label}
+        {v === 'diagnosis' && critical > 0 && (
+          <span className="n bad" aria-label={`${critical} critical`}>
+            {critical}
+          </span>
+        )}
+        {v === 'threads' && dump && threads != null && <span className="n">{threads}</span>}
       </button>
     );
   };

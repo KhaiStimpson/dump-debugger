@@ -91,7 +91,7 @@ export function PinButtons({ entity }: { entity: EntityRef }) {
         title={pinned ? 'Unpin (P)' : 'Pin (P)'}
         aria-pressed={pinned}
       >
-        📌{pinned ? ' Pinned' : ''}
+        {pinned ? 'Pinned' : 'Pin'}
       </button>
       <button className="btn ghost" onClick={() => navigator.clipboard?.writeText(entity.label)}>
         Copy
@@ -137,7 +137,7 @@ function ThreadBody({ id }: { id: number }) {
         </div>
         <dl className="kv">
           <dt>Serving</dt>
-          <dd className="mono" style={{ color: s.request ? 'var(--info)' : 'var(--fg-3)' }}>
+          <dd className="mono" style={{ color: s.request ? undefined : 'var(--fg-3)' }}>
             {s.request ?? '—'}
           </dd>
           <dt>Where</dt>

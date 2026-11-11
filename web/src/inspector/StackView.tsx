@@ -87,7 +87,7 @@ function FrameRow({ f, hot }: { f: StackFrame; hot?: boolean }) {
   return (
     <div className={cls} title={f.fullName ?? f.display}>
       {f.display}
-      {hot && <span style={{ opacity: 0.6 }}> ← waiting</span>}
+      {hot && <span className="wait">waiting here</span>}
       {where && <span className="src">{where}</span>}
     </div>
   );

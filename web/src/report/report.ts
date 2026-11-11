@@ -262,20 +262,20 @@ function toHtml(title: string, blocks: Block[], entities: EntityRef[]): string {
 :root{color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:${colors.bg0};color:${colors.fg1};font:14px/1.55 ${fonts.sans};padding:28px 16px}
-.paper{max-width:760px;margin:0 auto;background:${colors.bg1};border:1px solid ${colors.line};border-radius:10px;padding:40px 48px}
-h1,h2,h3{color:${colors.fg0};font-weight:600;letter-spacing:-.01em;margin:0}
+.paper{max-width:760px;margin:0 auto;background:${colors.bg1};border:1px solid ${colors.line};border-radius:4px;padding:40px 48px}
+h1,h2,h3{color:${colors.fg0};font-weight:600;margin:0}
 h1{font-size:24px;line-height:1.25;margin-top:8px}
 h2{font-size:16px;margin:26px 0 8px}
 h3{font-size:14px;margin:18px 0 4px}
 p{margin:8px 0}
 .sub{font-family:${fonts.mono};font-size:12px;color:${colors.fg3}}
-.lbl{font-size:11px;color:${colors.fg3};text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.lbl{font-size:13px;color:${colors.fg2};font-weight:600}
 code,.mono{font-family:${fonts.mono};font-size:12.5px;color:${colors.fg0}}
 code{background:${colors.bg3};border:1px solid ${colors.line2};border-radius:4px;padding:0 5px}
 ol,ul{padding-left:20px}li{margin:4px 0}
-.note{border-left:2px solid ${colors.warn};padding:6px 12px;background:${colors.warnDim};border-radius:0 6px 6px 0;font-size:13px;margin:10px 0}
+.note{border:1px solid ${colors.line2};padding:6px 12px;background:${colors.bg2};border-radius:3px;font-size:13px;margin:10px 0}
 table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}
-th{text-align:left;color:${colors.fg2};font-weight:500;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;padding:6px 8px;border-bottom:1px solid ${colors.line}}
+th{text-align:left;color:${colors.fg2};font-weight:600;font-size:12px;padding:6px 8px;border-bottom:1px solid ${colors.line}}
 td{padding:6px 8px;border-bottom:1px solid ${colors.line};vertical-align:top}
 footer{margin-top:30px;padding-top:14px;border-top:1px solid ${colors.line};font-size:12px;color:${colors.fg3}}
 strong{color:${colors.fg0}}

@@ -94,43 +94,40 @@ export function Diagnosis() {
           {diagnosis.vitals.map((vt) => (
             <div className="vital" key={vt.key}>
               <div className="lbl">{vt.label}</div>
-              <div className="v">{vt.value}</div>
-              <div className="d">{vt.detail}</div>
-              <div className="bar">
-                <i
-                  style={{
-                    width: `${Math.round((vt.fraction ?? 0) * 100)}%`,
-                    background: toneColor[vt.tone === 'neutral' ? 'accent' : vt.tone],
-                  }}
-                />
+              <div
+                className="v"
+                style={{ color: vt.tone === 'critical' || vt.tone === 'warning' ? toneColor[vt.tone] : undefined }}
+              >
+                {vt.value}
               </div>
+              <div className="d">{vt.detail}</div>
             </div>
           ))}
         </div>
-        <div className="symp" role="radiogroup" aria-label="What were you seeing?">
-          <span className="lbl" style={{ marginRight: 4 }}>
-            What were you seeing?
-          </span>
-          {symptoms.map((s) => (
-            <button
-              key={s.id}
-              role="radio"
-              aria-checked={symptom === s.id}
-              className={symptom === s.id ? 'on' : ''}
-              onClick={() => {
-                setSymptom(s.id);
-                const first =
-                  s.id === 'all'
-                    ? diagnosis.findings[0]
-                    : diagnosis.findings
-                        .filter((f) => f.symptoms.includes(s.id as Symptom))
-                        .sort((a, b) => b.score - a.score)[0];
-                setOpen(new Set(first ? [first.id] : []));
-              }}
-            >
-              {s.label}
-            </button>
-          ))}
+        <div className="symp">
+          What were you seeing?
+          <div className="seg" role="radiogroup" aria-label="What were you seeing?">
+            {symptoms.map((s) => (
+              <button
+                key={s.id}
+                role="radio"
+                aria-checked={symptom === s.id}
+                className={symptom === s.id ? 'on' : ''}
+                onClick={() => {
+                  setSymptom(s.id);
+                  const first =
+                    s.id === 'all'
+                      ? diagnosis.findings[0]
+                      : diagnosis.findings
+                          .filter((f) => f.symptoms.includes(s.id as Symptom))
+                          .sort((a, b) => b.score - a.score)[0];
+                  setOpen(new Set(first ? [first.id] : []));
+                }}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="finds">
           {ranked.length === 0 && (
@@ -255,7 +252,7 @@ function FindingCard(props: { f: Finding; open: boolean; dim: boolean; focused: 
                   onClick={() => (pinned ? pins.unpin(entity.uri) : pins.pin(entity))}
                   aria-pressed={pinned}
                 >
-                  📌 {pinned ? 'Pinned' : 'Pin'}
+                  {pinned ? 'Pinned' : 'Pin'}
                 </button>
                 <button className="btn ghost" onClick={copy}>
                   Copy

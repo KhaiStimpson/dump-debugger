@@ -1,6 +1,6 @@
 import type { MouseEvent, ReactNode } from 'react';
 import type { EntityRef } from '../contracts.gen';
-import { chipClass, chipKind } from '../entities';
+import { chipClass } from '../entities';
 import { useApp } from '../state/store';
 import { useContextMenu } from './ContextMenu';
 
@@ -11,7 +11,7 @@ interface ChipProps {
 }
 
 /**
- * The one chip style for every entity (P2: "everything is an entity, every entity is a
+ * The one link style for every entity (P2: "everything is an entity, every entity is a
  * link"). Click opens the inspector; right-click offers Pin, Copy and Show in graph.
  */
 export function Chip({ entity, suffix }: ChipProps) {
@@ -28,8 +28,7 @@ export function Chip({ entity, suffix }: ChipProps) {
       }}
       onContextMenu={(e) => menu.open(e, entity)}
     >
-      <span className="k">{chipKind[entity.kind]}</span>
-      {entity.label}
+      {entity.kind === 'thread' && entity.label.startsWith('#') ? `thread ${entity.label}` : entity.label}
       {suffix && <span className="sfx">{suffix}</span>}
     </button>
   );

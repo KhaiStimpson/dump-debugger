@@ -1,6 +1,4 @@
 import {
-  Background,
-  BackgroundVariant,
   Handle,
   MarkerType,
   Position,
@@ -134,9 +132,7 @@ function LocksInner() {
             minZoom={0.2}
             maxZoom={2}
             colorMode="dark"
-          >
-            <Background variant={BackgroundVariant.Dots} gap={22} size={1} color="#ffffff14" bgColor={colors.bg0} />
-          </ReactFlow>
+          />
         )}
         {cycle && graph && <ExplainCard graph={graph} cycleIndex={0} />}
         <div className="legend">

@@ -114,7 +114,6 @@ function ObjectPane({ address }: { address: number }) {
             <span className="ty">{r.typeName}</span>
             <span className="val">
               <button className="chip o" onClick={() => go(addr(r.object.uri))}>
-                <span className="k">obj</span>
                 {r.object.label}
               </button>
             </span>
@@ -155,7 +154,7 @@ function FieldRow({ f, depth }: { f: FieldValue; depth: number }) {
             <>
               <span>{f.display}</span>{' '}
               <button className="chip o" onClick={() => go(f.address!)} title="Open this object">
-                <span className="k">obj</span>0x{f.address.toString(16)}
+                0x{f.address.toString(16)}
               </button>
             </>
           ) : (

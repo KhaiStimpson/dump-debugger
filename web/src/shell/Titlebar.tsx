@@ -42,14 +42,12 @@ export function Titlebar() {
 
   return (
     <header className="titlebar" ref={ref}>
-      <div className="logo" />
       <span className="dump">{name}</span>
       {md && !atHome && view !== 'compare' && (
         <span className="meta">
-          <span className="pill">{diagnosis?.dump.runtime ?? md.runtimes[0]?.productVersion}</span>
-          <span className="pill">{md.architecture}</span>
-          <span className="pill">{bytes(md.fileSizeBytes)}</span>
-          <span className="pill">{diagnosis?.dump.threadCount ?? md.threadCount} threads</span>
+          {[diagnosis?.dump.runtime ?? md.runtimes[0]?.productVersion, md.architecture, bytes(md.fileSizeBytes)]
+            .filter(Boolean)
+            .join(' · ')}
         </span>
       )}
       <button className="search" data-interactive onClick={() => setPalette(true)} aria-keyshortcuts="Control+K">

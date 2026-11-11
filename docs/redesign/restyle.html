@@ -1,0 +1,180 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Dump Debugger restyle mockup (Diagnosis, Threads)</title>
+<style>
+body{background:#111;color:#ddd;font-family:'Segoe UI',system-ui,sans-serif;max-width:1000px;margin:24px auto;padding:0 24px}
+h4.view{font:600 15px 'Segoe UI',system-ui,sans-serif;margin:28px 0 8px}
+.app{--fg:#f2f2f2;--fg2:#c4c4c4;--fg3:#9e9e9e;--line:#3c3c3c;--bg:#1e1e1e;--chrome:#2b2b2b;--sel:#0a4a78;--bad:#ff7b72;--warn:#e9b44c;
+ box-sizing:border-box;width:1000px;height:620px;background:var(--bg);color:var(--fg);
+ font:13px/1.45 'Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;display:grid;grid-template:32px 1fr 22px/152px 1fr;
+ border:1px solid #4a4a4a;border-radius:8px;overflow:hidden;text-align:left}
+.app *{box-sizing:border-box}
+.app .mono{font-family:'Cascadia Code','Cascadia Mono',Consolas,ui-monospace,monospace;font-size:12px;font-weight:400}
+.tb{grid-column:1/3;display:flex;align-items:center;gap:10px;padding-left:12px;background:var(--chrome);border-bottom:1px solid var(--line);font-size:12px}
+.tb .meta{color:var(--fg3)}
+.tb .search{margin-left:auto;width:280px;height:22px;border:1px solid #555;border-radius:3px;padding:0 8px;color:var(--fg3);display:flex;align-items:center;justify-content:space-between;background:var(--bg)}
+.tb .wc span{display:inline-block;width:42px;text-align:center;color:var(--fg2)}
+.nav{background:var(--chrome);border-right:1px solid var(--line);padding:8px 6px;display:flex;flex-direction:column;gap:2px}
+.nav a{display:flex;align-items:center;gap:9px;height:28px;padding:0 9px;border-radius:4px;color:var(--fg2)}
+.nav a.on{background:#444;color:var(--fg);font-weight:600}
+.nav a i{margin-left:auto;font-style:normal;font-weight:400;font-size:12px;color:var(--fg3)}
+.nav a.on i{color:var(--fg2)}
+.nav a i.bad{color:var(--bad)}
+.nav svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.3;flex:none}
+.nav hr{border:0;border-top:1px solid var(--line);margin:5px 2px;width:auto}
+.nav .sp{flex:1}
+.body{display:grid;min-width:0;min-height:0}
+.sb{grid-column:1/3;display:flex;justify-content:space-between;align-items:center;padding:0 12px;font-size:11.5px;color:var(--fg2);border-top:1px solid var(--line);background:var(--chrome)}
+.app h1{font-size:18px;line-height:1.35;font-weight:600;margin:0 0 6px}
+.app h2{font-size:14px;font-weight:600;margin:0}
+.app h3{font-size:13px;font-weight:600;margin:0 0 4px}
+.app p{margin:0}
+.app .ref{text-decoration:underline;text-decoration-color:#7a7a7a;text-underline-offset:3px}
+.app button{font:inherit;color:var(--fg);background:#333;border:1px solid #555;border-radius:3px;height:26px;padding:0 11px}
+.seg{display:inline-flex;flex:none;white-space:nowrap;border:1px solid #555;border-radius:3px;overflow:hidden}
+.seg a{padding:3px 10px;color:var(--fg2);border-left:1px solid #555}
+.seg a:first-child{border-left:0}
+.seg a.on{background:#444;color:var(--fg)}
+.seg a em{font-style:normal;color:var(--fg3);margin-left:5px}
+.seg a.on em{color:var(--fg2)}
+.dx{grid-template-columns:1fr 210px}
+.dx .ct{padding:18px 22px;overflow:hidden}
+.facts{color:var(--fg2);margin-bottom:14px!important}
+.ask{display:flex;align-items:center;gap:10px;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:14px;color:var(--fg2)}
+.fm{color:var(--fg2);margin:2px 0 12px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+.cols p{margin-bottom:12px}
+.cols ul,.cols ol{margin:0;padding:0;list-style:none}
+.cols ul li{padding:2px 0}
+.cols ol{padding-left:18px;list-style:decimal}
+.cols ol li{margin-bottom:6px}
+.acts{display:flex;gap:6px;margin-top:14px}
+.app aside{border-left:1px solid var(--line);padding:18px 16px;color:var(--fg2);font-size:12.5px}
+.app aside p{margin-bottom:18px}
+.th{grid-template-columns:1fr 310px}
+.th .ct{display:flex;flex-direction:column;min-width:0}
+.bar{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:12px}
+.bar .f{flex:1;min-width:40px;height:24px;border:1px solid #555;border-radius:3px;padding:0 8px;color:var(--fg3);display:flex;align-items:center}
+table{border-collapse:collapse;width:100%;table-layout:fixed}
+th{font-size:12px;font-weight:600;color:var(--fg2);text-align:left;height:26px;padding:0 8px;background:var(--chrome);border:1px solid var(--line);border-left:0}
+th:last-child{border-right:0}
+td{height:27px;padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+td:first-child,th:first-child{width:58px;text-align:right;padding-right:12px}
+tr.sel td{background:var(--sel);color:#fff}
+td.sys{color:var(--fg2)}
+td.bad{color:var(--bad)}td.warn{color:var(--warn)}
+tr.sel td.bad{color:#fff}
+.insp{border-left:1px solid var(--line);overflow:hidden}
+.insp section{padding:12px 14px;border-bottom:1px solid var(--line)}
+.insp .hd{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.insp .hd b{font-size:15px;font-weight:600}
+.insp .hd .s{color:var(--bad)}
+.kv{display:grid;grid-template-columns:72px 1fr;gap:5px 8px;margin-bottom:12px}
+.kv span{color:var(--fg2)}
+.kv div{overflow-wrap:anywhere;min-width:0}
+.fr{padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fr em{font-style:normal;color:var(--bad);margin-left:8px}
+.fr.fw{color:var(--fg3)}
+.fr small{color:var(--fg3);font-size:11px;margin-left:8px}
+.insp .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:12px}
+.insp .sh h3{margin:0}
+.objs{display:flex;flex-wrap:wrap;gap:4px 16px}
+</style></head><body>
+
+<h4 class="view">Diagnosis</h4>
+<div class="app">
+ <div class="tb"><span>leak.dmp - Dump Debugger</span><span class="meta">.NET 10.0.15 · x64 · 414 MB dump</span><span class="search"><span>Search threads, types, objects</span><span>Ctrl+K</span></span><span class="wc"><span>&#8211;</span><span>&#9744;</span><span>&#10005;</span></span></div>
+ <nav class="nav">
+  <a><svg viewBox="0 0 14 14"><path d="M2 7l5-4 5 4v5H2z"/></svg>Home</a><hr>
+  <a class="on"><svg viewBox="0 0 14 14"><path d="M1 7h3l2-4 2 8 2-4h3"/></svg>Diagnosis</a>
+  <a><svg viewBox="0 0 14 14"><path d="M2 3h10M2 7h7M2 11h10"/></svg>Threads<i>4</i></a>
+  <a><svg viewBox="0 0 14 14"><rect x="3" y="6" width="8" height="6"/><path d="M5 6V4a2 2 0 014 0v2"/></svg>Locks</a>
+  <a><svg viewBox="0 0 14 14"><path d="M2 2h4v10H2zM8 2h4v4H8zM8 8h4v4H8z"/></svg>Memory</a>
+  <a><svg viewBox="0 0 14 14"><circle cx="3" cy="7" r="1.5"/><circle cx="11" cy="3" r="1.5"/><circle cx="11" cy="11" r="1.5"/><path d="M4.5 6.3l5-2.6M4.5 7.7l5 2.6"/></svg>Objects</a>
+  <a><svg viewBox="0 0 14 14"><path d="M4 2v10l-2-2M10 12V2l2 2"/></svg>Compare</a>
+  <span class="sp"></span>
+  <a><svg viewBox="0 0 14 14"><path d="M3 1h6l2 2v10H3zM5 6h4M5 9h4"/></svg>Report</a>
+ </nav>
+ <div class="body dx">
+  <div class="ct">
+   <h1>No hang or deadlock found. Worth a look: System.Byte[] is 89% of the heap, mostly 3 PDF documents in ReportCache.</h1>
+   <p class="facts">4 threads, none blocked. 304 MB managed heap (LOH 89%, Gen2 10%). No requests in flight, no exceptions. Medium confidence.</p>
+   <div class="ask">What were you seeing? <span class="seg"><a class="on">Not sure</a><a>Hang / timeouts</a><a>High memory</a><a>Crash</a><a>Slow / high CPU</a></span></div>
+   <h2>System.Byte[] is 89% of the heap, mostly 3 PDF documents in ReportCache</h2>
+   <div class="fm">Informational, high confidence. 270 MB across 4 instances.</div>
+   <div class="cols">
+    <div><h3>What this means</h3>
+     <p>Most of this memory is a few big objects rather than many small ones. That isn't a bug by itself, but objects this size live on the Large Object Heap and are only collected in full GCs, so if they're held longer than needed the process stays large.</p>
+     <h3>Evidence</h3>
+     <ul><li><span class="ref mono">byte[]</span></li><li><span class="ref">PDF document "Q3-statements" in ReportCache</span></li><li><span class="ref">PDF document "Q3-invoices-EU" in ReportCache</span></li><li><span class="ref">PDF document "Q3-invoices-US" in ReportCache</span></li></ul></div>
+    <div><h3>What to do next</h3>
+     <ol><li>Open the largest one, <span class="ref">PDF document "Q3-statements"</span>, and check what keeps it alive (its path to a GC root).</li>
+     <li>If <span class="mono">ReportCache</span> is a cache, give it a size limit or an expiry so entries can be evicted.</li></ol>
+     <div class="acts"><button>Show memory</button><button>Pin</button><button>Copy</button></div></div>
+   </div>
+  </div>
+  <aside><h3>Busiest requests</h3><p>No HTTP requests found on thread stacks.</p><h3>Pinned</h3><p>Nothing pinned yet. Right-click a thread, lock, object or finding, or press P, to add it to the report.</p></aside>
+ </div>
+ <div class="sb"><span>Worker x64, pid 11404 · DAC from local machine</span><span>Analysis took 1.0 s</span></div>
+</div>
+
+<h4 class="view">Threads</h4>
+<div class="app">
+ <div class="tb"><span>deadlock.dmp - Dump Debugger</span><span class="meta">.NET 10.0.15 · x64 · 144 MB dump</span><span class="search"><span>Search threads, types, objects</span><span>Ctrl+K</span></span><span class="wc"><span>&#8211;</span><span>&#9744;</span><span>&#10005;</span></span></div>
+ <nav class="nav">
+  <a><svg viewBox="0 0 14 14"><path d="M2 7l5-4 5 4v5H2z"/></svg>Home</a><hr>
+  <a><svg viewBox="0 0 14 14"><path d="M1 7h3l2-4 2 8 2-4h3"/></svg>Diagnosis<i class="bad">1 critical</i></a>
+  <a class="on"><svg viewBox="0 0 14 14"><path d="M2 3h10M2 7h7M2 11h10"/></svg>Threads<i>33</i></a>
+  <a><svg viewBox="0 0 14 14"><rect x="3" y="6" width="8" height="6"/><path d="M5 6V4a2 2 0 014 0v2"/></svg>Locks<i>2</i></a>
+  <a><svg viewBox="0 0 14 14"><path d="M2 2h4v10H2zM8 2h4v4H8zM8 8h4v4H8z"/></svg>Memory</a>
+  <a><svg viewBox="0 0 14 14"><circle cx="3" cy="7" r="1.5"/><circle cx="11" cy="3" r="1.5"/><circle cx="11" cy="11" r="1.5"/><path d="M4.5 6.3l5-2.6M4.5 7.7l5 2.6"/></svg>Objects</a>
+  <a><svg viewBox="0 0 14 14"><path d="M4 2v10l-2-2M10 12V2l2 2"/></svg>Compare</a>
+  <span class="sp"></span>
+  <a><svg viewBox="0 0 14 14"><path d="M3 1h6l2 2v10H3zM5 6h4M5 9h4"/></svg>Report</a>
+ </nav>
+ <div class="body th">
+  <div class="ct">
+   <div class="bar"><span class="seg"><a class="on">By stack</a><a>By request</a><a>Flat</a></span><span class="seg"><a class="on">All<em>33</em></a><a>Blocked<em>12</em></a><a>Waiting<em>3</em></a><a>Idle<em>18</em></a></span><span class="f">Filter</span></div>
+   <table>
+    <tr><th>Count</th><th>Where (first app frame)</th><th style="width:30%">Request</th><th style="width:118px">State</th></tr>
+    <tr class="sel"><td>1</td><td class="mono">OrderLedger.Append(LedgerEntry)</td><td class="mono">POST /api/inventory/reserve</td><td class="bad">Deadlocked</td></tr>
+    <tr><td>1</td><td class="mono">InventoryCache.TryReserve(Sku, int)</td><td class="mono">POST /api/orders/checkout</td><td class="bad">Deadlocked</td></tr>
+    <tr><td>6</td><td class="mono">OrderLedger.Append(LedgerEntry)</td><td class="mono">POST /api/orders/{id}/notes</td><td class="bad">Waiting on #14</td></tr>
+    <tr><td>4</td><td class="mono">InventoryCache.TryGet(Sku)</td><td class="mono">GET /api/inventory/{id}</td><td class="bad">Waiting on #6</td></tr>
+    <tr><td>1</td><td class="mono">Program.Main(string[])</td><td></td><td class="warn">Sync over async</td></tr>
+    <tr><td>2</td><td class="sys">Thread-pool I/O</td><td></td><td class="sys">Waiting on I/O</td></tr>
+    <tr><td>13</td><td class="sys">Idle thread-pool workers</td><td></td><td class="sys">Idle</td></tr>
+    <tr><td>2</td><td class="sys">Timer / thread-pool gate</td><td></td><td class="sys">Timer</td></tr>
+    <tr><td>1</td><td class="sys">Finalizer</td><td></td><td class="sys">No managed code</td></tr>
+    <tr><td>1</td><td class="sys">Native threads</td><td></td><td class="sys">No managed code</td></tr>
+    <tr><td>1</td><td class="sys">Kestrel heartbeat</td><td></td><td class="sys">Timer</td></tr>
+   </table>
+  </div>
+  <div class="insp">
+   <section>
+    <div class="hd"><b>Thread #6</b><span class="s">Deadlocked</span></div>
+    <div class="kv"><span>Serving</span><div class="mono">POST /api/inventory/reserve</div>
+     <span>Where</span><div class="mono">OrderLedger.Append(LedgerEntry)</div>
+     <span>Holds</span><div class="mono ref">InventoryCache._sync</div>
+     <span>Waiting for</span><div><span class="mono ref">OrderLedger._gate</span>, held by <span class="ref">thread #14</span></div>
+     <span>Thread</span><div>managed 6, OS 0xe9c</div></div>
+    <div class="acts" style="margin:0"><button>Show in lock graph</button><button>Pin</button><button>Copy</button></div>
+   </section>
+   <section>
+    <div class="sh"><h3>Stack</h3><span class="seg"><a class="on">App frames</a><a>All</a></span></div>
+    <div class="mono">
+     <div class="fr">Monitor.Enter_Slowpath(object)<em>waiting here</em></div>
+     <div class="fr fw">&#9656; 1 framework frame</div>
+     <div class="fr">OrderLedger.Append(LedgerEntry)<small>Orders.cs:11</small></div>
+     <div class="fr">InventoryService.Reserve(Sku, int)<small>IL +0x44</small></div>
+     <div class="fr">DeadlockScenario.RunAsync lambda()<small>IL +0x11</small></div>
+     <div class="fr fw">&#9656; 9 framework frames</div>
+    </div>
+   </section>
+   <section style="border:0"><h3 style="margin-bottom:6px">Objects on stack</h3>
+    <div class="objs mono"><span class="ref">OrderLedger</span><span class="ref">LedgerEntry</span><span class="ref">InventoryService</span><span class="ref">DeadlockScenario</span></div>
+   </section>
+  </div>
+ </div>
+ <div class="sb"><span>Worker x64, pid 27492 · DAC from local machine</span><span>Analysis restored from workspace</span></div>
+</div>
+</body></html>

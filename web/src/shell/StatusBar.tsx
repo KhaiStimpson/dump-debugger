@@ -12,24 +12,20 @@ export function StatusBar() {
     <footer className="statusbar">
       {worker && worker.state !== 'exited' ? (
         <span>
-          <span className="dot" />
-          worker {worker.architecture.toLowerCase()} · pid {worker.processId}
+          Worker {worker.architecture.toLowerCase()}, pid {worker.processId}
         </span>
       ) : (
-        <span>
-          <span className="dot" style={{ background: 'var(--fg-3)' }} />
-          no worker
-        </span>
+        <span>No worker</span>
       )}
       {diagnosis?.dump.dacSource && <span>DAC {diagnosis.dump.dacSource}</span>}
-      {dump && <span title={dump.workspacePath}>workspace: {dump.workspacePath.split(/[\\/]/).pop()}/</span>}
+      {dump && <span title={dump.workspacePath}>Workspace {dump.workspacePath.split(/[\\/]/).pop()}</span>}
       <span style={{ marginLeft: 'auto' }} role="status" aria-live="polite">
         {diagnosis
           ? diagnosis.fromCache
-            ? 'analysis restored from workspace'
+            ? 'Analysis restored from workspace'
             : diagnosis.complete
-              ? `analysis ${seconds(diagnosis.seconds)} · all analyzers done`
-              : `analyzing · ${running?.label.toLowerCase() ?? '…'}${running?.fraction != null ? ` ${Math.round(running.fraction * 100)}%` : ''}`
+              ? `Analysis took ${seconds(diagnosis.seconds)}`
+              : `Analyzing: ${running?.label.toLowerCase() ?? '…'}${running?.fraction != null ? ` ${Math.round(running.fraction * 100)}%` : ''}`
           : ''}
       </span>
     </footer>

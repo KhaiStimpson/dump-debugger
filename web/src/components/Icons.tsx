@@ -56,7 +56,7 @@ export const icons = {
     </svg>
   ),
   drop: (
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.6">
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--fg-2)" strokeWidth="1.6">
       <path d="M12 3v12m0 0-4-4m4 4 4-4" />
       <path d="M4 17v3h16v-3" />
     </svg>
