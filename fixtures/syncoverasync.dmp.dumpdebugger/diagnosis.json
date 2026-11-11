@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 2,
+  "dump": {
+    "path": "C:\\Dev\\repos\\dump-debugger\\fixtures\\syncoverasync.dmp",
+    "fileName": "syncoverasync.dmp",
+    "fileSizeBytes": 174964876,
+    "runtime": ".NET 10.0.15",
+    "architecture": "x64",
+    "threadCount": 229,
+    "processName": "DumpDebugger.DumpGen.exe",
+    "dacSource": "local machine"
+  },
+  "verdict": {
+    "severity": "ok",
+    "confidence": "medium",
+    "headline": "No hang, deadlock or memory problem stood out.",
+    "body": "229 threads (0 blocked) and a 12.0 MB managed heap. Nothing crossed a warning threshold. The views on the left have the detail if you\u0027re chasing something specific.",
+    "entities": [],
+    "findingId": null
+  },
+  "vitals": [
+    {
+      "key": "threads",
+      "label": "Threads",
+      "value": "229",
+      "detail": "0 blocked \u00B7 0 running",
+      "fraction": 0,
+      "tone": "neutral"
+    },
+    {
+      "key": "threadPool",
+      "label": "Thread pool",
+      "value": "200/221",
+      "detail": "workers busy",
+      "fraction": 0.9049773755656109,
+      "tone": "neutral"
+    },
+    {
+      "key": "heap",
+      "label": "Managed heap",
+      "value": "12.0 MB",
+      "detail": "LOH 0% \u00B7 Gen2 0%",
+      "fraction": 0,
+      "tone": "accent"
+    },
+    {
+      "key": "requests",
+      "label": "Requests in flight",
+      "value": "200",
+      "detail": "0 blocked",
+      "fraction": 0,
+      "tone": "neutral"
+    },
+    {
+      "key": "exceptions",
+      "label": "Exceptions",
+      "value": "0",
+      "detail": "on thread stacks",
+      "fraction": 0,
+      "tone": "neutral"
+    }
+  ],
+  "findings": [],
+  "busiestRequests": [
+    {
+      "route": "GET /api/pricing/quote",
+      "threads": 200
+    }
+  ],
+  "stages": [
+    {
+      "id": "runtime",
+      "label": "Matched runtime \u0026 resolved DAC",
+      "status": "done",
+      "seconds": 0.1050298,
+      "detail": "local machine",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "threads",
+      "label": "Read 229 threads \u0026 stacks",
+      "status": "done",
+      "seconds": 0.6816589,
+      "detail": null,
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "locks",
+      "label": "Locks \u0026 wait-for graph",
+      "status": "done",
+      "seconds": 0,
+      "detail": "no contention",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "heap",
+      "label": "Walked the heap",
+      "status": "done",
+      "seconds": 0.09745189999999992,
+      "detail": "12.0 MB \u00B7 93,859 objects",
+      "fraction": 1,
+      "tone": "neutral"
+    },
+    {
+      "id": "analyzers",
+      "label": "Thread-pool, async \u0026 exception analyzers",
+      "status": "done",
+      "seconds": 0.0018828000000000733,
+      "detail": "3 analyzers ran",
+      "fraction": null,
+      "tone": "neutral"
+    }
+  ],
+  "seconds": 0.9408728,
+  "complete": true,
+  "fromCache": false,
+  "analyzedAt": "2026-11-11T09:01:19.6894246+00:00"
+}

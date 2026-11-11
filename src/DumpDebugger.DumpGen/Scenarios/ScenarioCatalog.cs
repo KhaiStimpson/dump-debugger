@@ -8,6 +8,7 @@ public static class ScenarioCatalog
     [
         new("simple", "Idle console process with a few thousand strings on the heap.", SimpleScenario.RunAsync),
         new("deadlock", "ASP.NET Core app: checkout and inventory requests deadlock on two locks; more requests queue behind them.", DeadlockScenario.RunAsync),
+        new("syncoverasync", "ASP.NET Core app: 200 pricing requests block pool threads on .Result of a downstream call that never answers.", SyncOverAsyncScenario.RunAsync),
     ];
 
     public static Scenario Get(string name) =>

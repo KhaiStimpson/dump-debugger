@@ -167,6 +167,11 @@ function ThreadBody({ id }: { id: number }) {
             {s.exception ? ` · ${s.exception}` : ''}
           </dd>
         </dl>
+        {(t.holds.length > 0 || t.waitingFor) && (
+          <button className="btn" style={{ marginTop: 12 }} onClick={() => navigate('locks', uri.thread(id))}>
+            Show in graph
+          </button>
+        )}
       </div>
       <NoteEditor entity={entity} />
       <div className="ib">
@@ -255,7 +260,7 @@ function LockBody({ entityUri }: { entityUri: string }) {
         </div>
       )}
       <div className="ib">
-        <button className="btn" onClick={() => navigate('locks')}>
+        <button className="btn" onClick={() => navigate('locks', lock.uri)}>
           Show in graph
         </button>
       </div>

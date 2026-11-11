@@ -8,6 +8,20 @@ public sealed record LedgerEntry(string OrderId, string Kind);
 
 public sealed record StockItem(Sku Sku, int OnHand);
 
+public sealed record Cart(string Id, int Items);
+
+public sealed record Quote(string CartId, decimal Total);
+
+public sealed class PricingClient(HttpClient http)
+{
+    /// <summary>The bug: a synchronous API over an async call, blocking a pool thread on .Result.</summary>
+    public Quote GetQuote(Cart cart)
+    {
+        var rates = http.GetStringAsync($"/downstream/rates?cart={cart.Id}").Result;
+        return new Quote(cart.Id, rates.Length);
+    }
+}
+
 /// <summary>Lets the first checkout and the first reservation both get inside their first lock before either goes for its second.</summary>
 public static class Rendezvous
 {

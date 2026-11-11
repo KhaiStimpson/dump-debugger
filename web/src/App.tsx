@@ -16,6 +16,8 @@ import { useApp } from './state/store';
 import { Analyzing } from './views/Analyzing';
 import { Diagnosis } from './views/Diagnosis';
 import { Home } from './views/Home';
+import { Locks } from './views/Locks';
+import { Threads } from './views/Threads';
 import { Placeholder } from './views/Placeholder';
 
 export function App() {
@@ -55,7 +57,7 @@ function Shell() {
         <Rail />
         <main className="main" id="main">
           <CurrentView view={view} />
-          {inspectorOpen && !docksInspector.includes(view) && <Inspector />}
+          {inspectorOpen && !docksInspector.includes(view) && <Inspector docked />}
           <Palette />
           <Help />
         </main>
@@ -73,6 +75,10 @@ function CurrentView({ view }: { view: View }) {
       return <Analyzing />;
     case 'diagnosis':
       return <Diagnosis />;
+    case 'threads':
+      return <Threads />;
+    case 'locks':
+      return <Locks />;
     default:
       return <Placeholder view={view} />;
   }
