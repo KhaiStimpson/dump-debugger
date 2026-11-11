@@ -113,42 +113,18 @@ the end user — no redistribution by us, no licensing question. This is exactly
 `dotnet-dump`, and Visual Studio all do. The only cost is one network round trip the first
 time an unseen runtime version is encountered.
 
-### 2.4 Analysis is rules-first, LLM-optional
+### 2.4 Analysis is rules-first
 
-Per decision: deterministic analyzers produce a **structured findings document**; an optional
-LLM layer turns that document into prose and speculates about root cause. The app is fully
-functional with the LLM layer disabled, and never requires network access for its core value.
-
-This ordering matters for a debugging tool. A deadlock cycle is a graph property — proving it
+Deterministic analyzers produce a **structured findings document**, and the app never
+requires network access for its core value. A deadlock cycle is a graph property: proving it
 deterministically and showing the cycle is strictly better than asking a model to notice it.
-The model's job is synthesis and narrative, not detection.
 
-### 2.5 LLM access without an API key
-
-You have a Claude subscription but no API key. The integration therefore targets, in order:
-
-1. **Claude Code CLI in headless mode** (primary). If `claude` is on `PATH`, invoke:
-   `claude -p "<prompt>" --output-format json`, feeding the findings JSON on stdin.
-   This reuses your existing subscription login — no key to manage, no key stored by this app.
-   The app detects the CLI at startup and only enables the narrative feature if present.
-2. **`ANTHROPIC_API_KEY` environment variable** (alternate). If set, call the Messages API
-   directly via the official `Anthropic` NuGet package. Never prompt for or store a key in
-   app settings — read it from the environment only.
-3. **Disabled** (default when neither is available). Every panel still works; the "Explain
-   this" affordances are hidden rather than shown broken.
-
-Model: `claude-opus-5` with adaptive thinking. The findings JSON is small (a few KB of
-aggregates, never raw heap contents), so cost and latency are modest.
-
-**Privacy is the reason this layer is opt-in and off by default.** Dumps contain connection
-strings, tokens, PII, and customer data in memory. The app must:
-- Send only the **structured findings document**, never raw memory or object contents.
-- Show the exact payload in a review pane before the first send, with a "don't ask again" per-workspace.
-- Redact by pattern (connection strings, JWTs, `Authorization` headers, email addresses) in
-  any string that does make it into findings.
+> **Redesign note (2026-11):** the optional LLM narrative layer described in the original
+> plan (§2.5, §8, Phase 6) was dropped. Each analyzer now carries authored, evidence-templated
+> explanations ("what this means", "what to do next"), and a templated verdict synthesizer
+> phrases the headline. See `docs/redesign/`.
 
 ---
-
 ## 3. Product shape
 
 ### 3.1 Workspace concept
@@ -332,7 +308,6 @@ reports reduced confidence rather than silently omitting the finding.
 | `DumpDebugger.Analysis` | net10.0 | ClrMD-backed implementation: dump loading, indexing, runtime adapters, all analyzers. |
 | `DumpDebugger.Worker` | net10.0, published x86 + x64 | Thin host: IPC server around `DumpDebugger.Analysis`. |
 | `DumpDebugger.App` | net10.0-windows, WinUI 3 | UI shell, worker lifecycle, navigation. |
-| `DumpDebugger.Llm` | net10.0 | CLI/API narrative provider behind an interface. |
 | `DumpDebugger.Tests` | net10.0 | Unit + analyzer tests against fixture dumps. |
 | `DumpDebugger.DumpGen` | net10.0 / net48 | Test-fixture generator (§9). |
 
@@ -349,7 +324,7 @@ Streaming progress reporting throughout; the UI is usable for thread analysis be
 heap index finishes.
 
 **Findings schema.** Stable, versioned JSON. It is simultaneously the UI's data source, the
-LLM's input, the report generator's input, and the test assertion target. Designing it well
+report generator's input and the test assertion target. Designing it well
 is the highest-leverage early decision.
 
 ```jsonc
@@ -391,38 +366,9 @@ your existing muscle memory.
 
 ---
 
-## 8. LLM layer detail
+## 8. LLM layer (removed)
 
-**Input:** the findings JSON plus a compact context block (runtime, thread counts, top types).
-Never raw memory. Total payload budget: 32KB, truncating lowest-severity findings first.
-
-**Output:** three things, requested in one structured call —
-1. A narrative summary of what is likely happening, in plain prose.
-2. A ranked list of hypotheses, each with the evidence that supports and contradicts it.
-3. Suggested next investigative steps, phrased as things to look at *in this app*.
-
-**Prompt discipline.** The system prompt states that findings are authoritative and the model
-must not invent evidence, must attribute every claim to a finding id, and must say "the dump
-does not show this" rather than speculating beyond the data. Hallucinated debugging advice is
-worse than no advice.
-
-**Provider interface** (`DumpDebugger.Llm`):
-
-```csharp
-public interface INarrativeProvider {
-    bool IsAvailable { get; }
-    string Description { get; }          // "Claude Code CLI (subscription)" | "Anthropic API key"
-    Task<Narrative> SummarizeAsync(FindingsDocument findings, CancellationToken ct);
-}
-```
-
-Implementations: `ClaudeCliNarrativeProvider` (primary, subscription), `AnthropicApiNarrativeProvider`
-(if `ANTHROPIC_API_KEY` is set), `NullNarrativeProvider` (default). Detection at startup,
-surfaced in Settings so it's obvious which is active and why.
-
-Also worth offering: a **per-panel "explain this"** action (explain this thread's stack,
-explain this object graph) rather than only a whole-dump summary. Smaller, faster, more
-useful, and easier to keep grounded.
+Dropped in the redesign; see the note in §2.4.
 
 ---
 
@@ -496,10 +442,7 @@ Deliverable: *the app leads with conclusions rather than data.*
 long-running-operation detection.
 Deliverable: *"thread 47 is serving POST /api/orders/checkout" — the correlation payoff.*
 
-### Phase 6 — LLM narrative
-Provider detection, CLI integration, redaction and payload review, narrative and per-panel
-explanations.
-Deliverable: *plain-English root-cause hypotheses on top of hard evidence.*
+### Phase 6 — (LLM narrative: dropped in the redesign)
 
 ### Phase 7 — Polish
 Workspace persistence, bookmarks and annotations, dump comparison (two dumps, delta view),
@@ -534,7 +477,6 @@ short, shipping through Phase 4 already beats the current workflow substantially
 | Very large dumps (30GB+) exhaust memory | App unusable on the worst cases | Streaming indexing, memory-mapped access, never load the whole heap into managed memory |
 | .NET Framework 4.8 signal gaps | Weaker findings on the runtime you use most | Explicit per-runtime confidence in findings; invest in the 4.8 adapter early rather than last |
 | Analyzer false positives | Erodes trust in Triage, worse than no analysis | Confidence levels; always show the evidence; never hide the raw data behind a conclusion |
-| LLM hallucination | Confidently wrong debugging advice | Findings-only input, attribution requirement, off by default, prose clearly marked as generated |
 | Scope creep across 4 pain points | Nothing finished well | Phased delivery; each phase independently useful |
 
 ---

@@ -92,9 +92,15 @@ public sealed class RecentsStore
     public static (Severity, string) Badge(Diagnosis d)
     {
         var top = d.Findings.FirstOrDefault();
-        if (top is null || d.Verdict.Severity == Severity.Ok)
+        if (top is null)
         {
             return (Severity.Ok, "Healthy");
+        }
+
+        // Nothing urgent, but a memory note is still what someone would want to see in the list.
+        if (d.Verdict.Severity == Severity.Ok)
+        {
+            return top.Analyzer == "heap-dominance" ? (Severity.Info, "Heap " + (d.Vitals.FirstOrDefault(v => v.Key == "heap")?.Value ?? "")) : (Severity.Ok, "Healthy");
         }
 
         var label = top.Analyzer switch

@@ -1932,3 +1932,5 @@ button {
 .report > .sr-only {
   grid-area: 1/1;
 }
+.rrow{grid-template-columns:1fr 200px 120px 90px}
+.rrow .sev{white-space:nowrap;max-width:100%;overflow:hidden}
