@@ -35,11 +35,12 @@ function findHostExe() {
   return found[0];
 }
 
-const exe = plan.exe ? resolve(plan.exe) : findHostExe();
+const exe = plan.attach ? '(attached)' : plan.exe ? resolve(plan.exe) : findHostExe();
 const args = ['--cdp', String(port)];
 if (plan.dump) args.unshift(resolve(webRoot, plan.dump));
 console.log(`launching ${exe} ${args.join(' ')}`);
-const host = spawn(exe, args, { stdio: 'ignore', env: { ...process.env, ...(plan.env ?? {}) } });
+// plan.attach: the app was started elsewhere (e.g. inside its MSIX package) with --cdp.
+const host = plan.attach ? { kill() {} } : spawn(exe, args, { stdio: 'ignore', env: { ...process.env, ...(plan.env ?? {}) } });
 
 const deadline = Date.now() + 30_000;
 let browser;

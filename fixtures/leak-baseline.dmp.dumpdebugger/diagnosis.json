@@ -67,7 +67,7 @@
       "id": "runtime",
       "label": "Matched runtime \u0026 resolved DAC",
       "status": "done",
-      "seconds": 0.1214049,
+      "seconds": 0.113813,
       "detail": "local machine",
       "fraction": null,
       "tone": "neutral"
@@ -76,7 +76,7 @@
       "id": "threads",
       "label": "Read 4 threads \u0026 stacks",
       "status": "done",
-      "seconds": 0.0833095,
+      "seconds": 0.0783053,
       "detail": null,
       "fraction": null,
       "tone": "neutral"
@@ -94,7 +94,7 @@
       "id": "heap",
       "label": "Walked the heap",
       "status": "done",
-      "seconds": 0.0395973,
+      "seconds": 0.042326,
       "detail": "212 MB \u00B7 38,540 objects",
       "fraction": 1,
       "tone": "neutral"
@@ -103,7 +103,7 @@
       "id": "objects",
       "label": "Large-object identification",
       "status": "done",
-      "seconds": 0.07630510000000001,
+      "seconds": 0.06972140000000002,
       "detail": "2 large objects named \u00B7 47,785 references indexed",
       "fraction": 1,
       "tone": "neutral"
@@ -112,14 +112,14 @@
       "id": "analyzers",
       "label": "Thread-pool, async \u0026 exception analyzers",
       "status": "done",
-      "seconds": 0.012416700000000003,
+      "seconds": 0.01233289999999998,
       "detail": "11 analyzers ran",
       "fraction": null,
       "tone": "neutral"
     }
   ],
-  "seconds": 0.41514819999999997,
+  "seconds": 0.3986359,
   "complete": true,
   "fromCache": false,
-  "analyzedAt": "2026-11-11T09:43:36.4420419+00:00"
+  "analyzedAt": "2026-11-11T09:55:35.803319+00:00"
 }

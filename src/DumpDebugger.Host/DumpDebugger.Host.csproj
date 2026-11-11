@@ -30,6 +30,8 @@
 
   <PropertyGroup Condition="'$(Packaged)' == 'true'">
     <EnableMsixTooling>true</EnableMsixTooling>
+    <SelfContained>true</SelfContained>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
     <WindowsPackageType>MSIX</WindowsPackageType>
     <GenerateAppxPackageOnBuild>true</GenerateAppxPackageOnBuild>
     <AppxBundle>Never</AppxBundle>
@@ -53,28 +55,30 @@
   </ItemGroup>
 
   <!--
-    Bundled assets. The web app (web/dist, built with `npm run build` in web/) is served from
-    <out>\web through a WebView2 virtual host. Workers are built separately for win-x86 and
-    win-x64 (ClrMD must match the dump's bitness) and copied to <out>\Workers\<rid>.
-    Nothing is built here, only copied, so a missing piece fails loudly at runtime instead.
+    Bundled assets, included as content so they land both next to the exe and inside an MSIX:
+      web\                 the React app (web/dist; run `npm run build` in web/ first)
+      Workers\win-x64|x86  the architecture-matched workers (ClrMD must match the dump's bitness)
+      Tools\DumpGen        the sample generator behind Home's "Generate a sample"
+    Defaults point at the dev build outputs; build/package.ps1 overrides them with
+    self-contained publish folders so the package needs no .NET install.
   -->
   <PropertyGroup>
-    <WebDist>$(MSBuildThisFileDirectory)..\..\web\dist</WebDist>
-    <WorkerBin>$(MSBuildThisFileDirectory)..\DumpDebugger.Worker\bin\$(Configuration)\net10.0</WorkerBin>
-    <DumpGenBin>$(MSBuildThisFileDirectory)..\DumpDebugger.DumpGen\bin\$(Configuration)\net10.0</DumpGenBin>
+    <WebDist Condition="'$(WebDist)' == ''">$(MSBuildThisFileDirectory)..\..\web\dist</WebDist>
+    <WorkerX64Dir Condition="'$(WorkerX64Dir)' == ''">$(MSBuildThisFileDirectory)..\DumpDebugger.Worker\bin\$(Configuration)\net10.0\win-x64</WorkerX64Dir>
+    <WorkerX86Dir Condition="'$(WorkerX86Dir)' == ''">$(MSBuildThisFileDirectory)..\DumpDebugger.Worker\bin\$(Configuration)\net10.0\win-x86</WorkerX86Dir>
+    <DumpGenDir Condition="'$(DumpGenDir)' == ''">$(MSBuildThisFileDirectory)..\DumpDebugger.DumpGen\bin\$(Configuration)\net10.0</DumpGenDir>
   </PropertyGroup>
 
-  <Target Name="CopyBundledAssets" AfterTargets="Build">
-    <ItemGroup>
-      <WebFiles Include="$(WebDist)\**\*.*" />
-      <WorkerX64Files Include="$(WorkerBin)\win-x64\**\*.*" />
-      <WorkerX86Files Include="$(WorkerBin)\win-x86\**\*.*" />
-      <DumpGenFiles Include="$(DumpGenBin)\**\*.*" />
-    </ItemGroup>
+  <ItemGroup>
+    <Content Include="$(WebDist)\**\*" Link="web\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="$(WorkerX64Dir)\**\*" Link="Workers\win-x64\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="$(WorkerX86Dir)\**\*" Link="Workers\win-x86\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="$(DumpGenDir)\**\*" Exclude="$(DumpGenDir)\**\*.dmp" Link="Tools\DumpGen\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="WarnMissingBundles" BeforeTargets="Build">
     <Warning Condition="!Exists('$(WebDist)\index.html')" Text="web/dist is missing; run 'npm run build' in web/ before building the host." />
-    <Copy SourceFiles="@(WebFiles)" DestinationFolder="$(OutDir)web\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(WorkerX64Files)" DestinationFolder="$(OutDir)Workers\win-x64\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(WorkerX86Files)" DestinationFolder="$(OutDir)Workers\win-x86\%(RecursiveDir)" SkipUnchangedFiles="true" />
-    <Copy SourceFiles="@(DumpGenFiles)" DestinationFolder="$(OutDir)Tools\DumpGen\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Warning Condition="!Exists('$(WorkerX64Dir)\DumpDebugger.Worker.exe')" Text="The x64 worker isn't built; run 'dotnet build src/DumpDebugger.Worker -r win-x64'." />
+    <Warning Condition="!Exists('$(WorkerX86Dir)\DumpDebugger.Worker.exe')" Text="The x86 worker isn't built; run 'dotnet build src/DumpDebugger.Worker -r win-x86'." />
   </Target>
 </Project>

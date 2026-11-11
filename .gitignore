@@ -41,3 +41,6 @@ fixtures/*.workspace/
 # OS
 Thumbs.db
 .DS_Store
+
+# Packaging output (build/package.ps1)
+artifacts/

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Severity } from '../contracts.gen';
 import { Sev } from '../components/Sev';
 import { uri } from '../entities';
+import { rpc } from '../rpc/client';
 import { navigate, type View } from '../router';
 import { useRpc } from '../state/queries';
 import { useApp } from '../state/store';
@@ -120,7 +121,6 @@ function PaletteBody({ close }: { close(): void }) {
     cmd(
       'Open dump…',
       async () => {
-        const { rpc } = await import('../rpc/client');
         const picked = await rpc.call('dump.pick', {});
         if (picked.path) void openDump(picked.path);
       },

@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { ContextMenuProvider } from './components/ContextMenu';
 import { refFor } from './entities';
 import { Inspector } from './inspector/Inspector';
@@ -17,12 +17,14 @@ import { Analyzing } from './views/Analyzing';
 import { Compare } from './views/Compare';
 import { Diagnosis } from './views/Diagnosis';
 import { Home } from './views/Home';
-import { Locks } from './views/Locks';
 import { Memory } from './views/Memory';
 import { Objects } from './views/Objects';
 import { Report } from './views/Report';
 import { Threads } from './views/Threads';
 import { Placeholder } from './views/Placeholder';
+
+// React Flow + ELK are most of the bundle; load them when the Locks view is first opened.
+const Locks = lazy(() => import('./views/Locks').then((m) => ({ default: m.Locks })));
 
 export function App() {
   return (
@@ -83,7 +85,11 @@ function CurrentView({ view }: { view: View }) {
     case 'threads':
       return <Threads />;
     case 'locks':
-      return <Locks />;
+      return (
+        <Suspense fallback={<div className="view on" />}>
+          <Locks />
+        </Suspense>
+      );
     case 'memory':
       return <Memory />;
     case 'objects':
