@@ -1,0 +1,21 @@
+verdict: Critical/High
+  The app is hung: 2 requests are deadlocked, and 10 more threads are queued behind them.
+  [#N] holds [OrderLedger._gate] and wants [InventoryCache._sync]. [#N] holds [InventoryCache._sync] and wants [OrderLedger._gate]. Neither can proceed, so everything that needs either lock is stuck.
+finding deadlock.cycle.1 Critical/High [Hang,SlowCpu]
+  title: Deadlock between `CheckoutService.Commit` and `InventoryService.Reserve`
+  why: Lock-order inversion on 2 locks · 2 threads in cycle · 10 threads waiting behind
+  means: Two pieces of code take the same two locks in opposite order. Under load they eventually interleave: each grabs its first lock, then waits forever for the other's. Anything else that needs either lock queues behind them. The process won't recover without a restart.
+  next: Restart the process (or recycle the app pool) to recover now. A deadlocked process doesn't heal on its own.
+  next: Take the locks in one order everywhere: [OrderLedger._gate] before [InventoryCache._sync], as `CheckoutService.Commit` does. `InventoryService.Reserve` takes them the other way round.
+  next: Or don't call out while holding a lock: `CheckoutService.Commit` calls `InventoryCache.TryReserve` while it holds [OrderLedger._gate].
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Lock InventoryCache._sync
+  evidence: Lock OrderLedger._gate
+  evidence: Request POST /api/inventory/reserve
+  evidence: Request POST /api/orders/checkout
+group: 1 × InventoryCache.TryReserve(Sku, int) | POST /api/orders/checkout | Deadlocked (deadlock)
+group: 1 × OrderLedger.Append(LedgerEntry) | POST /api/inventory/reserve | Deadlocked (deadlock)
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()
+group: 4 × InventoryCache.TryGet(Sku) | GET /api/inventory/{id} | Waiting on #N
+group: 6 × OrderLedger.Append(LedgerEntry) | POST /api/orders/{id}/notes | Waiting on #N

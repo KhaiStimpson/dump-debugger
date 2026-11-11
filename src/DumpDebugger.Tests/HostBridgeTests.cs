@@ -62,18 +62,18 @@ public class HostBridgeTests
         var dump = await FixtureDumps.GetAsync("deadlock");
         await using var bridge = new BridgeHarness();
 
-        var metadata = await bridge.CallAsync<Core.Dump.DumpMetadata>("dump.open", new { path = dump });
-        Assert.Equal(Core.Dump.DumpArchitecture.X64, metadata.Architecture);
+        var opened = await bridge.CallAsync<Core.Contracts.DumpOpened>("dump.open", new { path = dump });
+        Assert.Equal(Core.Dump.DumpArchitecture.X64, opened.Metadata.Architecture);
 
-        var threads = await bridge.CallAsync("threads.list");
-        Assert.True(threads.GetArrayLength() >= 3);
+        var groups = await bridge.CallAsync<Core.Contracts.ThreadGroupsResult>("threads.groups", new { groupBy = "flat", state = "all" });
+        Assert.True(groups.TotalThreads >= 3);
     }
 
     [Fact]
     public async Task Worker_methods_fail_cleanly_before_a_dump_is_open()
     {
         await using var bridge = new BridgeHarness();
-        var ex = await Assert.ThrowsAsync<RpcException>(() => bridge.CallAsync("threads.list"));
+        var ex = await Assert.ThrowsAsync<RpcException>(() => bridge.CallAsync("threads.groups", new { groupBy = "stack", state = "all" }));
         Assert.Equal(RpcError.NoDumpOpen, ex.Error.Code);
     }
 

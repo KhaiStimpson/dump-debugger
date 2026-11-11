@@ -1,118 +1,74 @@
 using System.Diagnostics;
+using Contoso.Scenarios;
 using Microsoft.Diagnostics.NETCore.Client;
 
-// Minimal fixture generator (PLAN.md §9 describes the full fixture matrix; this is a
-// stripped-down subset covering the scenarios validated so far).
-// Usage: DumpDebugger.DumpGen <output.dmp> [--scenario simple|deadlock]
+// Fixture generator (PLAN.md §9). Usage:
+//   DumpDebugger.DumpGen <output.dmp> [--scenario <name>]
+//   DumpDebugger.DumpGen --list
+// The scenario runs in a child "victim" process; when it prints READY the driver writes a full
+// dump of it and kills it.
+if (args is ["--list"])
+{
+    foreach (var s in ScenarioCatalog.All)
+    {
+        Console.WriteLine($"{s.Name,-16} {s.Description}");
+    }
+
+    return 0;
+}
+
+if (args is ["--victim", var victimScenario, ..])
+{
+    await ScenarioCatalog.Get(victimScenario).RunAsync();
+    return 0;
+}
+
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("Usage: DumpDebugger.DumpGen <output.dmp> [--scenario simple|deadlock]");
+    Console.Error.WriteLine("Usage: DumpDebugger.DumpGen <output.dmp> [--scenario <name>] | --list");
     return 1;
 }
 
 var outputPath = Path.GetFullPath(args[0]);
-var scenario = args.Length >= 2 && args[0] == "--victim" ? args[1] : GetScenarioArg(args);
+var scenario = args.Length >= 3 && args[1] == "--scenario" ? args[2] : "simple";
+_ = ScenarioCatalog.Get(scenario); // validate before launching anything
 
-if (args.Length >= 1 && args[0] == "--victim")
-{
-    RunVictim(scenario);
-    return 0;
-}
-
-var selfPath = Process.GetCurrentProcess().MainModule!.FileName!;
-var psi = new ProcessStartInfo(selfPath, $"--victim \"{scenario}\"")
+var psi = new ProcessStartInfo(Environment.ProcessPath!, $"--victim \"{scenario}\"")
 {
     UseShellExecute = false,
     RedirectStandardOutput = true,
 };
 
 using var victim = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start victim process.");
-var ready = await victim.StandardOutput.ReadLineAsync();
-if (ready != "READY")
+var deadline = Task.Delay(TimeSpan.FromSeconds(90));
+string? line;
+while (true)
 {
-    Console.Error.WriteLine("Victim process did not signal readiness.");
-    victim.Kill();
+    var read = victim.StandardOutput.ReadLineAsync();
+    if (await Task.WhenAny(read, deadline) == deadline)
+    {
+        Console.Error.WriteLine("Victim process did not signal readiness within 90 s.");
+        victim.Kill(entireProcessTree: true);
+        return 1;
+    }
+
+    line = await read;
+    if (line is null or "READY")
+    {
+        break;
+    }
+
+    Console.WriteLine($"  victim: {line}");
+}
+
+if (line != "READY")
+{
+    Console.Error.WriteLine("Victim process exited before signalling readiness.");
     return 1;
 }
 
-// Give the runtime a moment to settle (and, for "deadlock", let both threads actually block)
-// before snapshotting.
-await Task.Delay(1000);
-
-var client = new DiagnosticsClient(victim.Id);
-client.WriteDump(DumpType.Full, outputPath);
-
-victim.Kill();
+Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+new DiagnosticsClient(victim.Id).WriteDump(DumpType.Full, outputPath);
+victim.Kill(entireProcessTree: true);
 Console.WriteLine($"Wrote dump: {outputPath}");
 return 0;
-
-static string GetScenarioArg(string[] a) =>
-    a.Length >= 3 && a[1] == "--scenario" ? a[2] : "simple";
-
-static void RunVictim(string scenario)
-{
-    if (scenario == "deadlock")
-    {
-        RunDeadlockVictim();
-    }
-    else
-    {
-        RunSimpleVictim();
-    }
-}
-
-static void RunSimpleVictim()
-{
-    var data = new List<string>();
-    for (var i = 0; i < 10_000; i++)
-    {
-        data.Add($"dump-debugger-fixture-object-{i}");
-    }
-
-    Console.WriteLine("READY");
-    Console.Out.Flush();
-    Thread.Sleep(Timeout.Infinite);
-}
-
-static void RunDeadlockVictim()
-{
-    var lockA = new object();
-    var lockB = new object();
-    using var bothEntered = new Barrier(2);
-
-    var t1 = new Thread(() =>
-    {
-        lock (lockA)
-        {
-            bothEntered.SignalAndWait();
-            Thread.Sleep(200);
-            lock (lockB)
-            {
-                // unreachable in the deadlock case
-            }
-        }
-    }) { IsBackground = true, Name = "DeadlockThread1" };
-
-    var t2 = new Thread(() =>
-    {
-        lock (lockB)
-        {
-            bothEntered.SignalAndWait();
-            Thread.Sleep(200);
-            lock (lockA)
-            {
-                // unreachable in the deadlock case
-            }
-        }
-    }) { IsBackground = true, Name = "DeadlockThread2" };
-
-    t1.Start();
-    t2.Start();
-
-    // Both threads hold their first lock and are racing to enter the other's; give them time
-    // to actually deadlock before signalling readiness to snapshot.
-    Thread.Sleep(1000);
-    Console.WriteLine("READY");
-    Console.Out.Flush();
-    Thread.Sleep(Timeout.Infinite);
-}

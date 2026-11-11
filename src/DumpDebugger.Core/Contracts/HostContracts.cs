@@ -28,3 +28,26 @@ public enum WorkerState
 public sealed record WorkerStatus(WorkerState State, string Architecture, int? ProcessId, string? Message);
 
 public sealed record PickedFile(string? Path);
+
+public sealed record DumpOpened(Dump.DumpMetadata Metadata, string WorkspacePath, bool CachedAnalysis);
+
+/// <summary>The latest diagnosis for the open dump, or null before analysis has produced one.</summary>
+public sealed record AnalysisState(Diagnosis? Diagnosis, bool Running);
+
+public sealed record AnalysisRunParams(bool IncludeHeap = true);
+
+/// <summary>A row on Home: a recently opened dump and the badge from its last verdict.</summary>
+public sealed record RecentDump(
+    string Path,
+    string FileName,
+    string Folder,
+    DateTimeOffset OpenedAt,
+    string? Runtime,
+    string? Architecture,
+    long SizeBytes,
+    Severity? VerdictSeverity,
+    string? VerdictLabel,
+    bool Exists,
+    bool IsSample);
+
+public sealed record PathParams(string Path);

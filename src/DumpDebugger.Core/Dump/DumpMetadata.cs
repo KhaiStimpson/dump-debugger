@@ -27,6 +27,7 @@ public enum DacResolutionTier
 public sealed record RuntimeInfo(
     RuntimeFamily Family,
     string Version,
+    string ProductVersion,
     string? DacPath,
     DacResolutionTier DacTier,
     bool IsManagedAnalysisAvailable);

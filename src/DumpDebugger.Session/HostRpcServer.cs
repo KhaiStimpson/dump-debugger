@@ -31,6 +31,10 @@ public sealed partial class HostRpcServer : IAsyncDisposable
     private readonly SemaphoreSlim _sessionGate = new(1, 1);
     private readonly HostRpcServerOptions _options;
     private WorkerSession? _session;
+    private Workspace? _workspace;
+    private Diagnosis? _latest;
+    private CancellationTokenSource? _analysisCts;
+    private Task? _analysisTask;
 
     public HostRpcServer(IHostPlatform platform, Func<string, Task> sendToWeb, HostRpcServerOptions? options = null)
     {
@@ -153,12 +157,31 @@ public sealed partial class HostRpcServer : IAsyncDisposable
                 await CloseDumpAsync().ConfigureAwait(false);
                 return ContractJson.ToElement(new Ack());
 
+            case "analysis.get":
+                return ContractJson.ToElement(new AnalysisState(_latest, _analysisTask is { IsCompleted: false }));
+
+            case "recents.list":
+                return ContractJson.ToElement(_recents.List());
+
+            case "recents.remove":
+                _recents.Remove(Params<PathParams>(@params).Path);
+                return ContractJson.ToElement(new Ack());
+
+            case "analysis.cancel":
+                _analysisCts?.Cancel();
+                return ContractJson.ToElement(new Ack());
+
             default:
                 throw new RpcException(new RpcError(RpcError.MethodNotFound, $"Host method '{method}' is not implemented."));
         }
     }
 
-    public async Task<Core.Dump.DumpMetadata> OpenDumpAsync(string path, CancellationToken ct)
+    /// <summary>
+    /// Starts the matching worker, opens the dump, and either restores the cached diagnosis from
+    /// the workspace or starts streaming analysis in the background. Returns as soon as the dump
+    /// is open, so the UI can show the Analyzing screen while stages complete.
+    /// </summary>
+    public async Task<DumpOpened> OpenDumpAsync(string path, CancellationToken ct)
     {
         if (!File.Exists(path))
         {
@@ -177,13 +200,61 @@ public sealed partial class HostRpcServer : IAsyncDisposable
 
             var metadata = await session.OpenDumpAsync(path, ct).ConfigureAwait(false);
             await NotifyWebAsync("worker.status", new WorkerStatus(WorkerState.Ready, session.Architecture.ToString(), session.ProcessId, null)).ConfigureAwait(false);
-            return metadata;
+
+            var workspace = Workspace.For(path);
+            _workspace = workspace;
+            var cached = workspace.TryLoadDiagnosis();
+            if (cached is not null)
+            {
+                _latest = cached with { FromCache = true };
+                await NotifyWebAsync("analysis.updated", _latest).ConfigureAwait(false);
+            }
+            else if (metadata.Runtimes.Any(r => r.IsManagedAnalysisAvailable))
+            {
+                StartAnalysis(session, workspace);
+            }
+
+            await OnDumpOpenedAsync(metadata, workspace, _latest).ConfigureAwait(false);
+            return new DumpOpened(metadata, workspace.Directory, cached is not null);
         }
         finally
         {
             _sessionGate.Release();
         }
     }
+
+    /// <summary>Hook for recents and other per-open bookkeeping (see HostRpcServer.Recents.cs).</summary>
+    private partial Task OnDumpOpenedAsync(Core.Dump.DumpMetadata metadata, Workspace workspace, Diagnosis? diagnosis);
+
+    private void StartAnalysis(WorkerSession session, Workspace workspace)
+    {
+        _analysisCts = new CancellationTokenSource();
+        var ct = _analysisCts.Token;
+        _latest = null;
+        _analysisTask = Task.Run(async () =>
+        {
+            try
+            {
+                var final = await session.Connection.CallAsync<Diagnosis>("analysis.run", new AnalysisRunParams(), ct).ConfigureAwait(false);
+                if (final is not null)
+                {
+                    _latest = final;
+                    workspace.SaveDiagnosis(final);
+                    await OnAnalysisCompletedAsync(workspace, final).ConfigureAwait(false);
+                }
+            }
+            catch (Exception ex) when (ex is OperationCanceledException or RpcException or IOException)
+            {
+                // Cancelled, or the worker went away; the UI keeps the last snapshot it saw.
+            }
+        });
+    }
+
+    private partial Task OnAnalysisCompletedAsync(Workspace workspace, Diagnosis diagnosis);
+
+    public Task? AnalysisTask => _analysisTask;
+
+    public Diagnosis? LatestDiagnosis => _latest;
 
     public async Task CloseDumpAsync()
     {
@@ -200,6 +271,10 @@ public sealed partial class HostRpcServer : IAsyncDisposable
 
     private async Task CloseDumpCoreAsync()
     {
+        _analysisCts?.Cancel();
+        _analysisCts = null;
+        _latest = null;
+        _workspace = null;
         if (_session is { } old)
         {
             _session = null;
@@ -208,8 +283,15 @@ public sealed partial class HostRpcServer : IAsyncDisposable
         }
     }
 
-    private void RelayWorkerNotification(string method, JsonElement? payload) =>
+    private void RelayWorkerNotification(string method, JsonElement? payload)
+    {
+        if (method == "analysis.updated" && ContractJson.FromElement<Diagnosis>(payload) is { } d)
+        {
+            _latest = d;
+        }
+
         _ = SendAsync(RpcMessage.Notification(method, payload));
+    }
 
     private static T Params<T>(JsonElement? element) =>
         ContractJson.FromElement<T>(element)

@@ -39,11 +39,11 @@ Each phase ends shippable.
 - **Done when:** the host opens the fixture dump and the web app lists its threads through the bridge.
 
 ### R1 — Engine contract v2
-- [ ] `Finding` v2: `plainTitle`, `whatItMeans`, `nextSteps[]`, `symptoms[]`, typed `EntityRef[]` evidence, confidence
-- [ ] Entity URIs: `thread/{id}`, `lock/{addr}`, `object/{addr}`, `type/{name}`, `request/{route}`, `finding/{id}`
-- [ ] Worker protocol v2: paged queries, streamed findings, named progress stages, cancellation per request
-- [ ] First-application-frame classifier (skip runtime helper frames and framework namespaces)
-- [ ] Verdict synthesizer: pick and phrase the headline from the top findings (templated, not free-form)
+- [x] `Finding` v2: `plainTitle`, `whatItMeans`, `nextSteps[]`, `symptoms[]`, typed `EntityRef[]` evidence, confidence
+- [x] Entity URIs: `thread/{id}`, `lock/{addr}`, `object/{addr}`, `type/{name}`, `request/{route}`, `finding/{id}`
+- [x] Worker protocol v2: paged queries, streamed findings, named progress stages, cancellation per request
+- [x] First-application-frame classifier (skip runtime helper frames and framework namespaces)
+- [x] Verdict synthesizer: pick and phrase the headline from the top findings (templated, not free-form)
 - **Done when:** the deadlock fixture produces an English verdict naming methods, not `.InlinedCallFrame`.
 
 ### R2 — Shell, Home, Diagnosis
@@ -106,3 +106,4 @@ Each analyzer ships with authored explanations, a DumpGen scenario and a golden 
 ## Implementation notes & deviations
 
 - **R0.** Host-side logic lives in a new UI-free library, `DumpDebugger.Session` (worker lifecycle, bridge dispatcher, workspace), so the bridge is tested headlessly; `DumpDebugger.Host` is only the window. The same JSON-RPC message shape is used on both hops (web ⇄ host over `postMessage`, host ⇄ worker over the named pipe); worker methods are forwarded with params untouched. TS types come from a small reflection generator (`tools/DumpDebugger.TsGen`) over Core's `RpcCatalog` rather than NJsonSchema: it also emits the typed method/notification maps, which a schema generator wouldn't. The host is unpackaged + self-contained by default; MSIX is opt-in (`-p:Packaged=true`). Vite 6 rather than 7 because Vite 7 needs Node ≥ 20.19. Screenshots are taken from the real app through WebView2's CDP port (`web/scripts/shot.mjs`).
+- **R1.** Wait-for edges turned out to be readable exactly, so deadlocks are now reported at *high* confidence (v1 said medium): a blocked thread's `Monitor.Enter` frame keeps the wanted lock object as a stack root, and sync-block owners give the held side. Sync blocks with "waiters" but no owner are `Monitor.Wait` condition variables and are ignored. Locks are named after the field that holds them (`OrderLedger._gate`) from objects on the involved stacks, static fields, or, as a fallback, a referrer scan during the heap walk. Requests come from Kestrel's `Http1Connection` (or `DefaultHttpContext`/`HttpResponse` leading to it) among stack roots. Source lines are read from portable PDBs next to the module when present. Instead of streaming findings one at a time, the worker pushes a whole `Diagnosis` snapshot (`analysis.updated`) after each stage: it's small, and the UI just replaces state. The DumpGen `deadlock` scenario is now a real Kestrel app whose checkout and inventory endpoints deadlock under HTTP load. Paging lands with the first unbounded list (heap types, R4); thread lists are aggregated into groups in the worker.

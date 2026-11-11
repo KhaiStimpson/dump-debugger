@@ -40,6 +40,7 @@ public static class DumpLoader
             runtimeInfos.Add(new RuntimeInfo(
                 family,
                 clrInfo.Version.ToString(),
+                ProductVersion(clrInfo),
                 dacPath,
                 resolution.Tier,
                 resolution.Runtime is not null));
@@ -50,18 +51,21 @@ public static class DumpLoader
             }
         }
 
+        var header = MinidumpHeader.Read(dumpPath);
+        var modules = dataTarget.EnumerateModules().ToList();
+        var exe = modules.FirstOrDefault(m => m.FileName?.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) == true);
         var metadata = new DumpMetadata(
             DumpPath: dumpPath,
             FileSizeBytes: new FileInfo(dumpPath).Length,
             Architecture: architecture,
-            IsFullMemoryDump: MinidumpHeader.IsFullMemoryDump(dumpPath),
-            IsCrashDump: true,
-            CapturedAt: null,
-            ProcessName: null,
+            IsFullMemoryDump: header.IsFullMemory,
+            IsCrashDump: header.HasException,
+            CapturedAt: header.CapturedAt,
+            ProcessName: exe?.FileName is { } exePath ? Path.GetFileName(exePath) : null,
             ProcessId: dataTarget.DataReader.ProcessId,
             Runtimes: runtimeInfos,
             ThreadCount: runtimes.Count > 0 ? runtimes[0].Threads.Count() : 0,
-            ModuleCount: dataTarget.EnumerateModules().Count());
+            ModuleCount: modules.Count);
 
         return new LoadedDump
         {
@@ -69,6 +73,22 @@ public static class DumpLoader
             Metadata = metadata,
             Runtimes = runtimes,
         };
+    }
+
+    /// <summary>
+    /// The version people recognise ("10.0.15", "4.8"). The CLR file version (10.0.1526.53008) is
+    /// not it; on .NET Core the shared-framework folder the runtime was loaded from is.
+    /// </summary>
+    private static string ProductVersion(ClrInfo clr)
+    {
+        var path = clr.ModuleInfo.FileName ?? "";
+        var match = System.Text.RegularExpressions.Regex.Match(path, @"Microsoft\.NETCore\.App[\\/](\d+\.\d+\.\d+[^\\/]*)");
+        if (match.Success)
+        {
+            return match.Groups[1].Value;
+        }
+
+        return $"{clr.Version.Major}.{clr.Version.Minor}";
     }
 
     private static DumpArchitecture MapArchitecture(Architecture arch) => arch switch

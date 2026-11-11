@@ -8,6 +8,25 @@ export interface Ack {
   ok: boolean;
 }
 
+export interface AnalysisRunParams {
+  includeHeap: boolean;
+}
+
+export interface AnalysisStage {
+  id: string;
+  label: string;
+  status: StageStatus;
+  seconds: number | null;
+  detail: string | null;
+  fraction: number | null;
+  tone: Tone;
+}
+
+export interface AnalysisState {
+  diagnosis: Diagnosis | null;
+  running: boolean;
+}
+
 export interface AppInfo {
   version: string;
   hostArchitecture: string;
@@ -15,8 +34,25 @@ export interface AppInfo {
   startupDumpPath: string | null;
 }
 
+export type Confidence = 'low' | 'medium' | 'high';
+export const ConfidenceValues: readonly Confidence[] = ['low', 'medium', 'high'];
+
 export type DacResolutionTier = 'none' | 'embeddedInDump' | 'localMachine' | 'appCache' | 'symbolServer';
 export const DacResolutionTierValues: readonly DacResolutionTier[] = ['none', 'embeddedInDump', 'localMachine', 'appCache', 'symbolServer'];
+
+export interface Diagnosis {
+  schemaVersion: number;
+  dump: DumpSummary;
+  verdict: Verdict;
+  vitals: Vital[];
+  findings: Finding[];
+  busiestRequests: RequestCount[];
+  stages: AnalysisStage[];
+  seconds: number;
+  complete: boolean;
+  fromCache: boolean;
+  analyzedAt: string;
+}
 
 export type DumpArchitecture = 'unknown' | 'x86' | 'x64' | 'arm64';
 export const DumpArchitectureValues: readonly DumpArchitecture[] = ['unknown', 'x86', 'x64', 'arm64'];
@@ -35,16 +71,84 @@ export interface DumpMetadata {
   moduleCount: number;
 }
 
+export interface DumpOpened {
+  metadata: DumpMetadata;
+  workspacePath: string;
+  cachedAnalysis: boolean;
+}
+
+export interface DumpSummary {
+  path: string;
+  fileName: string;
+  fileSizeBytes: number;
+  runtime: string;
+  architecture: string;
+  threadCount: number;
+  processName: string | null;
+  dacSource: string | null;
+}
+
+export type EntityKind = 'thread' | 'lock' | 'object' | 'type' | 'request' | 'finding';
+export const EntityKindValues: readonly EntityKind[] = ['thread', 'lock', 'object', 'type', 'request', 'finding'];
+
+/** A link to any entity. `uri` is stable per dump: thread/{id}, lock/0x{addr}, object/0x{addr}, type/{name}, request/{route}, finding/{id}. */
+export interface EntityRef {
+  uri: string;
+  kind: EntityKind;
+  label: string;
+  detail: string | null;
+}
+
+/** Finding v2. Text fields support `code` and {{uri}} (an inline entity chip whose label comes from `evidence`). */
+export interface Finding {
+  id: string;
+  analyzer: string;
+  severity: Severity;
+  confidence: Confidence;
+  title: string;
+  why: string;
+  whatItMeans: string;
+  nextSteps: string[];
+  symptoms: Symptom[];
+  evidence: EntityRef[];
+  score: number;
+  visual: FindingVisual;
+}
+
+export type FindingVisual = 'none' | 'waitGraph' | 'heap';
+export const FindingVisualValues: readonly FindingVisual[] = ['none', 'waitGraph', 'heap'];
+
+export type FrameKind = 'app' | 'framework' | 'runtime';
+export const FrameKindValues: readonly FrameKind[] = ['app', 'framework', 'runtime'];
+
+export interface LockCycle {
+  id: string;
+  threads: number[];
+  locks: string[];
+  explanation: string;
+  acquiredAt: string[];
+}
+
+export interface LockInfo {
+  uri: string;
+  address: number;
+  name: string;
+  typeName: string;
+  ownerThread: number | null;
+  acquiredAt: string | null;
+  waiters: number[];
+  recursion: number;
+  inCycle: boolean;
+}
+
 export type NoParams = Record<string, never>;
 
 export interface OpenDumpParams {
   path: string;
 }
 
-export interface OperationContextInfo {
-  osThreadId: number;
-  source: string;
-  description: string;
+export interface PathParams {
+  path: string;
 }
 
 export interface PickedFile {
@@ -57,11 +161,30 @@ export interface ProgressNotification {
   detail: string | null;
 }
 
+export interface RecentDump {
+  path: string;
+  fileName: string;
+  folder: string;
+  openedAt: string;
+  runtime: string | null;
+  architecture: string | null;
+  sizeBytes: number;
+  verdictSeverity: Severity | null;
+  verdictLabel: string | null;
+  exists: boolean;
+  isSample: boolean;
+}
+
 export interface Rect {
   x: number;
   y: number;
   width: number;
   height: number;
+}
+
+export interface RequestCount {
+  route: string;
+  threads: number;
 }
 
 export type RuntimeFamily = 'unknown' | 'netFramework' | 'netCore';
@@ -70,31 +193,158 @@ export const RuntimeFamilyValues: readonly RuntimeFamily[] = ['unknown', 'netFra
 export interface RuntimeInfo {
   family: RuntimeFamily;
   version: string;
+  productVersion: string;
   dacPath: string | null;
   dacTier: DacResolutionTier;
   isManagedAnalysisAvailable: boolean;
 }
 
-export interface StackFrameInfo {
-  methodName: string;
-  typeName: string | null;
+export type Severity = 'ok' | 'info' | 'warning' | 'critical';
+export const SeverityValues: readonly Severity[] = ['ok', 'info', 'warning', 'critical'];
+
+export interface StackFrame {
+  display: string;
+  fullName: string | null;
+  kind: FrameKind;
+  module: string | null;
+  ilOffset: number | null;
+  sourceFile: string | null;
+  line: number | null;
+  isWait: boolean;
 }
 
-export interface ThreadInfo {
-  osThreadId: number;
-  managedThreadId: number;
-  isAlive: boolean;
-  isGc: boolean;
-  isFinalizer: boolean;
-  lockCount: number;
-  currentExceptionType: string | null;
-  frames: StackFrameInfo[];
-  stackGroupHash: string;
-  operationContext: OperationContextInfo | null;
+export type StageStatus = 'pending' | 'running' | 'done' | 'skipped' | 'failed';
+export const StageStatusValues: readonly StageStatus[] = ['pending', 'running', 'done', 'skipped', 'failed'];
+
+export type Symptom = 'hang' | 'highMemory' | 'crash' | 'slowCpu';
+export const SymptomValues: readonly Symptom[] = ['hang', 'highMemory', 'crash', 'slowCpu'];
+
+export interface ThreadDetail {
+  thread: ThreadSummary;
+  frames: StackFrame[];
+  holds: EntityRef[];
+  waitingFor: EntityRef | null;
+  waitingForOwner: EntityRef | null;
+  stackObjects: EntityRef[];
+  sameStack: number[];
+}
+
+export interface ThreadGroup {
+  key: string;
+  count: number;
+  where: string;
+  whereIsApp: boolean;
+  request: string | null;
+  state: ThreadState;
+  stateLabel: string;
+  threadIds: number[];
+  inDeadlock: boolean;
+}
+
+export type ThreadGrouping = 'stack' | 'request' | 'flat';
+export const ThreadGroupingValues: readonly ThreadGrouping[] = ['stack', 'request', 'flat'];
+
+export interface ThreadGroupsQuery {
+  groupBy: ThreadGrouping;
+  state: ThreadStateFilter;
+  search: string | null;
+}
+
+export interface ThreadGroupsResult {
+  groups: ThreadGroup[];
+  totalThreads: number;
+  counts: ThreadStateCount[];
+}
+
+export interface ThreadQuery {
+  id: number;
+}
+
+export type ThreadRole = 'request' | 'poolWorker' | 'main' | 'finalizer' | 'gc' | 'timer' | 'io' | 'background';
+export const ThreadRoleValues: readonly ThreadRole[] = ['request', 'poolWorker', 'main', 'finalizer', 'gc', 'timer', 'io', 'background'];
+
+export type ThreadState = 'running' | 'blocked' | 'waiting' | 'idle';
+export const ThreadStateValues: readonly ThreadState[] = ['running', 'blocked', 'waiting', 'idle'];
+
+export interface ThreadStateCount {
+  state: ThreadStateFilter;
+  count: number;
+}
+
+export type ThreadStateFilter = 'all' | 'blocked' | 'waiting' | 'running' | 'idle';
+export const ThreadStateFilterValues: readonly ThreadStateFilter[] = ['all', 'blocked', 'waiting', 'running', 'idle'];
+
+export interface ThreadSummary {
+  id: number;
+  osId: number;
+  state: ThreadState;
+  stateLabel: string;
+  role: ThreadRole;
+  where: string | null;
+  request: string | null;
+  requestPath: string | null;
+  groupKey: string;
+  waitingOnLock: string | null;
+  waitingOnThread: number | null;
+  inDeadlock: boolean;
+  exception: string | null;
 }
 
 export interface TitlebarRegions {
   passthrough: Rect[];
+}
+
+export type Tone = 'neutral' | 'accent' | 'ok' | 'info' | 'warning' | 'critical';
+export const ToneValues: readonly Tone[] = ['neutral', 'accent', 'ok', 'info', 'warning', 'critical'];
+
+export interface Verdict {
+  severity: Severity;
+  confidence: Confidence;
+  headline: string;
+  body: string;
+  entities: EntityRef[];
+  findingId: string | null;
+}
+
+export interface Vital {
+  key: string;
+  label: string;
+  value: string;
+  detail: string;
+  fraction: number | null;
+  tone: Tone;
+}
+
+export type WaitEdgeKind = 'owns' | 'waitsFor' | 'queuedBehind';
+export const WaitEdgeKindValues: readonly WaitEdgeKind[] = ['owns', 'waitsFor', 'queuedBehind'];
+
+export interface WaitGraph {
+  nodes: WaitGraphNode[];
+  edges: WaitGraphEdge[];
+  cycles: LockCycle[];
+  locks: LockInfo[];
+}
+
+export interface WaitGraphEdge {
+  from: string;
+  to: string;
+  kind: WaitEdgeKind;
+  inCycle: boolean;
+}
+
+export interface WaitGraphNode {
+  id: string;
+  kind: EntityKind;
+  label: string;
+  sub: string | null;
+  detail: string | null;
+  inCycle: boolean;
+  count: number;
+  threadIds: number[];
+}
+
+export interface WaitGraphQuery {
+  cyclesOnly: boolean;
 }
 
 export type WorkerState = 'starting' | 'ready' | 'exited';
@@ -112,9 +362,16 @@ export interface RpcMethods {
   'app.info': { params: NoParams; result: AppInfo };
   'window.setTitlebar': { params: TitlebarRegions; result: Ack };
   'dump.pick': { params: NoParams; result: PickedFile };
-  'dump.open': { params: OpenDumpParams; result: DumpMetadata };
+  'dump.open': { params: OpenDumpParams; result: DumpOpened };
   'dump.close': { params: NoParams; result: Ack };
-  'threads.list': { params: NoParams; result: ThreadInfo[] };
+  'analysis.get': { params: NoParams; result: AnalysisState };
+  'analysis.cancel': { params: NoParams; result: Ack };
+  'recents.list': { params: NoParams; result: RecentDump[] };
+  'recents.remove': { params: PathParams; result: Ack };
+  'analysis.run': { params: AnalysisRunParams; result: Diagnosis };
+  'threads.groups': { params: ThreadGroupsQuery; result: ThreadGroupsResult };
+  'threads.get': { params: ThreadQuery; result: ThreadDetail };
+  'locks.graph': { params: WaitGraphQuery; result: WaitGraph };
 }
 
 export type RpcMethod = keyof RpcMethods;
@@ -123,6 +380,7 @@ export type RpcMethod = keyof RpcMethods;
 export interface RpcNotifications {
   'dump.progress': ProgressNotification;
   'worker.status': WorkerStatus;
+  'analysis.updated': Diagnosis;
 }
 
 export type RpcNotification = keyof RpcNotifications;

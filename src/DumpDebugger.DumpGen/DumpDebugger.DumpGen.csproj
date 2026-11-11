@@ -1,13 +1,18 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- Fixture generator: runs a scenario in a child "victim" process (a real ASP.NET Core app
+       for the request-shaped scenarios), waits for it to reach the interesting state, and
+       writes a full dump of it. Each analyzer's golden test depends on one scenario here. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <RootNamespace>Contoso</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.661903" />
   </ItemGroup>
 

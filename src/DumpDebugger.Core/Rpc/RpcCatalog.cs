@@ -21,6 +21,7 @@ public sealed record RpcNotificationInfo(string Name, Type Payload);
 /// contract. This is the single source of truth: the host dispatcher routes by
 /// <see cref="RpcTarget"/>, and DumpDebugger.TsGen turns it into the typed
 /// <c>RpcMethods</c>/<c>RpcNotifications</c> maps in <c>web/src/contracts.gen.ts</c>.
+/// Worker methods must aggregate and paginate: nothing here returns a raw heap.
 /// </summary>
 public static class RpcCatalog
 {
@@ -29,20 +30,28 @@ public static class RpcCatalog
         Host<NoParams, AppInfo>("app.info"),
         Host<TitlebarRegions, Ack>("window.setTitlebar"),
         Host<NoParams, PickedFile>("dump.pick"),
-        Host<OpenDumpParams, DumpMetadata>("dump.open"),
+        Host<OpenDumpParams, DumpOpened>("dump.open"),
         Host<NoParams, Ack>("dump.close"),
+        Host<NoParams, AnalysisState>("analysis.get"),
+        Host<NoParams, Ack>("analysis.cancel"),
+        Host<NoParams, IReadOnlyList<RecentDump>>("recents.list"),
+        Host<PathParams, Ack>("recents.remove"),
 
-        Worker<NoParams, IReadOnlyList<ThreadInfo>>("threads.list"),
+        Worker<AnalysisRunParams, Diagnosis>("analysis.run"),
+        Worker<ThreadGroupsQuery, ThreadGroupsResult>("threads.groups"),
+        Worker<ThreadQuery, ThreadDetail>("threads.get"),
+        Worker<WaitGraphQuery, WaitGraph>("locks.graph"),
     ];
 
     public static readonly IReadOnlyList<RpcNotificationInfo> Notifications =
     [
         new("dump.progress", typeof(ProgressNotification)),
         new("worker.status", typeof(WorkerStatus)),
+        new("analysis.updated", typeof(Diagnosis)),
     ];
 
     /// <summary>Contract types the web app uses directly that no method signature reaches.</summary>
-    public static readonly IReadOnlyList<Type> ExtraExportedTypes = [];
+    public static readonly IReadOnlyList<Type> ExtraExportedTypes = [typeof(EntityKind)];
 
     private static readonly Dictionary<string, RpcMethodInfo> ByName =
         Methods.ToDictionary(m => m.Name, StringComparer.Ordinal);
