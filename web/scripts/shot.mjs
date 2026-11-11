@@ -40,7 +40,9 @@ const args = ['--cdp', String(port)];
 if (plan.dump) args.unshift(resolve(webRoot, plan.dump));
 console.log(`launching ${exe} ${args.join(' ')}`);
 // plan.attach: the app was started elsewhere (e.g. inside its MSIX package) with --cdp.
-const host = plan.attach ? { kill() {} } : spawn(exe, args, { stdio: 'ignore', env: { ...process.env, ...(plan.env ?? {}) } });
+const host = plan.attach
+  ? { kill() {} }
+  : spawn(exe, args, { stdio: 'ignore', env: { ...process.env, ...(plan.env ?? {}) } });
 
 const deadline = Date.now() + 30_000;
 let browser;
