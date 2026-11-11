@@ -12,6 +12,8 @@ public sealed class TypeAggregate
     public long Count { get; set; }
     public long Size { get; set; }
     public long LohSize { get; set; }
+
+    public bool IsApp { get; init; }
 }
 
 public sealed class HeapModel
@@ -21,6 +23,12 @@ public sealed class HeapModel
     public required long FreeBytes { get; init; }
     public required long LohFreeBytes { get; init; }
     public required long LohBytes { get; init; }
+
+    /// <summary>Object count and bytes per generation (Gen0/1/2, LOH, POH, Frozen).</summary>
+    public required IReadOnlyDictionary<string, (long Count, long Size)> GenerationStats { get; init; }
+
+    /// <summary>Every live object in address order, captured during the walk so the reference index doesn't need a second walk.</summary>
+    public required ObjectTable Table { get; init; }
 
     public IEnumerable<TypeStat> TypeStats => Types.Select(t => new TypeStat(t.Name, t.Count, t.Size));
 }
@@ -59,7 +67,8 @@ public static class HeapWalker
         var heap = runtime.Heap;
         var types = new Dictionary<ulong, TypeAggregate>();
         lockNames = [];
-        var segments = heap.Segments.ToList();
+        // Address order, so the object table comes out sorted (segments never overlap).
+        var segments = heap.Segments.OrderBy(s => s.ObjectRange.Start).ToList();
         var totalBytes = segments.Sum(s => (long)s.ObjectRange.Length);
         long done = 0;
         long objects = 0;
@@ -68,6 +77,9 @@ public static class HeapWalker
         long lohBytes = 0;
         var gens = new Dictionary<string, long>();
         var lastReport = 0L;
+        var genCounts = new long[6];
+        var genSizes = new long[6];
+        var table = new ObjectTable(estimate: (int)Math.Min(int.MaxValue / 2, Math.Max(1024, totalBytes / 96)));
 
         foreach (var seg in segments)
         {
@@ -110,12 +122,16 @@ public static class HeapWalker
                 objects++;
                 if (!types.TryGetValue(obj.Type.MethodTable, out var agg))
                 {
-                    agg = new TypeAggregate { MethodTable = obj.Type.MethodTable, Name = obj.Type.Name ?? "<unknown type>" };
+                    agg = new TypeAggregate { MethodTable = obj.Type.MethodTable, Name = obj.Type.Name ?? "<unknown type>", IsApp = FrameClassifier.IsAppType(obj.Type.Name, obj.Type.Module) };
                     types[obj.Type.MethodTable] = agg;
                 }
 
                 agg.Count++;
                 agg.Size += size;
+                var gen = HeapIndex.GenerationOf(seg, obj.Address);
+                genCounts[gen]++;
+                genSizes[gen] += size;
+                table.Add(obj.Address, obj.Type, size, gen);
                 if (isLoh)
                 {
                     agg.LohSize += size;
@@ -147,6 +163,9 @@ public static class HeapWalker
             FreeBytes = free,
             LohFreeBytes = lohFree,
             LohBytes = lohBytes,
+            GenerationStats = Enumerable.Range(0, 6).Where(g => genCounts[g] > 0)
+                .ToDictionary(g => HeapIndex.GenerationName((byte)g), g => (genCounts[g], genSizes[g])),
+            Table = table,
         };
     }
 

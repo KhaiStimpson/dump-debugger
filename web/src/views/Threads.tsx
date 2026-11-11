@@ -85,7 +85,8 @@ export function Threads() {
         <div className="pane-h">
           <h3>Threads</h3>
           <span className="pill">
-            {threadsShown} thread{threadsShown === 1 ? '' : 's'} · {groups.length} {groupBy === 'flat' ? 'rows' : 'groups'}
+            {threadsShown} thread{threadsShown === 1 ? '' : 's'} · {groups.length}{' '}
+            {groupBy === 'flat' ? 'rows' : 'groups'}
           </span>
           <input
             className="filter"
@@ -97,14 +98,26 @@ export function Threads() {
           <div className="r">
             <div className="seg" role="radiogroup" aria-label="Grouping">
               {groupings.map((g) => (
-                <button key={g.id} role="radio" aria-checked={groupBy === g.id} className={groupBy === g.id ? 'on' : ''} onClick={() => setGroupBy(g.id)}>
+                <button
+                  key={g.id}
+                  role="radio"
+                  aria-checked={groupBy === g.id}
+                  className={groupBy === g.id ? 'on' : ''}
+                  onClick={() => setGroupBy(g.id)}
+                >
                   {g.label}
                 </button>
               ))}
             </div>
             <div className="seg" role="radiogroup" aria-label="State filter">
               {filters.map((f) => (
-                <button key={f.id} role="radio" aria-checked={state === f.id} className={state === f.id ? 'on' : ''} onClick={() => setState(f.id)}>
+                <button
+                  key={f.id}
+                  role="radio"
+                  aria-checked={state === f.id}
+                  className={state === f.id ? 'on' : ''}
+                  onClick={() => setState(f.id)}
+                >
                   {f.label} <span className="n">{counts.get(f.id) ?? ''}</span>
                 </button>
               ))}
@@ -128,7 +141,14 @@ export function Threads() {
                   className={`trow ${sel ? 'sel' : ''}`}
                   role="option"
                   aria-selected={sel}
-                  style={{ position: 'absolute', top: 0, left: 0, right: 0, height: ROW, transform: `translateY(${v.start}px)` }}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: ROW,
+                    transform: `translateY(${v.start}px)`,
+                  }}
                   onClick={() => select(g)}
                 >
                   <span className="cnt">{groupBy === 'flat' ? `#${g.threadIds[0]}` : g.count}</span>

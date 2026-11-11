@@ -402,21 +402,59 @@ function TypeBody({ name }: { name: string }) {
 }
 
 function ObjectBody({ entityUri }: { entityUri: string }) {
-  const address = addressOf(entityUri);
-  const entity = refFor(entityUri);
+  const address = addressOf(entityUri)!;
+  const { data: o, error } = useRpc('objects.inspect', { address, elementOffset: 0, elementLimit: 10 });
+  const roots = useRpc('objects.roots', { address, mode: 'shortest', maxPaths: 1 });
+  const entity = { ...refFor(entityUri), label: o?.identity ?? refFor(entityUri).label };
+  const root = roots.data?.paths[0]?.root;
   return (
     <>
       <div className="ih">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <h3 style={{ fontSize: 15 }}>● Object</h3>
+          <h3 style={{ fontSize: 15 }}>● {o?.identity ?? 'Object'}</h3>
           <PinButtons entity={entity} />
         </div>
-        <p className="mono" style={{ color: 'var(--fg-2)', margin: '6px 0 0' }}>
-          0x{address?.toString(16)}
+        <p className="mono" style={{ color: 'var(--fg-2)', margin: '6px 0 0', wordBreak: 'break-all' }}>
+          0x{address.toString(16)}
+          {o ? ` · ${shortType(o.typeName)} · ${o.generation} · ${o.size.toLocaleString('en-US')} B` : ''}
         </p>
+        {error && <p className="conf">{String((error as Error).message ?? error)}</p>}
       </div>
+      <NoteEditor entity={entity} />
+      {o && (o.fields.length > 0 || o.elements) && (
+        <div className="ib">
+          <span className="lbl">{o.fields.length ? 'Fields' : 'Elements'}</span>
+          <dl className="kv" style={{ gridTemplateColumns: '120px 1fr' }}>
+            {(o.fields.length ? o.fields : (o.elements ?? [])).slice(0, 10).map((f) => (
+              <div key={f.name} style={{ display: 'contents' }}>
+                <dt className="mono" style={{ fontSize: 12 }}>
+                  {f.name}
+                </dt>
+                <dd
+                  className="mono"
+                  style={{
+                    fontSize: 12,
+                    color: f.kind === 'string' ? '#a7f3d0' : f.kind === 'null' ? 'var(--fg-3)' : 'var(--code)',
+                  }}
+                >
+                  {f.display}
+                  {f.note ? ` — ${f.note}` : ''}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+      {root && (
+        <div className="ib">
+          <span className="lbl">Kept alive by</span>
+          <p style={{ margin: '6px 0 0', fontSize: 13 }} className="mono">
+            {root.label}
+          </p>
+        </div>
+      )}
       <div className="ib">
-        <button className="btn pri" onClick={() => navigate('objects', `0x${address?.toString(16)}`)}>
+        <button className="btn pri" onClick={() => navigate('objects', `0x${address.toString(16)}`)}>
           Open in object explorer
         </button>
       </div>

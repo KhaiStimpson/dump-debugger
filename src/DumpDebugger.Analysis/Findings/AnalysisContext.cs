@@ -14,6 +14,11 @@ public sealed class AnalysisContext
     public required LockModel Locks { get; init; }
     public HeapModel? Heap { get; init; }
 
+    /// <summary>Reference index and object queries; null until the large-object stage has run.</summary>
+    public DumpDebugger.Analysis.Heap.ObjectExplorer? Explorer { get; init; }
+
+    public IReadOnlyList<LargeObject>? LargeObjects { get; init; }
+
     public IReadOnlyDictionary<int, ThreadRecord> ThreadsById => _byId ??= Threads.ToDictionary(t => t.Id);
 
     private IReadOnlyDictionary<int, ThreadRecord>? _byId;

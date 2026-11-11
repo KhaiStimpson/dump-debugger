@@ -60,8 +60,24 @@ export function refFor(u: string, known?: readonly EntityRef[]): EntityRef {
 
 /** System.Collections.Generic.Dictionary<System.String,X> → Dictionary<String,X> */
 export function shortType(name: string): string {
-  return name.replace(/(?:[A-Za-z_][\w]*\.)+(?=[A-Za-z_<])/g, '').replace(/\+/g, '.');
+  return name
+    .replace(/(?:[A-Za-z_][\w]*\.)+(?=[A-Za-z_<])/g, '')
+    .replace(/\+/g, '.')
+    .replace(/\b(Byte|Int32|Int64|String|Object|Boolean|Char|Double|Single|Decimal)\b/g, (t) => aliases[t] ?? t);
 }
+
+const aliases: Record<string, string> = {
+  Byte: 'byte',
+  Int32: 'int',
+  Int64: 'long',
+  String: 'string',
+  Object: 'object',
+  Boolean: 'bool',
+  Char: 'char',
+  Double: 'double',
+  Single: 'float',
+  Decimal: 'decimal',
+};
 
 export const chipClass: Record<EntityKind, string> = {
   thread: 't',

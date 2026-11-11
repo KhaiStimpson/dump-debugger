@@ -1,5 +1,6 @@
 using System.Text.Json;
 using DumpDebugger.Analysis;
+using DumpDebugger.Analysis.Heap;
 using DumpDebugger.Analysis.Locks;
 using DumpDebugger.Analysis.Threads;
 using DumpDebugger.Core.Contracts;
@@ -60,6 +61,59 @@ public sealed class WorkerHandlers : IDisposable
                     var q = ContractJson.FromElement<WaitGraphQuery>(@params) ?? new WaitGraphQuery(false);
                     var (threads, locks) = await RequireRuntime().EnsureThreadsAsync(ct);
                     return ContractJson.ToElement(LockModelBuilder.ToGraph(locks, threads, q.CyclesOnly));
+                }
+
+            case "heap.summary":
+                {
+                    var heap = await RequireRuntime().EnsureHeapAsync(ct);
+                    return ContractJson.ToElement(HeapQueries.Summary(heap));
+                }
+
+            case "heap.types":
+                {
+                    var q = Params<HeapTypesQuery>(@params);
+                    var heap = await RequireRuntime().EnsureHeapAsync(ct);
+                    return ContractJson.ToElement(HeapQueries.Types(heap, q));
+                }
+
+            case "heap.largeObjects":
+                {
+                    var index = RequireRuntime();
+                    if (index.LargeObjects is null)
+                    {
+                        var explorer = await index.EnsureExplorerAsync(null, ct);
+                        index.LargeObjects = await index.WithClrAsync(() => explorer.LargeObjects(), ct);
+                    }
+
+                    return ContractJson.ToElement(index.LargeObjects);
+                }
+
+            case "heap.instances":
+                {
+                    var q = Params<InstancesQuery>(@params);
+                    var explorer = await RequireRuntime().EnsureExplorerAsync(null, ct);
+                    return ContractJson.ToElement(await RequireRuntime().WithClrAsync(() => explorer.Instances(q), ct));
+                }
+
+            case "objects.inspect":
+                {
+                    var q = Params<ObjectQuery>(@params);
+                    var explorer = await RequireRuntime().EnsureExplorerAsync(null, ct);
+                    return ContractJson.ToElement(await RequireRuntime().WithClrAsync(() => explorer.Inspect(q), ct));
+                }
+
+            case "objects.referrers":
+                {
+                    var q = Params<ReferrersQuery>(@params);
+                    var explorer = await RequireRuntime().EnsureExplorerAsync(null, ct);
+                    return ContractJson.ToElement(await RequireRuntime().WithClrAsync(() => explorer.Referrers(q), ct));
+                }
+
+            case "objects.roots":
+                {
+                    var q = Params<RootsQuery>(@params);
+                    var explorer = await RequireRuntime().EnsureExplorerAsync(null, ct);
+                    return ContractJson.ToElement(await RequireRuntime().WithClrAsync(() => explorer.FindRoots(q, ct), ct));
                 }
 
             default:

@@ -1,0 +1,21 @@
+verdict: Ok/Medium
+  No hang or deadlock found. Worth a look: System.Byte[] is 89% of the heap, mostly 3 PDF documents in ReportCache.
+  4 threads (0 blocked) and a 304 MB managed heap. Nothing crossed a warning threshold. The views on the left have the detail if you're chasing something specific.
+finding heap.dominance.System.Byte[] Info/High [HighMemory]
+  title: `System.Byte[]` is 89% of the heap, mostly 3 PDF documents in `ReportCache`
+  why: 270 MB across 4 instances · top 3 270 MB
+  means: Most of this memory is a few big objects rather than many small ones. That isn't a bug by itself, but objects this size live on the Large Object Heap and are only collected in full GCs, so if they're held longer than needed the process stays large.
+  next: Open the largest one, [PDF document "Q3-statements" in ReportCache], and check what keeps it alive (its path to a GC root).
+  next: If `ReportCache` is a cache, give it a size limit or an expiry so entries can be evicted.
+  evidence: Object PDF document "Q3-invoices-EU" in ReportCache
+  evidence: Object PDF document "Q3-invoices-US" in ReportCache
+  evidence: Object PDF document "Q3-statements" in ReportCache
+  evidence: Type byte[]
+large: PDF document "Q3-statements" in ReportCache | System.Byte[] | LOH | CachedReport.Pdf
+large: PDF document "Q3-invoices-EU" in ReportCache | System.Byte[] | LOH | CachedReport.Pdf
+large: PDF document "Q3-invoices-US" in ReportCache | System.Byte[] | LOH | CachedReport.Pdf
+large: CartSnapshot[] in SessionStore | Contoso.Orders.CartSnapshot[] | LOH | 
+path: Dictionary<string,CachedReport> (3 entries) via _entries
+path: Dictionary.Entry[3] via [0]
+path: CachedReport "Q3-statements" via Pdf
+path: PDF document (120 MB) via 

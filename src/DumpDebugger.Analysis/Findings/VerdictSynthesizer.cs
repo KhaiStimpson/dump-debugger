@@ -21,10 +21,15 @@ public static class VerdictSynthesizer
             var tail = complete
                 ? "Nothing crossed a warning threshold. The views on the left have the detail if you're chasing something specific."
                 : "Deeper analyzers are still running; this may change.";
+            var okHeadline = !complete
+                ? "Nothing alarming so far."
+                : top is not null
+                    ? $"No hang or deadlock found. Worth a look: {StripMarks(top.Finding.Title)}."
+                    : "No hang, deadlock or memory problem stood out.";
             return new Verdict(
                 Severity.Ok,
                 complete ? Confidence.Medium : Confidence.Low,
-                complete ? "No hang, deadlock or memory problem stood out." : "Nothing alarming so far.",
+                okHeadline,
                 $"{Plural(context.Threads.Count, "thread")} ({blocked} blocked)" + (heap is { } h ? $" and a {Bytes(h)} managed heap. " : ". ") + tail,
                 [],
                 top?.Finding.Id);

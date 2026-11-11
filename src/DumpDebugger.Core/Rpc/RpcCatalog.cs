@@ -46,6 +46,13 @@ public static class RpcCatalog
         Worker<ThreadGroupsQuery, ThreadGroupsResult>("threads.groups"),
         Worker<ThreadQuery, ThreadDetail>("threads.get"),
         Worker<WaitGraphQuery, WaitGraph>("locks.graph"),
+        Worker<NoParams, HeapSummary>("heap.summary"),
+        Worker<HeapTypesQuery, Page<TypeRow>>("heap.types"),
+        Worker<InstancesQuery, Page<InstanceRow>>("heap.instances"),
+        Worker<NoParams, IReadOnlyList<LargeObject>>("heap.largeObjects"),
+        Worker<ObjectQuery, ObjectView>("objects.inspect"),
+        Worker<ReferrersQuery, Page<Referrer>>("objects.referrers"),
+        Worker<RootsQuery, RootPathsResult>("objects.roots"),
     ];
 
     public static readonly IReadOnlyList<RpcNotificationInfo> Notifications =

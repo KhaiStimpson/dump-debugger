@@ -36,6 +36,11 @@ function PaletteBody({ close }: { close(): void }) {
   const closeDump = useApp((s) => s.closeDump);
   const threads = useRpc('threads.groups', { groupBy: 'flat', state: 'all', search: null }, !!dump);
   const graph = useRpc('locks.graph', { cyclesOnly: false }, !!dump);
+  const types = useRpc(
+    'heap.types',
+    { groupBy: 'type', filter: null, offset: 0, limit: 400, sort: 'size' },
+    !!dump && !!diagnosis?.complete,
+  );
 
   useEffect(() => input.current?.focus(), []);
 
@@ -80,6 +85,26 @@ function PaletteBody({ close }: { close(): void }) {
       }),
     );
 
+    types.data?.items.forEach((t) =>
+      all.push({
+        group: 'Types',
+        icon: '▦',
+        label: t.name,
+        meta: `${t.count.toLocaleString('en-US')} instances`,
+        run: () => navigate('memory', t.name),
+      }),
+    );
+
+    const address = q.trim().match(/^(?:0x)?([0-9a-f]{6,16})$/i);
+    if (dump && address) {
+      all.push({
+        group: 'Objects',
+        icon: '●',
+        label: `Go to object 0x${address[1]}`,
+        run: () => navigate('objects', `0x${address[1]}`),
+      });
+    }
+
     diagnosis?.findings.forEach((f) =>
       all.push({
         group: 'Findings',
@@ -114,7 +139,7 @@ function PaletteBody({ close }: { close(): void }) {
     cmd('Home', go('home'), 'G H');
     cmd('Keyboard shortcuts', () => useApp.getState().setHelp(true), '?');
     return all;
-  }, [threads.data, graph.data, diagnosis, dump, inspect, openDump, closeDump]);
+  }, [threads.data, graph.data, types.data, q, diagnosis, dump, inspect, openDump, closeDump]);
 
   const filtered = useMemo(() => {
     const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
@@ -132,7 +157,7 @@ function PaletteBody({ close }: { close(): void }) {
       if (list.length < (q ? 6 : 4)) list.push(it);
       byGroup.set(it.group, list);
     }
-    const order = ['Requests', 'Threads', 'Locks', 'Types', 'Findings', 'Commands'];
+    const order = ['Objects', 'Requests', 'Threads', 'Locks', 'Types', 'Findings', 'Commands'];
     return order.flatMap((g) => byGroup.get(g) ?? []);
   }, [items, q]);
 

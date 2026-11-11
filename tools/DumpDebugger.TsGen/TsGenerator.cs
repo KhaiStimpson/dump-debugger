@@ -108,7 +108,11 @@ public static class TsGenerator
             sb.AppendLine($"export interface {name} {{");
             foreach (var p in props)
             {
-                var info = Nullability.Create(p);
+                // Properties typed by a generic parameter (Page<T>.Items) carry no useful
+                // nullability through reflection; contracts never use null elements there.
+                var usesTypeParameter = type.IsGenericType
+                    && type.GetGenericTypeDefinition().GetProperty(p.Name)?.PropertyType.ContainsGenericParameters == true;
+                var info = usesTypeParameter ? null : Nullability.Create(p);
                 sb.AppendLine($"  {JsonName(p)}: {TsType(p.PropertyType, info)};");
             }
 

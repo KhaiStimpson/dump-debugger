@@ -99,6 +99,16 @@ export interface EntityRef {
   detail: string | null;
 }
 
+export interface FieldValue {
+  name: string;
+  typeName: string;
+  display: string;
+  kind: ValueKind;
+  address: number | null;
+  note: string | null;
+  children: FieldValue[] | null;
+}
+
 /** Finding v2. Text fields support `code` and {{uri}} (an inline entity chip whose label comes from `evidence`). */
 export interface Finding {
   id: string;
@@ -129,6 +139,65 @@ export interface GeneratedSample {
   path: string;
 }
 
+export interface GenerationSize {
+  name: string;
+  bytes: number;
+}
+
+export type HeapGrouping = 'type' | 'namespace' | 'generation';
+export const HeapGroupingValues: readonly HeapGrouping[] = ['type', 'namespace', 'generation'];
+
+export interface HeapOverview {
+  totalBytes: number;
+  objectCount: number;
+  typeCount: number;
+  generations: GenerationSize[];
+  walked: boolean;
+}
+
+export type HeapSort = 'size' | 'count' | 'name';
+export const HeapSortValues: readonly HeapSort[] = ['size', 'count', 'name'];
+
+export interface HeapSummary {
+  overview: HeapOverview;
+  treemap: TreemapCell[];
+  freeBytes: number;
+  lohFreeBytes: number;
+}
+
+export interface HeapTypesQuery {
+  groupBy: HeapGrouping;
+  filter: string | null;
+  offset: number;
+  limit: number;
+  sort: HeapSort;
+}
+
+export interface InstanceRow {
+  uri: string;
+  address: number;
+  size: number;
+  generation: string;
+  identity: string;
+}
+
+export interface InstancesQuery {
+  typeName: string;
+  offset: number;
+  limit: number;
+}
+
+export interface LargeObject {
+  uri: string;
+  address: number;
+  typeName: string;
+  size: number;
+  generation: string;
+  identity: string;
+  detail: string | null;
+  pinned: boolean;
+}
+
 export interface LockCycle {
   id: string;
   threads: number[];
@@ -151,8 +220,48 @@ export interface LockInfo {
 
 export type NoParams = Record<string, never>;
 
+export interface ObjectQuery {
+  address: number;
+  elementOffset: number;
+  elementLimit: number;
+}
+
+export interface ObjectView {
+  uri: string;
+  address: number;
+  typeName: string;
+  size: number;
+  generation: string;
+  identity: string;
+  stringValue: string | null;
+  length: number | null;
+  preview: string | null;
+  fields: FieldValue[];
+  elements: FieldValue[] | null;
+  elementOffset: number;
+  isFree: boolean;
+}
+
 export interface OpenDumpParams {
   path: string;
+}
+
+export interface PageOfInstanceRow {
+  items: InstanceRow[];
+  total: number;
+  offset: number;
+}
+
+export interface PageOfReferrer {
+  items: Referrer[];
+  total: number;
+  offset: number;
+}
+
+export interface PageOfTypeRow {
+  items: TypeRow[];
+  total: number;
+  offset: number;
 }
 
 export interface PathParams {
@@ -206,9 +315,60 @@ export interface Rect {
   height: number;
 }
 
+export interface Referrer {
+  object: EntityRef;
+  typeName: string;
+  via: string;
+}
+
+export interface ReferrersQuery {
+  address: number;
+  offset: number;
+  limit: number;
+}
+
 export interface RequestCount {
   route: string;
   threads: number;
+}
+
+export interface RootInfo {
+  kind: RootKind;
+  label: string;
+  detail: string;
+  threadId: number | null;
+}
+
+export type RootKind = 'static' | 'threadStatic' | 'stack' | 'strongHandle' | 'pinnedHandle' | 'asyncPinned' | 'refCounted' | 'finalizerQueue' | 'other';
+export const RootKindValues: readonly RootKind[] = ['static', 'threadStatic', 'stack', 'strongHandle', 'pinnedHandle', 'asyncPinned', 'refCounted', 'finalizerQueue', 'other'];
+
+export interface RootPath {
+  root: RootInfo;
+  steps: RootPathStep[];
+}
+
+export type RootPathMode = 'shortest' | 'all';
+export const RootPathModeValues: readonly RootPathMode[] = ['shortest', 'all'];
+
+export interface RootPathStep {
+  object: EntityRef;
+  typeName: string;
+  via: string | null;
+  note: string | null;
+}
+
+export interface RootPathsResult {
+  paths: RootPath[];
+  truncated: boolean;
+  unrooted: boolean;
+  seconds: number;
+  explanation: string;
+}
+
+export interface RootsQuery {
+  address: number;
+  mode: RootPathMode;
+  maxPaths: number;
 }
 
 export type RuntimeFamily = 'unknown' | 'netFramework' | 'netCore';
@@ -327,9 +487,30 @@ export interface TitlebarRegions {
 export type Tone = 'neutral' | 'accent' | 'ok' | 'info' | 'warning' | 'critical';
 export const ToneValues: readonly Tone[] = ['neutral', 'accent', 'ok', 'info', 'warning', 'critical'];
 
+export interface TreemapCell {
+  name: string;
+  label: string;
+  size: number;
+  share: number;
+  isOther: boolean;
+  otherCount: number;
+}
+
+export interface TypeRow {
+  name: string;
+  count: number;
+  size: number;
+  lohSize: number;
+  share: number;
+  isApp: boolean;
+}
+
 export interface UriParams {
   uri: string;
 }
+
+export type ValueKind = 'null' | 'string' | 'number' | 'bool' | 'char' | 'dateTime' | 'reference' | 'struct' | 'pointer' | 'other';
+export const ValueKindValues: readonly ValueKind[] = ['null', 'string', 'number', 'bool', 'char', 'dateTime', 'reference', 'struct', 'pointer', 'other'];
 
 export interface Verdict {
   severity: Severity;
@@ -411,6 +592,13 @@ export interface RpcMethods {
   'threads.groups': { params: ThreadGroupsQuery; result: ThreadGroupsResult };
   'threads.get': { params: ThreadQuery; result: ThreadDetail };
   'locks.graph': { params: WaitGraphQuery; result: WaitGraph };
+  'heap.summary': { params: NoParams; result: HeapSummary };
+  'heap.types': { params: HeapTypesQuery; result: PageOfTypeRow };
+  'heap.instances': { params: InstancesQuery; result: PageOfInstanceRow };
+  'heap.largeObjects': { params: NoParams; result: LargeObject[] };
+  'objects.inspect': { params: ObjectQuery; result: ObjectView };
+  'objects.referrers': { params: ReferrersQuery; result: PageOfReferrer };
+  'objects.roots': { params: RootsQuery; result: RootPathsResult };
 }
 
 export type RpcMethod = keyof RpcMethods;

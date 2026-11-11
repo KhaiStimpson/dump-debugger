@@ -42,6 +42,7 @@ public sealed class AnalysisPipeline
         if (includeHeap)
         {
             SetStage("heap", "Walking the heap", StageStatus.Pending);
+            SetStage("objects", "Large-object identification", StageStatus.Pending);
             SetStage("analyzers", "Thread-pool, async & exception analyzers", StageStatus.Pending);
         }
 
@@ -67,7 +68,8 @@ public sealed class AnalysisPipeline
             var heap = await WalkHeapAsync(locks, ct).ConfigureAwait(false);
             _index.Heap = heap;
             _overview = heap.Overview;
-            _context = new AnalysisContext { Runtime = _index.Runtime, Threads = threads, Locks = locks, Heap = heap };
+            await IdentifyLargeObjectsAsync(ct).ConfigureAwait(false);
+            _context = new AnalysisContext { Runtime = _index.Runtime, Threads = threads, Locks = locks, Heap = heap, Explorer = _index.Explorer, LargeObjects = _index.LargeObjects };
 
             var ta = _clock.Elapsed.TotalSeconds;
             SetStage("analyzers", "Thread-pool, async & exception analyzers", StageStatus.Running);
@@ -79,6 +81,7 @@ public sealed class AnalysisPipeline
             }, ct).ConfigureAwait(false);
             SetStage("analyzers", "Thread-pool, async & exception analyzers", StageStatus.Done, _clock.Elapsed.TotalSeconds - ta,
                 $"{Plural(_analyzers.Count, "analyzer")} ran");
+
         }
 
         return await PublishAsync(true).ConfigureAwait(false);
@@ -108,6 +111,36 @@ public sealed class AnalysisPipeline
         SetStage("heap", "Walked the heap", StageStatus.Done, _clock.Elapsed.TotalSeconds - th,
             $"{Bytes(heap.Overview.TotalBytes)} · {Count(heap.Overview.ObjectCount)} objects", 1);
         return heap;
+    }
+
+    /// <summary>
+    /// Builds the reference index (which the object explorer and root paths reuse) and names
+    /// the largest objects by their owners. Last, because nothing in the verdict depends on it.
+    /// </summary>
+    private async Task IdentifyLargeObjectsAsync(CancellationToken ct)
+    {
+        var t0 = _clock.Elapsed.TotalSeconds;
+        SetStage("objects", "Large-object identification", StageStatus.Running, 0, null, 0);
+        await PublishAsync(false).ConfigureAwait(false);
+        var lastPublish = Stopwatch.StartNew();
+        var explorer = await _index.EnsureExplorerAsync((label, fraction) =>
+        {
+            SetStage("objects", "Large-object identification", StageStatus.Running, _clock.Elapsed.TotalSeconds - t0, label.ToLowerInvariant(), fraction);
+            if (lastPublish.ElapsedMilliseconds > 300)
+            {
+                lastPublish.Restart();
+                _ = PublishAsync(false);
+            }
+        }, ct).ConfigureAwait(false);
+        _index.LargeObjects = await _index.WithClrAsync(() =>
+        {
+            // Warm the root and static-field maps now, so the first "why is it alive?" is instant.
+            explorer.Roots();
+            explorer.Statics();
+            return explorer.LargeObjects();
+        }, ct).ConfigureAwait(false);
+        SetStage("objects", "Large-object identification", StageStatus.Done, _clock.Elapsed.TotalSeconds - t0,
+            $"{Plural(_index.LargeObjects.Count, "large object")} named · {Count(explorer.Index.EdgeCount)} references indexed", 1);
     }
 
     private void RunAnalyzers(AnalyzerStage stage)

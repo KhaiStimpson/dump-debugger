@@ -89,6 +89,58 @@ public sealed class DumpIndex : IDisposable
         }
     }
 
+    public ObjectExplorer? Explorer { get; private set; }
+
+    public IReadOnlyList<Core.Contracts.LargeObject>? LargeObjects { get; set; }
+
+    /// <summary>The heap walk's aggregates, walking now if analysis hasn't yet (e.g. the diagnosis came from the workspace cache).</summary>
+    public async Task<HeapModel> EnsureHeapAsync(CancellationToken ct)
+    {
+        if (Heap is { } h)
+        {
+            return h;
+        }
+
+        await _modelGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            Heap ??= await WithClrAsync(() => HeapWalker.Walk(Runtime, new HashSet<ulong>(), (_, _) => { }, ct, out _), ct).ConfigureAwait(false);
+            return Heap;
+        }
+        finally
+        {
+            _modelGate.Release();
+        }
+    }
+
+    /// <summary>The object explorer and its reference index, built on first use (seconds on large heaps; reported through <paramref name="progress"/>).</summary>
+    public async Task<ObjectExplorer> EnsureExplorerAsync(Action<string, double>? progress, CancellationToken ct)
+    {
+        if (Explorer is { } e)
+        {
+            return e;
+        }
+
+        await _explorerGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            if (Explorer is null)
+            {
+                var heap = await EnsureHeapAsync(ct).ConfigureAwait(false);
+                var index = await WithClrAsync(() => HeapIndex.Build(Runtime.Heap, heap.Table, progress ?? ((_, _) => { }), ct), ct).ConfigureAwait(false);
+                Explorer = new ObjectExplorer(Runtime, index);
+            }
+
+            return Explorer;
+        }
+        finally
+        {
+            _explorerGate.Release();
+        }
+    }
+
+    private readonly SemaphoreSlim _explorerGate = new(1, 1);
+
     public void Dispose()
     {
         Sources.Dispose();
