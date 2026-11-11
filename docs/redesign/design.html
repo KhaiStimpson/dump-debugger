@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dump Debugger — Redesign</title>
+<style>
+:root{
+  --bg-0:#0b0d10; --bg-1:#111419; --bg-2:#171b21; --bg-3:#1e232b; --bg-4:#262c35;
+  --line:#252a32; --line-2:#323944;
+  --fg-0:#eef0f3; --fg-1:#c5cad3; --fg-2:#8b93a1; --fg-3:#5e6673;
+  --accent:#2dd4bf; --accent-dim:#2dd4bf22; --accent-ink:#04201c;
+  --crit:#f2555a; --crit-dim:#f2555a1f;
+  --warn:#f5a524; --warn-dim:#f5a5241f;
+  --info:#60a5fa; --info-dim:#60a5fa1f;
+  --ok:#3ccf91;  --ok-dim:#3ccf911f;
+  --code:#d6b4ff;
+  --sans:"Segoe UI Variable Text","Segoe UI Variable","Inter","Segoe UI",system-ui,sans-serif;
+  --mono:"Cascadia Code","JetBrains Mono","Consolas",ui-monospace,monospace;
+  --r-1:4px; --r-2:6px; --r-3:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg-0);color:var(--fg-1);font:14px/1.5 var(--sans)}
+a{color:var(--accent)}
+code,.mono{font-family:var(--mono);font-size:12.5px}
+h1,h2,h3,h4{color:var(--fg-0);margin:0;font-weight:600;letter-spacing:-.01em}
+
+/* ---------- document chrome ---------- */
+.doc-top{position:sticky;top:0;z-index:50;background:#0b0d10ee;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.doc-top .in{max-width:1320px;margin:0 auto;display:flex;align-items:center;gap:24px;padding:12px 28px}
+.brand{display:flex;align-items:center;gap:10px;color:var(--fg-0);font-weight:600}
+.logo{width:22px;height:22px;border-radius:6px;background:conic-gradient(from 210deg,var(--accent),#0ea5e9,var(--accent));display:grid;place-items:center}
+.logo::after{content:"";width:8px;height:8px;border-radius:2px;background:var(--bg-0)}
+.doc-tabs{display:flex;gap:4px}
+.doc-tabs button{background:none;border:0;color:var(--fg-2);font:inherit;padding:6px 12px;border-radius:var(--r-2);cursor:pointer}
+.doc-tabs button:hover{color:var(--fg-0);background:var(--bg-2)}
+.doc-tabs button.on{color:var(--fg-0);background:var(--bg-3)}
+.doc{max-width:1320px;margin:0 auto;padding:40px 28px 120px}
+.section{display:none}.section.on{display:block}
+.eyebrow{color:var(--accent);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+.lede{font-size:17px;color:var(--fg-1);max-width:780px;margin:14px 0 0}
+.h-xl{font-size:36px;line-height:1.15}
+.h-l{font-size:22px;margin:48px 0 14px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r-3);padding:18px}
+.card h4{font-size:15px;margin-bottom:6px}
+.card p{margin:0;color:var(--fg-2)}
+.num{font-family:var(--mono);color:var(--accent);font-size:12px;margin-bottom:8px;display:block}
+.callout{border-left:2px solid var(--accent);background:var(--accent-dim);padding:14px 18px;border-radius:0 var(--r-2) var(--r-2) 0;color:var(--fg-1);margin:18px 0}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t th{text-align:left;color:var(--fg-2);font-weight:500;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;padding:8px 10px;border-bottom:1px solid var(--line)}
+table.t td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.bad{color:var(--crit)} .good{color:var(--ok)}
+ul.tight{margin:6px 0 0;padding-left:18px;color:var(--fg-2)} ul.tight li{margin:3px 0}
+
+/* ---------- shared components (design system) ---------- */
+.sev{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:999px}
+.sev::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.sev.crit{color:var(--crit);background:var(--crit-dim)}
+.sev.warn{color:var(--warn);background:var(--warn-dim)}
+.sev.info{color:var(--info);background:var(--info-dim)}
+.sev.ok{color:var(--ok);background:var(--ok-dim)}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;padding:1px 7px;border-radius:var(--r-1);background:var(--bg-3);border:1px solid var(--line-2);color:var(--fg-0);cursor:pointer;white-space:nowrap}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip .k{color:var(--fg-3);font-size:10.5px;text-transform:uppercase}
+.chip.t .k::before{content:"◆ "} .chip.o .k::before{content:"● "} .chip.l .k::before{content:"▲ "}
+.btn{display:inline-flex;align-items:center;gap:8px;font:inherit;font-size:13px;border-radius:var(--r-2);padding:6px 12px;border:1px solid var(--line-2);background:var(--bg-3);color:var(--fg-0);cursor:pointer}
+.btn:hover{background:var(--bg-4)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:600}
+.btn.ghost{background:none;border-color:transparent;color:var(--fg-2)}
+.kbd{font-family:var(--mono);font-size:11px;color:var(--fg-2);border:1px solid var(--line-2);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--bg-2)}
+.term{border-bottom:1px dotted var(--fg-3);cursor:help}
+.swatch{border-radius:var(--r-2);height:56px;border:1px solid var(--line)}
+.sw-l{font-size:12px;margin-top:6px;color:var(--fg-0)} .sw-v{font-family:var(--mono);font-size:11px;color:var(--fg-3)}
+
+/* ---------- the mock app window ---------- */
+.screen-pick{display:flex;flex-wrap:wrap;gap:6px;margin:18px 0}
+.screen-pick button{font:inherit;font-size:13px;background:var(--bg-1);border:1px solid var(--line);color:var(--fg-2);padding:6px 12px;border-radius:999px;cursor:pointer}
+.screen-pick button.on{color:var(--accent-ink);background:var(--accent);border-color:var(--accent);font-weight:600}
+.win{border:1px solid var(--line-2);border-radius:12px;overflow:hidden;background:var(--bg-0);box-shadow:0 30px 80px -20px #000c;height:780px;display:grid;grid-template-rows:38px 1fr 26px}
+.titlebar{display:flex;align-items:center;gap:12px;padding:0 12px;background:var(--bg-1);border-bottom:1px solid var(--line);font-size:12.5px}
+.titlebar .dump{color:var(--fg-0);font-weight:600}
+.titlebar .meta{display:flex;gap:6px}
+.pill{font-family:var(--mono);font-size:11px;color:var(--fg-2);background:var(--bg-3);padding:1px 7px;border-radius:999px}
+.titlebar .search{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-2);padding:3px 10px;color:var(--fg-3);width:300px}
+.titlebar .wc{display:flex;gap:18px;color:var(--fg-3);margin-left:12px}
+.body{display:grid;grid-template-columns:56px 1fr;min-height:0}
+.rail{background:var(--bg-1);border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:2px}
+.rail button{width:42px;height:42px;border-radius:8px;border:0;background:none;color:var(--fg-3);cursor:pointer;display:grid;place-items:center;position:relative}
+.rail button:hover{color:var(--fg-0);background:var(--bg-2)}
+.rail button.on{color:var(--accent);background:var(--accent-dim)}
+.rail button.on::before{content:"";position:absolute;left:-7px;top:10px;bottom:10px;width:3px;border-radius:3px;background:var(--accent)}
+.rail .badge{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--crit)}
+.rail .sp{flex:1}
+.rail svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.statusbar{display:flex;align-items:center;gap:16px;padding:0 12px;background:var(--bg-1);border-top:1px solid var(--line);font-size:11.5px;color:var(--fg-3);font-family:var(--mono)}
+.statusbar .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;margin-right:6px}
+.view{display:none;min-height:0;overflow:hidden}.view.on{display:grid}
+.scroll{overflow:auto;min-height:0}
+.pane-h{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.pane-h h3{font-size:15px}
+.pane-h .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.seg{display:inline-flex;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-2);padding:2px}
+.seg button{font:inherit;font-size:12px;border:0;background:none;color:var(--fg-2);padding:3px 10px;border-radius:4px;cursor:pointer}
+.seg button.on{background:var(--bg-4);color:var(--fg-0)}
+.lbl{font-size:11px;color:var(--fg-3);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+
+/* home */
+.home{place-items:center;background:radial-gradient(1200px 500px at 50% -10%,#2dd4bf14,transparent)}
+.home-in{width:760px}
+.drop{border:1.5px dashed var(--line-2);border-radius:14px;padding:44px;text-align:center;background:var(--bg-1)}
+.drop:hover{border-color:var(--accent)}
+.recent{margin-top:28px}
+.rrow{display:grid;grid-template-columns:1fr 170px 120px 90px;gap:12px;align-items:center;padding:11px 14px;border-radius:var(--r-2);cursor:pointer}
+.rrow:hover{background:var(--bg-2)}
+.rrow .n{color:var(--fg-0)} .rrow .s{font-size:12px;color:var(--fg-3)}
+
+/* analyzing */
+.anz{place-items:center}
+.steps{width:520px}
+.step{display:grid;grid-template-columns:22px 1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.step .ic{width:16px;height:16px;border-radius:50%;border:2px solid var(--line-2)}
+.step.done .ic{background:var(--ok);border-color:var(--ok)}
+.step.run .ic{border-color:var(--accent);border-top-color:transparent;animation:spin 1s linear infinite}
+.step .t{font-family:var(--mono);font-size:12px;color:var(--fg-3)}
+.prog{height:4px;background:var(--bg-3);border-radius:4px;overflow:hidden;margin:20px 0 8px}
+.prog i{display:block;height:100%;width:62%;background:linear-gradient(90deg,var(--accent),#0ea5e9)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* diagnosis */
+.diag{grid-template-columns:1fr 360px}
+.verdict{padding:24px 28px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#f2555a10,transparent)}
+.verdict h2{font-size:24px;line-height:1.25;margin:10px 0 8px;max-width:760px}
+.verdict p{margin:0;color:var(--fg-1);max-width:760px}
+.vitals{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--line)}
+.vital{padding:14px 20px;border-right:1px solid var(--line)}
+.vital:last-child{border-right:0}
+.vital .v{font-size:22px;color:var(--fg-0);font-weight:600;font-variant-numeric:tabular-nums}
+.vital .d{font-size:12px;color:var(--fg-3)}
+.vital .bar{height:3px;border-radius:3px;background:var(--bg-3);margin-top:8px;overflow:hidden}
+.vital .bar i{display:block;height:100%}
+.symp{display:flex;align-items:center;gap:8px;padding:12px 20px;border-bottom:1px solid var(--line)}
+.symp button{font:inherit;font-size:12.5px;border:1px solid var(--line-2);background:var(--bg-2);color:var(--fg-1);padding:4px 11px;border-radius:999px;cursor:pointer}
+.symp button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.finds{padding:12px 20px 30px}
+.find{border:1px solid var(--line);border-radius:var(--r-3);background:var(--bg-1);margin-bottom:10px;overflow:hidden}
+.find .fh{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 14px;cursor:pointer}
+.find .fh h4{font-size:14px;font-weight:600}
+.find .fh .why{font-size:12.5px;color:var(--fg-2)}
+.find .fb{display:none;padding:0 14px 14px 14px;border-top:1px solid var(--line)}
+.find.open .fb{display:block}
+.find .fb .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px}
+.find .fb ol{margin:6px 0 0;padding-left:18px;color:var(--fg-1)} .find .fb li{margin:4px 0}
+.ev{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.conf{font-size:11.5px;color:var(--fg-3)}
+.side{border-left:1px solid var(--line);background:var(--bg-1);min-height:0;overflow:auto}
+.side .blk{padding:16px 18px;border-bottom:1px solid var(--line)}
+.mini-graph{height:170px;background:var(--bg-0);border:1px solid var(--line);border-radius:var(--r-2);margin-top:10px}
+.pin{display:flex;gap:10px;padding:8px 0;font-size:13px}
+.pin .note{color:var(--fg-2);font-size:12.5px}
+
+/* threads */
+.threads{grid-template-columns:1fr 420px}
+.trow{display:grid;grid-template-columns:44px 1.4fr 1.6fr 110px;gap:12px;align-items:center;padding:9px 20px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}
+.trow:hover{background:var(--bg-1)}
+.trow.sel{background:var(--bg-2);box-shadow:inset 2px 0 0 var(--accent)}
+.trow .cnt{font-family:var(--mono);font-weight:600;color:var(--fg-0);text-align:center;background:var(--bg-3);border-radius:4px;padding:1px 0}
+.trow .frame{font-family:var(--mono);font-size:12px;color:var(--fg-0);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow .op{font-family:var(--mono);font-size:12px;color:var(--fg-2)}
+.trow .op b{color:var(--info);font-weight:500}
+.thead{display:grid;grid-template-columns:44px 1.4fr 1.6fr 110px;gap:12px;padding:8px 20px;border-bottom:1px solid var(--line)}
+.state{font-size:11.5px;padding:1px 8px;border-radius:999px;justify-self:start}
+.st-blk{color:var(--crit);background:var(--crit-dim)} .st-wait{color:var(--warn);background:var(--warn-dim)} .st-run{color:var(--ok);background:var(--ok-dim)} .st-idle{color:var(--fg-2);background:var(--bg-3)}
+.insp{border-left:1px solid var(--line);background:var(--bg-1);overflow:auto;min-height:0}
+.insp .ih{padding:16px 18px;border-bottom:1px solid var(--line)}
+.insp .ib{padding:14px 18px;border-bottom:1px solid var(--line)}
+.stack{font-family:var(--mono);font-size:12px;margin-top:8px}
+.stack div{padding:3px 8px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stack .app{color:var(--fg-0)} .stack .fw{color:var(--fg-3)} .stack .hot{background:var(--crit-dim);color:var(--crit)}
+.stack .fold{color:var(--fg-3);font-style:italic;cursor:pointer}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:6px 10px;font-size:13px;margin-top:8px}
+.kv dt{color:var(--fg-3)} .kv dd{margin:0;color:var(--fg-0)}
+
+/* locks */
+.locks{grid-template-rows:auto 1fr}
+.graph-wrap{position:relative;min-height:0;background:
+  radial-gradient(circle,#ffffff0d 1px,transparent 1px) 0 0/22px 22px,var(--bg-0)}
+.legend{position:absolute;left:20px;bottom:18px;display:flex;gap:16px;font-size:12px;color:var(--fg-2);background:var(--bg-1);border:1px solid var(--line);padding:8px 12px;border-radius:var(--r-2)}
+.legend i{display:inline-block;width:18px;height:0;border-top:2px solid;vertical-align:middle;margin-right:6px}
+.explain{position:absolute;right:20px;top:20px;width:320px;background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r-3);padding:16px}
+
+/* memory */
+.memory{grid-template-columns:1fr 400px}
+.treemap{display:grid;grid-template-columns:3.8fr 2.1fr 1.4fr;grid-template-rows:1fr 1fr;gap:3px;height:260px;margin:16px 20px}
+.tm{border-radius:6px;padding:10px;font-size:12px;color:#fff;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;overflow:hidden}
+.tm b{font-family:var(--mono);font-weight:500}
+.tm:hover{outline:2px solid var(--fg-0)}
+.bar-row{display:grid;grid-template-columns:1.6fr 80px 90px 1fr;gap:12px;align-items:center;padding:8px 20px;border-bottom:1px solid var(--line);font-size:13px}
+.bar-row .ty{font-family:var(--mono);font-size:12px;color:var(--fg-0)}
+.bar-row .r{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:12px}
+.hbar{height:6px;background:var(--bg-3);border-radius:4px;overflow:hidden}.hbar i{display:block;height:100%;background:var(--accent)}
+.lobj{padding:12px 18px;border-bottom:1px solid var(--line);cursor:pointer}
+.lobj:hover{background:var(--bg-2)}
+.lobj .id{color:var(--fg-0);font-size:13.5px}
+.lobj .sub{font-family:var(--mono);font-size:11.5px;color:var(--fg-3);margin-top:2px}
+
+/* objects */
+.objects{grid-template-columns:1fr 1fr}
+.crumbs{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:var(--fg-3);padding:10px 20px;border-bottom:1px solid var(--line)}
+.crumbs span{color:var(--fg-1)} .crumbs span.cur{color:var(--fg-0)}
+.fields{font-family:var(--mono);font-size:12.5px}
+.fields .fr{display:grid;grid-template-columns:20px 170px 200px 1fr;gap:8px;padding:6px 20px;border-bottom:1px solid var(--line);align-items:center}
+.fields .fr:hover{background:var(--bg-1)}
+.fields .ty{color:var(--fg-3)} .fields .nm{color:var(--fg-0)} .fields .val{color:var(--code)} .fields .val.s{color:#a7f3d0} .fields .val.n{color:#fcd34d}
+.fields .tw{color:var(--fg-3);cursor:pointer}
+.root-path{padding:20px}
+.rp-node{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-2);background:var(--bg-1);font-family:var(--mono);font-size:12px}
+.rp-node .ty{color:var(--fg-0)} .rp-node .f{color:var(--fg-3);margin-left:auto}
+.rp-node.root{border-color:var(--warn);background:var(--warn-dim)}
+.rp-node.target{border-color:var(--accent);background:var(--accent-dim)}
+.rp-edge{margin-left:22px;height:22px;border-left:1.5px dashed var(--line-2);font-family:var(--mono);font-size:11px;color:var(--fg-3);padding-left:12px;display:flex;align-items:center}
+
+/* compare */
+.compare{grid-template-rows:auto auto 1fr}
+.cmp-h{display:grid;grid-template-columns:1fr 40px 1fr;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.dumpcard{background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r-2);padding:10px 14px}
+.dumpcard .n{color:var(--fg-0);font-weight:600}
+.dumpcard .s{font-family:var(--mono);font-size:11.5px;color:var(--fg-3)}
+.delta-row{display:grid;grid-template-columns:1.5fr 110px 110px 110px 1.2fr;gap:12px;align-items:center;padding:8px 20px;border-bottom:1px solid var(--line);font-size:13px}
+.delta-row .r{text-align:right;font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums}
+.dbar{position:relative;height:8px}
+.dbar i{position:absolute;left:0;top:0;height:100%;border-radius:3px}
+.up{color:var(--crit)}.dn{color:var(--ok)}
+.cmp-sum{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+
+/* report */
+.report{grid-template-columns:300px 1fr}
+.paper{max-width:760px;margin:28px auto;background:var(--bg-1);border:1px solid var(--line);border-radius:var(--r-3);padding:40px 48px}
+.paper h1{font-size:24px}
+.paper h2{font-size:16px;margin:26px 0 8px}
+.paper p,.paper li{color:var(--fg-1)}
+.paper .note{border-left:2px solid var(--warn);padding:6px 12px;background:var(--warn-dim);border-radius:0 6px 6px 0;font-size:13px;margin:10px 0}
+
+/* palette overlay */
+.palette{position:absolute;left:50%;top:70px;transform:translateX(-50%);width:600px;background:var(--bg-2);border:1px solid var(--line-2);border-radius:12px;box-shadow:0 30px 80px #000e;display:none;z-index:5}
+.palette.on{display:block}
+.palette input{width:100%;background:none;border:0;border-bottom:1px solid var(--line);padding:14px 16px;color:var(--fg-0);font:inherit;font-size:15px;outline:none}
+.palette .pg{padding:6px}
+.palette .pi{display:grid;grid-template-columns:22px 1fr auto;gap:10px;padding:8px 10px;border-radius:6px;font-size:13px;align-items:center}
+.palette .pi.on{background:var(--bg-4)}
+.palette .gl{font-size:11px;color:var(--fg-3);padding:8px 10px 4px;text-transform:uppercase;letter-spacing:.06em}
+.win-wrap{position:relative}
+
+/* IA diagram */
+.ia svg text{font-family:var(--sans);fill:var(--fg-1);font-size:12px}
+
+/* narrow embeds: keep the desktop layout, scale it down */
+@media (max-width:1000px){html,body{background:transparent}body{zoom:.54}.doc-top{position:static}}
+</style>
+</head>
+<body>
+
+<div class="doc-top"><div class="in">
+  <div class="brand"><div class="logo"></div>Dump Debugger · Redesign</div>
+  <nav class="doc-tabs" id="docTabs">
+    <button data-s="vision" class="on">1 · Vision</button>
+    <button data-s="ia">2 · Information architecture</button>
+    <button data-s="ds">3 · Design system</button>
+    <button data-s="mock">4 · Mockups</button>
+    <button data-s="road">5 · Roadmap</button>
+  </nav>
+  <span style="margin-left:auto;color:var(--fg-3);font-size:12px">Draft · 2026-11-11</span>
+</div></div>
+
+<main class="doc">
+
+<!-- ===================================================== VISION -->
+<section class="section on" id="s-vision">
+  <div class="eyebrow">Vision</div>
+  <h1 class="h-xl">Plain answers first, every byte one click away.</h1>
+  <p class="lede">Dump Debugger becomes the tool an on-call developer reaches for at 2 a.m. with a hang dump and no WinDbg muscle memory. It opens with a verdict in plain English, tells you what to do next, and backs every claim with evidence you can click through: thread, lock, object, and the path that keeps it alive.</p>
+
+  <h2 class="h-l">What's wrong today</h2>
+  <div class="grid g3">
+    <div class="card"><span class="num">01</span><h4>Speaks WinDbg, not English</h4><p>"Possible deadlock among 2 threads holding contended locks" is accurate but hard to act on. Findings name addresses (<code>0x25a4040a4a8</code>) instead of the code and requests involved.</p></div>
+    <div class="card"><span class="num">02</span><h4>Stack groups show runtime noise</h4><p>Groups are labelled <code>.InlinedCallFrame</code> and <code>.DebuggerU2MCatchHandlerFrame</code>, which are runtime frames, not the user code that matters.</p></div>
+    <div class="card"><span class="num">03</span><h4>The canvas is mostly empty</h4><p>About 70% of the window is blank grid, while findings are squeezed into a 280px rail. The hierarchy runs backwards.</p></div>
+    <div class="card"><span class="num">04</span><h4>Nothing links to anything</h4><p>Clicking a thread in the graph doesn't open its stack. A finding can't take you to the lock, and you can't reach an object's fields or see what's keeping it alive.</p></div>
+    <div class="card"><span class="num">05</span><h4>No start or progress state</h4><p>There are no recent dumps, no sense of what the analyzer is doing on a 20 GB file, and no route to a sample dump.</p></div>
+    <div class="card"><span class="num">06</span><h4>Narrow diagnosis surface</h4><p>Deadlocks and heap share are covered. Thread-pool starvation, sync-over-async, exception storms and leak-vs-baseline, which are the common on-call causes, aren't.</p></div>
+  </div>
+
+  <h2 class="h-l">Design principles</h2>
+  <div class="grid g2">
+    <div class="card"><span class="num">P1</span><h4>Verdict → evidence → raw</h4><p>Every screen reads top-down in three layers: a sentence a non-expert can act on, the structured evidence behind it, then raw ClrMD detail (addresses, MTs, frames) collapsed but always present.</p></div>
+    <div class="card"><span class="num">P2</span><h4>Everything is an entity, every entity is a link</h4><p>Threads ◆, objects ●, locks ▲, types and requests render as one <span class="chip t"><span class="k">thr</span>#47</span> chip style. Clicking a chip opens it in the inspector, and nothing is a dead-end string.</p></div>
+    <div class="card"><span class="num">P3</span><h4>Name things the way the app does</h4><p>Lead with <code>POST /api/orders/checkout</code>, <code>OrderLedger._gate</code> and <code>CheckoutService.Commit()</code>, not OS thread IDs and hex. Addresses are secondary text.</p></div>
+    <div class="card"><span class="num">P4</span><h4>Teach in place</h4><p>Jargon such as <span class="term" title="A sync block is the CLR's bookkeeping for a `lock(obj)` statement: who owns it and who is waiting.">sync block</span> or <span class="term" title="A GC root is something the garbage collector treats as always alive: a static field, a local on a thread's stack, a pinned handle…">GC root</span> carries a hover definition. Each finding includes "What this means" and "What to do next". No AI is needed because the analyzers carry the explanation.</p></div>
+    <div class="card"><span class="num">P5</span><h4>Calm density</h4><p>Dark, dense, keyboard-first, like a pro tool, but with color reserved strictly for meaning: severity, selection and the accent. If everything is red, nothing is.</p></div>
+    <div class="card"><span class="num">P6</span><h4>Fast or honest about it</h4><p>Triage-level findings arrive within seconds and deeper analyzers stream in after. Long work shows named stages, never a bare spinner.</p></div>
+  </div>
+
+  <h2 class="h-l">Decisions captured</h2>
+  <table class="t">
+    <tr><th>Topic</th><th>Decision</th><th>Implication</th></tr>
+    <tr><td>Audience</td><td>On-call developers who aren't dump experts</td><td>Plain-language findings schema, glossary, next-steps per finding, symptom picker</td></tr>
+    <tr><td>Scope</td><td>Everything on the table</td><td>Finding schema v2, query-style worker protocol, new analyzers, new UI stack</td></tr>
+    <tr><td>UI stack</td><td>React + TypeScript inside a WebView2 host</td><td>Keep the Core/Analysis/Worker processes. Replace <code>DumpDebugger.App</code> UI with a web front end and a thin native host</td></tr>
+    <tr><td>Landing</td><td>Diagnosis page <em>and</em> symptom chips</td><td>Verdict and findings by default. A "What were you seeing?" chip re-ranks findings</td></tr>
+    <tr><td>New capabilities</td><td>Object explorer + GC root paths, dump compare, more analyzers</td><td>New worker queries: <code>InspectObject</code>, <code>FindRoots</code>, heap snapshot export for diffing</td></tr>
+    <tr><td>AI</td><td><span class="bad">Dropped</span></td><td>Remove <code>DumpDebugger.Llm</code> and the Explain button. Explanations are authored per analyzer</td></tr>
+    <tr><td>Hand-off</td><td>Incident report (MD/HTML) + bookmarks &amp; notes</td><td>Pins and notes live in the workspace sidecar and flow into the report</td></tr>
+    <tr><td>Look</td><td>Dark pro-tool</td><td>Design system in tab 3. The teal accent is kept as heritage</td></tr>
+  </table>
+</section>
+
+<!-- ===================================================== IA -->
+<section class="section" id="s-ia">
+  <div class="eyebrow">Information architecture</div>
+  <h1 class="h-xl">Seven places, one inspector, one graph of entities.</h1>
+  <p class="lede">Navigation is a fixed left rail of views. Selecting any entity anywhere opens it in a shared right-hand <b>inspector</b> instead of navigating away, with back/forward history (<span class="kbd">Alt</span>+<span class="kbd">←</span>). <span class="kbd">Ctrl</span>+<span class="kbd">K</span> jumps to anything by name, address, type or route.</p>
+
+  <h2 class="h-l">Screen inventory</h2>
+  <table class="t">
+    <tr><th style="width:150px">View</th><th>Question it answers</th><th>Primary content</th><th>Key outbound links</th></tr>
+    <tr><td><b>Home</b></td><td>What am I opening?</td><td>Drop zone, recent dumps with last verdict, sample generator, compare entry point</td><td>→ Analyzing → Diagnosis</td></tr>
+    <tr><td><b>Diagnosis</b></td><td>What's wrong, and what do I do?</td><td>Verdict headline, vitals strip, symptom chips, ranked findings (what it means / next steps / evidence)</td><td>Evidence chips → any entity</td></tr>
+    <tr><td><b>Threads</b></td><td>What was every thread doing?</td><td>Stack groups keyed on first <em>application</em> frame, operation (request) column, state; filter by state/request/frame</td><td>Thread → stack, held/awaited locks, stack objects</td></tr>
+    <tr><td><b>Locks</b></td><td>Who's waiting on whom?</td><td>Wait-for graph (threads ◆ ↔ locks ▲) with cycles highlighted and an explanation card</td><td>Node → thread / lock owner object</td></tr>
+    <tr><td><b>Memory</b></td><td>What's eating memory?</td><td>Heap treemap by type, type table, generation/LOH split, large-object list identified by fields</td><td>Type → instances → object</td></tr>
+    <tr><td><b>Objects</b></td><td>What is this thing and why is it alive?</td><td>Field tree with navigable references, retention path to GC root, "referenced by"</td><td>Field → object, root → thread/static</td></tr>
+    <tr><td><b>Compare</b></td><td>What changed between dump A and B?</td><td>Heap deltas by type, thread-group deltas, findings that appeared/resolved</td><td>Type → instances in B</td></tr>
+    <tr><td><b>Report</b></td><td>How do I hand this off?</td><td>Pins &amp; notes on the left, live preview of the incident report on the right, export MD/HTML</td><td>Pin → entity</td></tr>
+  </table>
+
+  <h2 class="h-l">Entity model and cross-links</h2>
+  <div class="card ia" style="padding:10px">
+  <svg viewBox="0 0 1240 360" width="100%">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#5e6673"/></marker></defs>
+    <g stroke="#5e6673" stroke-width="1.3" fill="none" marker-end="url(#ar)">
+      <path d="M180,90 L330,90"/><path d="M180,110 C260,200 260,250 330,260"/>
+      <path d="M470,90 L620,90"/><path d="M470,100 C540,150 560,170 620,180"/>
+      <path d="M470,260 L620,260"/><path d="M760,90 L900,90"/><path d="M760,180 L900,180"/>
+      <path d="M760,260 L900,260"/><path d="M1040,180 L1100,180"/><path d="M620,110 C560,140 540,140 470,120" stroke-dasharray="4 4"/>
+    </g>
+    <g font-size="11" fill="#8b93a1">
+      <text x="200" y="82">evidence</text><text x="200" y="200">evidence</text>
+      <text x="490" y="82">holds / waits</text><text x="490" y="160">serving</text>
+      <text x="490" y="252">frames → locals</text><text x="780" y="82">owner object</text>
+      <text x="780" y="172">instance of</text><text x="780" y="252">fields → refs</text><text x="1046" y="170">root</text>
+      <text x="520" y="138">owned by</text>
+    </g>
+    <g>
+      <rect x="40" y="60" width="140" height="60" rx="8" fill="#f2555a1f" stroke="#f2555a"/><text x="60" y="86" style="font-weight:600;fill:#eef0f3">Finding</text><text x="60" y="104" style="fill:#8b93a1;font-size:11px">severity · next steps</text>
+      <rect x="330" y="60" width="140" height="60" rx="8" fill="#171b21" stroke="#323944"/><text x="350" y="86" style="font-weight:600;fill:#eef0f3">◆ Thread</text><text x="350" y="104" style="fill:#8b93a1;font-size:11px">state · stack group</text>
+      <rect x="330" y="230" width="140" height="60" rx="8" fill="#171b21" stroke="#323944"/><text x="350" y="256" style="font-weight:600;fill:#eef0f3">Stack frame</text><text x="350" y="274" style="fill:#8b93a1;font-size:11px">app / framework</text>
+      <rect x="620" y="60" width="140" height="60" rx="8" fill="#171b21" stroke="#323944"/><text x="640" y="86" style="font-weight:600;fill:#eef0f3">▲ Lock</text><text x="640" y="104" style="fill:#8b93a1;font-size:11px">owner · waiters</text>
+      <rect x="620" y="150" width="140" height="60" rx="8" fill="#171b21" stroke="#323944"/><text x="640" y="176" style="font-weight:600;fill:#eef0f3">Operation</text><text x="640" y="194" style="fill:#8b93a1;font-size:11px">HTTP route · job</text>
+      <rect x="620" y="230" width="140" height="60" rx="8" fill="#171b21" stroke="#323944"/><text x="640" y="256" style="font-weight:600;fill:#eef0f3">● Object</text><text x="640" y="274" style="fill:#8b93a1;font-size:11px">fields · size</text>
+      <rect x="900" y="60" width="140" height="60" rx="8" fill="#171b21" stroke="#323944"/><text x="920" y="86" style="font-weight:600;fill:#eef0f3">● Object</text><text x="920" y="104" style="fill:#8b93a1;font-size:11px">lock target</text>
+      <rect x="900" y="150" width="140" height="60" rx="8" fill="#171b21" stroke="#323944"/><text x="920" y="176" style="font-weight:600;fill:#eef0f3">Type</text><text x="920" y="194" style="fill:#8b93a1;font-size:11px">count · total size</text>
+      <rect x="900" y="230" width="140" height="60" rx="8" fill="#171b21" stroke="#323944"/><text x="920" y="256" style="font-weight:600;fill:#eef0f3">● Object …</text><text x="920" y="274" style="fill:#8b93a1;font-size:11px">reference graph</text>
+      <rect x="1100" y="150" width="120" height="60" rx="8" fill="#f5a5241f" stroke="#f5a524"/><text x="1118" y="176" style="font-weight:600;fill:#eef0f3">GC root</text><text x="1118" y="194" style="fill:#8b93a1;font-size:11px">static · stack · handle</text>
+    </g>
+  </svg>
+  </div>
+  <div class="callout">Every entity has a stable URI inside the app (<code>thread/47</code>, <code>object/0x25a4040a4a8</code>, <code>type/System.Byte[]</code>, <code>finding/lock.cycle.1</code>). URIs back the inspector history, pins/notes, and report links, and later could back deep links if those come back into scope.</div>
+
+  <h2 class="h-l">Primary flows</h2>
+  <div class="grid g3">
+    <div class="card"><h4>Hang at 2 a.m.</h4><ul class="tight"><li>Open dump → verdict "Deadlock between checkout and inventory"</li><li>Expand finding → <b>Next steps</b> shows lock order to fix</li><li>Click <span class="chip t"><span class="k">thr</span>#47</span> → inspector shows the exact line</li><li>Pin it with a note → Export report</li></ul></div>
+    <div class="card"><h4>Memory keeps growing</h4><ul class="tight"><li>Pick symptom <b>High memory</b> → heap findings rank first</li><li>Memory treemap → <code>byte[]</code> 38%</li><li>Largest instance → identified as <code>ReportCache</code> entry</li><li>Objects → retention path to static <code>ReportCache.s_entries</code></li></ul></div>
+    <div class="card"><h4>Is it a leak?</h4><ul class="tight"><li>Home → Compare → pick baseline + current</li><li>Delta table: <code>CartSnapshot</code> +412k instances</li><li>Click → instances in B → object → root path</li><li>Findings diff: "New: unbounded static dictionary"</li></ul></div>
+  </div>
+</section>
+
+<!-- ===================================================== DESIGN SYSTEM -->
+<section class="section" id="s-ds">
+  <div class="eyebrow">Design system</div>
+  <h1 class="h-xl">Dark, dense, and color only where it means something.</h1>
+  <p class="lede">Tokens live as CSS custom properties in the React app (<code>tokens.css</code>), mirrored as a TS object for canvas and graph rendering. The neutral ramp is cool and slightly blue. Teal is kept from v1 as the single brand accent, used for selection, focus and primary actions, and never for status.</p>
+
+  <h2 class="h-l">Surfaces &amp; text</h2>
+  <div class="grid" style="grid-template-columns:repeat(9,1fr)">
+    <div><div class="swatch" style="background:var(--bg-0)"></div><div class="sw-l">bg-0</div><div class="sw-v">#0b0d10 canvas</div></div>
+    <div><div class="swatch" style="background:var(--bg-1)"></div><div class="sw-l">bg-1</div><div class="sw-v">#111419 panes</div></div>
+    <div><div class="swatch" style="background:var(--bg-2)"></div><div class="sw-l">bg-2</div><div class="sw-v">#171b21 hover</div></div>
+    <div><div class="swatch" style="background:var(--bg-3)"></div><div class="sw-l">bg-3</div><div class="sw-v">#1e232b raised</div></div>
+    <div><div class="swatch" style="background:var(--line-2)"></div><div class="sw-l">line-2</div><div class="sw-v">#323944</div></div>
+    <div><div class="swatch" style="background:var(--fg-0)"></div><div class="sw-l">fg-0</div><div class="sw-v">#eef0f3 primary</div></div>
+    <div><div class="swatch" style="background:var(--fg-1)"></div><div class="sw-l">fg-1</div><div class="sw-v">#c5cad3 body</div></div>
+    <div><div class="swatch" style="background:var(--fg-2)"></div><div class="sw-l">fg-2</div><div class="sw-v">#8b93a1 secondary</div></div>
+    <div><div class="swatch" style="background:var(--fg-3)"></div><div class="sw-l">fg-3</div><div class="sw-v">#5e6673 meta</div></div>
+  </div>
+
+  <h2 class="h-l">Meaning colors</h2>
+  <div class="grid" style="grid-template-columns:repeat(6,1fr)">
+    <div><div class="swatch" style="background:var(--accent)"></div><div class="sw-l">accent</div><div class="sw-v">#2dd4bf select/focus</div></div>
+    <div><div class="swatch" style="background:var(--crit)"></div><div class="sw-l">critical</div><div class="sw-v">#f2555a blocked/cycle</div></div>
+    <div><div class="swatch" style="background:var(--warn)"></div><div class="sw-l">warning</div><div class="sw-v">#f5a524 waiting/roots</div></div>
+    <div><div class="swatch" style="background:var(--info)"></div><div class="sw-l">info</div><div class="sw-v">#60a5fa requests</div></div>
+    <div><div class="swatch" style="background:var(--ok)"></div><div class="sw-l">ok</div><div class="sw-v">#3ccf91 running/healthy</div></div>
+    <div><div class="swatch" style="background:var(--code)"></div><div class="sw-l">value</div><div class="sw-v">#d6b4ff field values</div></div>
+  </div>
+  <p style="color:var(--fg-2);font-size:13px">Each meaning color has a <code>-dim</code> twin (12% alpha) for fills. Status is never conveyed by color alone: severity always carries a text label, and graph edges differ in dash pattern as well as hue.</p>
+
+  <h2 class="h-l">Type</h2>
+  <div class="grid g2">
+    <div class="card">
+      <div class="lbl">UI — Segoe UI Variable (Inter fallback)</div>
+      <div style="font-size:28px;color:var(--fg-0);font-weight:600;margin-top:10px">Verdict 24/600</div>
+      <div style="font-size:18px;color:var(--fg-0);font-weight:600">Section 15–18/600</div>
+      <div style="font-size:14px">Body 14/400 · line-height 1.5</div>
+      <div style="font-size:12.5px;color:var(--fg-2)">Secondary 12.5/400</div>
+      <div class="lbl" style="margin-top:6px">Label 11/600 caps +6%</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Data — Cascadia Code (JetBrains Mono fallback)</div>
+      <div class="mono" style="color:var(--fg-0);margin-top:12px;font-size:13px">CheckoutService.Commit(Order) +0x4a</div>
+      <div class="mono" style="color:var(--fg-2)">0x0000025a4040a4a8 · MT 7ffd1c2e0a10</div>
+      <div class="mono" style="color:var(--fg-0)">  38,412,160 B  <span style="color:var(--fg-3)">tabular-nums, right-aligned</span></div>
+      <p style="margin-top:10px">Used for frames, addresses, types, sizes and field values. Human sentences are never set in mono.</p>
+    </div>
+  </div>
+
+  <h2 class="h-l">Components</h2>
+  <div class="grid g3">
+    <div class="card"><div class="lbl">Severity</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="sev crit">Critical</span><span class="sev warn">Warning</span><span class="sev info">Info</span><span class="sev ok">Healthy</span></div></div>
+    <div class="card"><div class="lbl">Entity chips</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="chip t"><span class="k">thr</span>#47</span><span class="chip l"><span class="k">lock</span>OrderLedger._gate</span><span class="chip o"><span class="k">obj</span>CartSnapshot</span></div><p style="margin-top:8px;font-size:12.5px">Hover shows a preview card, click opens the inspector, and right-click offers Pin, Copy and Show in graph.</p></div>
+    <div class="card"><div class="lbl">Buttons &amp; keys</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center"><button class="btn pri">Open dump</button><button class="btn">Export</button><button class="btn ghost">Cancel</button><span class="kbd">Ctrl</span><span class="kbd">K</span></div></div>
+    <div class="card"><div class="lbl">Thread state</div><div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap"><span class="state st-blk">Blocked · lock</span><span class="state st-wait">Waiting · I/O</span><span class="state st-run">Running</span><span class="state st-idle">Idle pool</span></div></div>
+    <div class="card"><div class="lbl">Glossary term</div><p style="margin-top:10px">The thread is waiting on a <span class="term" title="The CLR's bookkeeping for a lock(obj) statement.">sync block</span> owned by #52.</p><p style="margin-top:6px;font-size:12.5px">Dotted underline with a one-line definition and a "Learn more" link to the in-app glossary.</p></div>
+    <div class="card"><div class="lbl">Density</div><p style="margin-top:10px">Table rows are 36px, compact mode is 28px, and the grid unit is 4px. Panes use 20px horizontal padding. Lists stay virtualized past 200 rows.</p></div>
+  </div>
+
+  <h2 class="h-l">Motion &amp; interaction rules</h2>
+  <div class="grid g4">
+    <div class="card"><h4>120 ms</h4><p>Hover and selection. Nothing animates slower than 200 ms, except graph layout settling at 300 ms.</p></div>
+    <div class="card"><h4>Keyboard parity</h4><p><span class="kbd">J</span>/<span class="kbd">K</span> moves through rows, <span class="kbd">Enter</span> opens, <span class="kbd">P</span> pins, <span class="kbd">G</span> <span class="kbd">T</span> goes to Threads, and <span class="kbd">?</span> lists every shortcut.</p></div>
+    <div class="card"><h4>Focus ring</h4><p>A 2px accent ring with a 2px offset. It is never removed and always visible on keyboard focus.</p></div>
+    <div class="card"><h4>Reduced motion</h4><p>Respects the OS setting: the graph snaps to layout and spinners become stage text.</p></div>
+  </div>
+</section>
+
+<!-- ===================================================== MOCKUPS -->
+<section class="section" id="s-mock">
+  <div class="eyebrow">Interactive mockups</div>
+  <h1 class="h-xl">Walk the redesigned app.</h1>
+  <p class="lede">Scenario: a hang dump of <code>w3wp.exe</code> running <b>Contoso.Orders.Api</b> on .NET 8 x64. Use the rail or the pills below. Everything is clickable: findings expand, symptom chips re-rank findings, threads update the inspector, chips jump between views, and <span class="kbd">Ctrl</span>+<span class="kbd">K</span> opens the palette.</p>
+
+  <div class="screen-pick" id="pick">
+    <button data-v="home">Home</button>
+    <button data-v="anz">Analyzing</button>
+    <button data-v="diag" class="on">Diagnosis</button>
+    <button data-v="threads">Threads</button>
+    <button data-v="locks">Locks</button>
+    <button data-v="memory">Memory</button>
+    <button data-v="objects">Objects</button>
+    <button data-v="compare">Compare</button>
+    <button data-v="report">Report</button>
+  </div>
+
+  <div class="win-wrap">
+  <div class="win" id="win">
+    <div class="titlebar">
+      <div class="logo"></div>
+      <span class="dump" id="tbName">w3wp-orders-2026-11-11-0214.dmp</span>
+      <span class="meta" id="tbMeta"><span class="pill">.NET 8.0.11</span><span class="pill">x64</span><span class="pill">2.4 GB</span><span class="pill">64 threads</span></span>
+      <div class="search" id="openPal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Search threads, types, objects…<span style="margin-left:auto"><span class="kbd">Ctrl</span> <span class="kbd">K</span></span></div>
+      <div class="wc"><span>—</span><span>☐</span><span>✕</span></div>
+    </div>
+
+    <div class="body">
+      <nav class="rail" id="rail">
+        <button data-v="home" title="Home"><svg viewBox="0 0 24 24"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg></button>
+        <button data-v="diag" class="on" title="Diagnosis"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg><span class="badge"></span></button>
+        <button data-v="threads" title="Threads"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h13"/></svg></button>
+        <button data-v="locks" title="Locks"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></button>
+        <button data-v="memory" title="Memory"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="10" height="11" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="15" y="11" width="6" height="10" rx="1"/><rect x="3" y="16" width="10" height="5" rx="1"/></svg></button>
+        <button data-v="objects" title="Objects"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="12" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8.3 7.2 15.7 10.8M8.3 16.8l7.4-3.6"/></svg></button>
+        <button data-v="compare" title="Compare"><svg viewBox="0 0 24 24"><path d="M8 4v16M16 4v16M4 8h4M16 16h4"/></svg></button>
+        <div class="sp"></div>
+        <button data-v="report" title="Report"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h5"/></svg></button>
+      </nav>
+
+      <div style="position:relative;min-height:0;display:grid">
+
+      <!-- HOME -->
+      <div class="view home" data-view="home">
+        <div class="home-in">
+          <h2 style="font-size:26px">Open a dump</h2>
+          <p style="color:var(--fg-2);margin:6px 0 20px">Hang, crash or memory dump from .NET Framework 4.8, .NET 6 or .NET 8+ (x86 or x64).</p>
+          <div class="drop">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v3h16v-3"/></svg>
+            <div style="color:var(--fg-0);font-size:15px;margin-top:10px">Drop a <code>.dmp</code> here</div>
+            <div style="margin-top:14px;display:flex;gap:8px;justify-content:center"><button class="btn pri" data-go="anz">Browse…</button><button class="btn" data-go="compare">Compare two dumps</button><button class="btn ghost">Generate a sample</button></div>
+          </div>
+          <div class="recent">
+            <div class="lbl" style="padding:0 14px 8px">Recent</div>
+            <div class="rrow" data-go="diag"><div><div class="n">w3wp-orders-2026-11-11-0214.dmp</div><div class="s">D:\dumps\prod-weu</div></div><span class="sev crit">Deadlock</span><span class="s">.NET 8 · x64</span><span class="s">2 h ago</span></div>
+            <div class="rrow" data-go="compare"><div><div class="n">w3wp-orders-2026-11-10-1630.dmp</div><div class="s">D:\dumps\prod-weu</div></div><span class="sev warn">Heap 3.1 GB</span><span class="s">.NET 8 · x64</span><span class="s">yesterday</span></div>
+            <div class="rrow"><div><div class="n">billing-worker-crash.dmp</div><div class="s">C:\Users\khail\Downloads</div></div><span class="sev crit">Unhandled exception</span><span class="s">.NET Fx 4.8 · x86</span><span class="s">Nov 3</span></div>
+            <div class="rrow"><div><div class="n">sample-deadlock.dmp</div><div class="s">fixtures</div></div><span class="sev ok">Sample</span><span class="s">.NET 10 · x64</span><span class="s">Oct 28</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALYZING -->
+      <div class="view anz" data-view="anz">
+        <div class="steps">
+          <div class="lbl">Analyzing w3wp-orders-2026-11-11-0214.dmp</div>
+          <h2 style="font-size:22px;margin-top:8px">Reading 2.4 GB · .NET 8.0.11 x64</h2>
+          <div class="prog"><i></i></div>
+          <div style="font-size:12px;color:var(--fg-3);margin-bottom:14px">You can start exploring threads now. Heap findings will appear as they finish.</div>
+          <div class="step done"><span class="ic"></span><span>Matched runtime &amp; resolved DAC <span style="color:var(--fg-3)">(local cache)</span></span><span class="t">0.4s</span></div>
+          <div class="step done"><span class="ic"></span><span>Read 64 threads &amp; stacks</span><span class="t">1.1s</span></div>
+          <div class="step done"><span class="ic"></span><span>Locks &amp; wait-for graph · <b style="color:var(--crit)">1 cycle found</b></span><span class="t">0.2s</span></div>
+          <div class="step run"><span class="ic"></span><span>Walking the heap · 1.48 / 2.38 GB</span><span class="t">6.3s</span></div>
+          <div class="step"><span class="ic"></span><span style="color:var(--fg-3)">Thread-pool, async &amp; exception analyzers</span><span class="t">—</span></div>
+          <div class="step"><span class="ic"></span><span style="color:var(--fg-3)">Large-object identification</span><span class="t">—</span></div>
+          <div style="margin-top:18px;display:flex;gap:8px"><button class="btn pri" data-go="diag">See early findings</button><button class="btn ghost">Cancel</button></div>
+        </div>
+      </div>
+
+      <!-- DIAGNOSIS -->
+      <div class="view diag on" data-view="diag">
+        <div class="scroll">
+          <div class="verdict">
+            <span class="sev crit">Critical · high confidence</span>
+            <h2>The app is hung: two checkout requests are deadlocked, and 31 more requests are queued behind them.</h2>
+            <p><span class="chip t" data-go="threads"><span class="k">thr</span>#47</span> holds <span class="chip l" data-go="locks"><span class="k">lock</span>OrderLedger._gate</span> and wants <span class="chip l" data-go="locks"><span class="k">lock</span>InventoryCache._sync</span>. <span class="chip t" data-go="threads"><span class="k">thr</span>#52</span> holds them in the opposite order. Neither can proceed, so every request touching the order ledger is stuck.</p>
+          </div>
+          <div class="vitals">
+            <div class="vital"><div class="lbl">Threads</div><div class="v">64</div><div class="d">33 blocked · 4 running</div><div class="bar"><i style="width:52%;background:var(--crit)"></i></div></div>
+            <div class="vital"><div class="lbl">Thread pool</div><div class="v">48/48</div><div class="d">workers busy · 212 queued</div><div class="bar"><i style="width:100%;background:var(--warn)"></i></div></div>
+            <div class="vital"><div class="lbl">Managed heap</div><div class="v">2.38 GB</div><div class="d">LOH 41% · Gen2 52%</div><div class="bar"><i style="width:60%;background:var(--accent)"></i></div></div>
+            <div class="vital"><div class="lbl">Requests in flight</div><div class="v">37</div><div class="d">oldest 4m 12s</div><div class="bar"><i style="width:80%;background:var(--warn)"></i></div></div>
+            <div class="vital"><div class="lbl">Exceptions</div><div class="v">3</div><div class="d">on thread stacks</div><div class="bar"><i style="width:10%;background:var(--info)"></i></div></div>
+          </div>
+          <div class="symp" id="symp">
+            <span class="lbl" style="margin-right:4px">What were you seeing?</span>
+            <button data-s="all" class="on">Not sure</button><button data-s="hang">Hang / timeouts</button><button data-s="mem">High memory</button><button data-s="crash">Crash</button><button data-s="slow">Slow / high CPU</button>
+          </div>
+          <div class="finds" id="finds">
+            <div class="find open" data-tags="hang slow all" data-rank="1">
+              <div class="fh"><span class="sev crit">Critical</span><div><h4>Deadlock between checkout and inventory reservation</h4><div class="why">Lock-order inversion on 2 locks · 2 threads in cycle · 31 threads waiting behind</div></div><span class="conf">High confidence</span></div>
+              <div class="fb"><div class="cols">
+                <div><div class="lbl">What this means</div><p style="margin:6px 0 0">Two pieces of code take the same two locks in opposite order. Under load they eventually interleave: each grabs its first lock, then waits forever for the other's. The process won't recover without a restart.</p>
+                  <div class="lbl" style="margin-top:14px">Evidence</div>
+                  <div class="ev"><span class="chip t" data-go="threads"><span class="k">thr</span>#47 POST /checkout</span><span class="chip t" data-go="threads"><span class="k">thr</span>#52 POST /inventory/reserve</span><span class="chip l" data-go="locks"><span class="k">lock</span>OrderLedger._gate</span><span class="chip l" data-go="locks"><span class="k">lock</span>InventoryCache._sync</span></div></div>
+                <div><div class="lbl">What to do next</div><ol>
+                  <li>Restart the app pool to recover now.</li>
+                  <li>Make both paths take the locks in one order: <code>_gate</code> before <code>_sync</code>. The inversion is in <code>InventoryService.Reserve()</code> line ~118.</li>
+                  <li>Or drop the nested lock: <code>CheckoutService.Commit()</code> doesn't need <code>_sync</code> while holding <code>_gate</code>.</li></ol>
+                  <div style="margin-top:12px;display:flex;gap:8px"><button class="btn" data-go="locks">Show graph</button><button class="btn">📌 Pin</button><button class="btn ghost">Copy</button></div></div>
+              </div></div>
+            </div>
+            <div class="find" data-tags="hang slow all" data-rank="2">
+              <div class="fh"><span class="sev warn">Warning</span><div><h4>Thread pool starved: all 48 workers busy, 212 work items queued</h4><div class="why">Consequence of the deadlock above, made worse by sync-over-async in 9 threads</div></div><span class="conf">High confidence</span></div>
+              <div class="fb"><div class="cols"><div><div class="lbl">What this means</div><p style="margin:6px 0 0">New requests can't get a thread, so even endpoints unrelated to checkout time out. The pool grows slowly, about one thread per 500 ms.</p></div><div><div class="lbl">What to do next</div><ol><li>Fix the deadlock first.</li><li>Replace <code>.Result</code> in <code>PricingClient.GetQuote()</code> with <code>await</code>.</li></ol></div></div></div>
+            </div>
+            <div class="find" data-tags="slow hang all" data-rank="3">
+              <div class="fh"><span class="sev warn">Warning</span><div><h4>Sync-over-async: 9 threads block on <code>Task.Result</code></h4><div class="why">All in <code>PricingClient.GetQuote</code> → <code>HttpClient.SendAsync</code></div></div><span class="conf">Medium confidence</span></div>
+              <div class="fb"><div class="cols"><div><div class="lbl">What this means</div><p style="margin:6px 0 0">Each thread is parked waiting for an async operation that itself needs a pool thread to complete.</p></div><div><div class="lbl">What to do next</div><ol><li>Make the call chain async end-to-end.</li></ol></div></div></div>
+            </div>
+            <div class="find" data-tags="mem all" data-rank="4">
+              <div class="fh"><span class="sev info">Info</span><div><h4><code>byte[]</code> is 38% of the heap, mostly 3 report buffers in <code>ReportCache</code></h4><div class="why">912 MB across 14k instances · top 3 instances 610 MB</div></div><span class="conf">High confidence</span></div>
+              <div class="fb"><div class="cols"><div><div class="lbl">What this means</div><p style="margin:6px 0 0">Large rendered PDFs are held by a static cache with no eviction. That's not the cause of this hang, but it's worth a look.</p><div class="ev"><span class="chip o" data-go="objects"><span class="k">obj</span>ReportCache entry "Q3-statements"</span></div></div><div><div class="lbl">What to do next</div><ol><li>Add size-based eviction to <code>ReportCache</code>.</li></ol></div></div></div>
+            </div>
+            <div class="find" data-tags="crash all" data-rank="5">
+              <div class="fh"><span class="sev info">Info</span><div><h4>3 exceptions on thread stacks (none unhandled)</h4><div class="why"><code>TaskCanceledException</code> ×2, <code>SqlException</code> (timeout) ×1</div></div><span class="conf">High confidence</span></div>
+              <div class="fb"><p style="margin:12px 0 0;color:var(--fg-2)">Timeouts are downstream symptoms of the hang.</p></div>
+            </div>
+          </div>
+        </div>
+        <aside class="side">
+          <div class="blk"><div class="lbl">The deadlock at a glance</div>
+            <svg class="mini-graph" viewBox="0 0 320 170" width="100%">
+              <g font-family="Cascadia Code,Consolas,monospace" font-size="10">
+              <rect x="14" y="20" width="96" height="40" rx="6" fill="#f2555a1f" stroke="#f2555a"/><text x="24" y="37" fill="#eef0f3">◆ #47</text><text x="24" y="51" fill="#8b93a1">/checkout</text>
+              <rect x="210" y="20" width="96" height="40" rx="6" fill="#f2555a1f" stroke="#f2555a"/><text x="220" y="37" fill="#eef0f3">◆ #52</text><text x="220" y="51" fill="#8b93a1">/reserve</text>
+              <rect x="14" y="112" width="96" height="40" rx="6" fill="#1e232b" stroke="#323944"/><text x="24" y="129" fill="#eef0f3">▲ _gate</text><text x="24" y="143" fill="#8b93a1">OrderLedger</text>
+              <rect x="210" y="112" width="96" height="40" rx="6" fill="#1e232b" stroke="#323944"/><text x="220" y="129" fill="#eef0f3">▲ _sync</text><text x="220" y="143" fill="#8b93a1">InventoryCache</text>
+              </g>
+              <g fill="none" stroke-width="1.5"><path d="M62 112V60" stroke="#c5cad3"/><path d="M258 112V60" stroke="#c5cad3"/><path d="M110 50 C170 70 170 110 210 125" stroke="#f2555a" stroke-dasharray="5 4"/><path d="M210 50 C150 70 150 110 110 125" stroke="#f2555a" stroke-dasharray="5 4"/></g>
+            </svg>
+            <div style="font-size:12px;color:var(--fg-3);margin-top:6px">— owns · <span style="color:var(--crit)">- - waits for</span></div>
+          </div>
+          <div class="blk"><div class="lbl">Busiest requests</div>
+            <div class="kv" style="grid-template-columns:1fr auto"><span class="mono">POST /api/orders/checkout</span><b>22</b><span class="mono">POST /api/inventory/reserve</span><b>9</b><span class="mono">GET /api/pricing/quote</span><b>4</b><span class="mono">GET /health</span><b>2</b></div>
+          </div>
+          <div class="blk"><div class="lbl">Pinned (2)</div>
+            <div class="pin"><span class="chip t"><span class="k">thr</span>#47</span><span class="note">Line 118, lock taken inside foreach. Confirm with Sam.</span></div>
+            <div class="pin"><span class="chip o"><span class="k">obj</span>ReportCache</span><span class="note">Separate ticket for eviction.</span></div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- THREADS -->
+      <div class="view threads" data-view="threads">
+        <div class="scroll">
+          <div class="pane-h"><h3>Threads</h3><span class="pill">64 threads · 11 groups</span>
+            <div class="r"><div class="seg"><button class="on">Group by stack</button><button>Request</button><button>Flat</button></div><div class="seg"><button class="on">All</button><button>Blocked</button><button>Running</button></div></div></div>
+          <div class="thead lbl"><span>#</span><span>Where (first app frame)</span><span>Doing</span><span>State</span></div>
+          <div id="tlist">
+            <div class="trow sel" data-t="47"><span class="cnt">1</span><span class="frame">CheckoutService.Commit(Order)</span><span class="op"><b>POST</b> /api/orders/checkout</span><span class="state st-blk">Deadlocked</span></div>
+            <div class="trow" data-t="52"><span class="cnt">1</span><span class="frame">InventoryService.Reserve(Sku, int)</span><span class="op"><b>POST</b> /api/inventory/reserve</span><span class="state st-blk">Deadlocked</span></div>
+            <div class="trow" data-t="g1"><span class="cnt">21</span><span class="frame">OrderLedger.Append(LedgerEntry)</span><span class="op"><b>POST</b> /api/orders/checkout</span><span class="state st-blk">Waiting on #47</span></div>
+            <div class="trow" data-t="g2"><span class="cnt">8</span><span class="frame">InventoryCache.TryGet(Sku)</span><span class="op"><b>POST</b> /api/inventory/reserve</span><span class="state st-blk">Waiting on #52</span></div>
+            <div class="trow" data-t="g3"><span class="cnt">9</span><span class="frame">PricingClient.GetQuote(Cart)</span><span class="op"><b>GET</b> /api/pricing/quote</span><span class="state st-wait">Task.Result</span></div>
+            <div class="trow" data-t="g4"><span class="cnt">4</span><span class="frame">ReportRenderer.RenderPdf(Report)</span><span class="op">background job · ReportWarmup</span><span class="state st-run">Running</span></div>
+            <div class="trow"><span class="cnt">12</span><span class="frame" style="color:var(--fg-3)">— idle thread-pool workers —</span><span class="op">—</span><span class="state st-idle">Idle</span></div>
+            <div class="trow"><span class="cnt">3</span><span class="frame" style="color:var(--fg-3)">Kestrel / socket I/O</span><span class="op">—</span><span class="state st-wait">Waiting · I/O</span></div>
+            <div class="trow"><span class="cnt">1</span><span class="frame" style="color:var(--fg-3)">Finalizer</span><span class="op">—</span><span class="state st-idle">Idle</span></div>
+            <div class="trow"><span class="cnt">2</span><span class="frame" style="color:var(--fg-3)">GC background</span><span class="op">—</span><span class="state st-idle">Idle</span></div>
+            <div class="trow"><span class="cnt">2</span><span class="frame" style="color:var(--fg-3)">Timer / tiered compilation</span><span class="op">—</span><span class="state st-idle">Idle</span></div>
+          </div>
+        </div>
+        <aside class="insp" id="insp"></aside>
+      </div>
+
+      <!-- LOCKS -->
+      <div class="view locks" data-view="locks">
+        <div class="pane-h"><h3>Locks &amp; waits</h3><span class="pill">6 contended locks · 1 cycle</span><div class="r"><div class="seg"><button class="on">Cycles only</button><button>All contention</button></div><button class="btn">Fit</button></div></div>
+        <div class="graph-wrap">
+          <svg viewBox="0 0 1100 600" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <marker id="m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#c5cad3"/></marker>
+              <marker id="m2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#f2555a"/></marker>
+              <marker id="m3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#5e6673"/></marker>
+            </defs>
+            <g font-family="Cascadia Code,Consolas,monospace" font-size="12">
+              <g fill="none" stroke-width="2">
+                <path d="M300 215 V365" stroke="#c5cad3" marker-end="url(#m1)"/>
+                <path d="M640 215 V365" stroke="#c5cad3" marker-end="url(#m1)"/>
+                <path d="M380 180 C480 220 520 330 560 375" stroke="#f2555a" stroke-dasharray="7 5" marker-end="url(#m2)"/>
+                <path d="M560 180 C460 220 420 330 380 375" stroke="#f2555a" stroke-dasharray="7 5" marker-end="url(#m2)"/>
+                <path d="M110 470 C150 420 200 410 230 405" stroke="#5e6673" stroke-dasharray="3 4" marker-end="url(#m3)"/>
+                <path d="M830 470 C790 420 750 410 720 405" stroke="#5e6673" stroke-dasharray="3 4" marker-end="url(#m3)"/>
+              </g>
+              <g style="cursor:pointer" data-go="threads"><rect x="220" y="140" width="180" height="76" rx="10" fill="#f2555a1f" stroke="#f2555a" stroke-width="1.5"/><text x="238" y="166" fill="#eef0f3" font-size="14">◆ Thread #47</text><text x="238" y="186" fill="#60a5fa">POST /checkout</text><text x="238" y="204" fill="#8b93a1" font-size="11">CheckoutService.Commit</text></g>
+              <g style="cursor:pointer" data-go="threads"><rect x="560" y="140" width="180" height="76" rx="10" fill="#f2555a1f" stroke="#f2555a" stroke-width="1.5"/><text x="578" y="166" fill="#eef0f3" font-size="14">◆ Thread #52</text><text x="578" y="186" fill="#60a5fa">POST /inventory/reserve</text><text x="578" y="204" fill="#8b93a1" font-size="11">InventoryService.Reserve</text></g>
+              <g><rect x="220" y="370" width="180" height="70" rx="10" fill="#1e232b" stroke="#323944" stroke-width="1.5"/><text x="238" y="396" fill="#eef0f3" font-size="14">▲ OrderLedger._gate</text><text x="238" y="416" fill="#8b93a1" font-size="11">0x25a4040a4a8 · 22 waiters</text></g>
+              <g><rect x="560" y="370" width="180" height="70" rx="10" fill="#1e232b" stroke="#323944" stroke-width="1.5"/><text x="578" y="396" fill="#eef0f3" font-size="14">▲ InventoryCache._sync</text><text x="578" y="416" fill="#8b93a1" font-size="11">0x25a4040a490 · 9 waiters</text></g>
+              <g><rect x="20" y="470" width="170" height="54" rx="10" fill="#171b21" stroke="#323944" stroke-dasharray="4 3"/><text x="36" y="494" fill="#c5cad3">◆ 21 threads</text><text x="36" y="512" fill="#8b93a1" font-size="11">OrderLedger.Append</text></g>
+              <g><rect x="750" y="470" width="170" height="54" rx="10" fill="#171b21" stroke="#323944" stroke-dasharray="4 3"/><text x="766" y="494" fill="#c5cad3">◆ 8 threads</text><text x="766" y="512" fill="#8b93a1" font-size="11">InventoryCache.TryGet</text></g>
+            </g>
+          </svg>
+          <div class="explain"><span class="sev crit">Cycle</span><h4 style="margin:10px 0 6px">Lock-order inversion</h4><p style="margin:0;color:var(--fg-2);font-size:13px">#47 took <b>_gate → _sync</b>. #52 took <b>_sync → _gate</b>. Each now holds what the other needs.</p><div class="lbl" style="margin-top:12px">Acquired at</div><div class="mono" style="color:var(--fg-0);margin-top:4px">CheckoutService.cs:211<br>InventoryService.cs:118</div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn">📌 Pin</button><button class="btn ghost" data-go="diag">Back to finding</button></div></div>
+          <div class="legend"><span><i style="border-color:#c5cad3"></i>owns</span><span><i style="border-color:#f2555a;border-top-style:dashed"></i>waits for (in cycle)</span><span><i style="border-color:#5e6673;border-top-style:dotted"></i>queued behind</span></div>
+        </div>
+      </div>
+
+      <!-- MEMORY -->
+      <div class="view memory" data-view="memory">
+        <div class="scroll">
+          <div class="pane-h"><h3>Managed heap</h3><span class="pill">2.38 GB · 4.1M objects</span><div class="r"><div class="seg"><button class="on">By type</button><button>By generation</button><button>By namespace</button></div></div></div>
+          <div class="treemap">
+            <div class="tm" style="grid-row:span 2;background:#0f766e"><b>System.Byte[]</b><span>912 MB · 38%</span></div>
+            <div class="tm" style="background:#115e59"><b>System.String</b><span>501 MB · 21%</span></div>
+            <div class="tm" style="background:#134e4a"><b>CartSnapshot</b><span>214 MB</span></div>
+            <div class="tm" style="background:#1e3a3a"><b>Dictionary&lt;Sku,Item&gt;.Entry[]</b><span>188 MB</span></div>
+            <div class="tm" style="background:#1f2f33"><b>other (1,204)</b><span>570 MB</span></div>
+          </div>
+          <div class="bar-row lbl"><span>Type</span><span class="r">Count</span><span class="r">Size</span><span>Share</span></div>
+          <div class="bar-row"><span class="ty">System.Byte[]</span><span class="r">14,208</span><span class="r">912.4 MB</span><div class="hbar"><i style="width:100%"></i></div></div>
+          <div class="bar-row"><span class="ty">System.String</span><span class="r">2,912,004</span><span class="r">501.0 MB</span><div class="hbar"><i style="width:55%"></i></div></div>
+          <div class="bar-row"><span class="ty">Contoso.Orders.CartSnapshot</span><span class="r">418,220</span><span class="r">214.1 MB</span><div class="hbar"><i style="width:23%"></i></div></div>
+          <div class="bar-row"><span class="ty">Dictionary&lt;Sku,Item&gt;+Entry[]</span><span class="r">3,104</span><span class="r">188.6 MB</span><div class="hbar"><i style="width:21%"></i></div></div>
+          <div class="bar-row"><span class="ty">Contoso.Orders.LedgerEntry</span><span class="r">604,881</span><span class="r">48.4 MB</span><div class="hbar"><i style="width:5%"></i></div></div>
+        </div>
+        <aside class="insp">
+          <div class="ih"><div class="lbl">Largest objects, identified</div><p style="margin:6px 0 0;color:var(--fg-2);font-size:12.5px">Named by reading their own fields and their owner.</p></div>
+          <div class="lobj" data-go="objects"><div class="id">Report PDF "Q3-statements" <span style="color:var(--fg-3)">in</span> ReportCache</div><div class="sub">byte[] · 240.0 MB · LOH · 0x25a5c010000</div></div>
+          <div class="lobj" data-go="objects"><div class="id">Report PDF "Q3-invoices-EU"</div><div class="sub">byte[] · 210.3 MB · LOH</div></div>
+          <div class="lobj" data-go="objects"><div class="id">Report PDF "Q3-invoices-US"</div><div class="sub">byte[] · 160.1 MB · LOH</div></div>
+          <div class="lobj"><div class="id">Inventory index (Sku → Item, 1.2M entries)</div><div class="sub">Dictionary&lt;Sku,Item&gt;+Entry[] · 96.0 MB</div></div>
+          <div class="lobj"><div class="id">Response buffer for <code>GET /api/reports/export</code></div><div class="sub">byte[] · 18.2 MB · pinned</div></div>
+        </aside>
+      </div>
+
+      <!-- OBJECTS -->
+      <div class="view objects" data-view="objects">
+        <div class="scroll" style="border-right:1px solid var(--line)">
+          <div class="pane-h"><h3>Report PDF "Q3-statements"</h3><span class="pill">byte[] · 240 MB</span><div class="r"><button class="btn">📌 Pin</button><button class="btn ghost">Copy</button></div></div>
+          <div class="crumbs">ReportCache.s_entries › <span>Dictionary&lt;string,CachedReport&gt;</span> › <span>Entry[17]</span> › <span class="cur">CachedReport</span></div>
+          <div class="fields">
+            <div class="fr lbl" style="font-family:var(--sans)"><span></span><span>Field</span><span>Type</span><span>Value</span></div>
+            <div class="fr"><span class="tw">▸</span><span class="nm">Key</span><span class="ty">string</span><span class="val s">"Q3-statements"</span></div>
+            <div class="fr"><span class="tw">▾</span><span class="nm">Pdf</span><span class="ty">byte[]</span><span class="val">byte[251,658,240] <span class="chip o"><span class="k">obj</span>0x25a5c010000</span></span></div>
+            <div class="fr"><span></span><span class="nm" style="padding-left:16px;color:var(--fg-2)">[0..7]</span><span class="ty">preview</span><span class="val">25 50 44 46 2D 31 2E 37 <span style="color:var(--fg-3)">%PDF-1.7</span></span></div>
+            <div class="fr"><span class="tw">▸</span><span class="nm">RenderedAt</span><span class="ty">DateTime</span><span class="val n">2026-11-09 06:00:12Z</span></div>
+            <div class="fr"><span class="tw">▸</span><span class="nm">HitCount</span><span class="ty">int</span><span class="val n">3</span></div>
+            <div class="fr"><span class="tw">▸</span><span class="nm">Options</span><span class="ty">RenderOptions</span><span class="val"><span class="chip o"><span class="k">obj</span>RenderOptions</span></span></div>
+            <div class="fr"><span class="tw">▸</span><span class="nm">_expiry</span><span class="ty">TimeSpan?</span><span class="val" style="color:var(--crit)">null — never expires</span></div>
+          </div>
+          <div class="pane-h" style="border-top:1px solid var(--line);margin-top:10px"><h3 style="font-size:13px">Referenced by (1)</h3></div>
+          <div class="fields"><div class="fr"><span></span><span class="nm">Entry[17].value</span><span class="ty">Dictionary entry</span><span class="val"><span class="chip o"><span class="k">obj</span>s_entries</span></span></div></div>
+        </div>
+        <div class="scroll">
+          <div class="pane-h"><h3>Why is it alive?</h3><span class="pill">shortest path to a GC root</span><div class="r"><div class="seg"><button class="on">Shortest</button><button>All paths (3)</button></div></div></div>
+          <div class="root-path">
+            <div class="rp-node root"><span class="sev warn">Root</span><span class="ty">static ReportCache.s_entries</span><span class="f">AppDomain static</span></div>
+            <div class="rp-edge">→ field</div>
+            <div class="rp-node"><span class="ty">Dictionary&lt;string,CachedReport&gt;</span><span class="f">142 entries</span></div>
+            <div class="rp-edge">→ _entries</div>
+            <div class="rp-node"><span class="ty">Entry&lt;string,CachedReport&gt;[]</span><span class="f">[17]</span></div>
+            <div class="rp-edge">→ value</div>
+            <div class="rp-node"><span class="ty">CachedReport "Q3-statements"</span><span class="f">.Pdf</span></div>
+            <div class="rp-edge">→ Pdf</div>
+            <div class="rp-node target"><span class="sev ok" style="color:var(--accent);background:var(--accent-dim)">This</span><span class="ty">byte[] 240 MB</span><span class="f">LOH</span></div>
+            <div class="callout" style="margin-top:22px">A <span class="term" title="Static fields live for the whole lifetime of the AppDomain/process.">static field</span> keeps this alive for the life of the process. <code>CachedReport._expiry</code> is null, so the cache never evicts it.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPARE -->
+      <div class="view compare" data-view="compare">
+        <div class="cmp-h">
+          <div class="dumpcard"><div class="lbl">Baseline · A</div><div class="n">w3wp-orders-2026-11-10-1630.dmp</div><div class="s">heap 1.21 GB · 41 threads · 0 critical</div></div>
+          <div style="text-align:center;color:var(--fg-3);font-size:20px">→</div>
+          <div class="dumpcard" style="border-color:var(--accent)"><div class="lbl">Current · B</div><div class="n">w3wp-orders-2026-11-11-0214.dmp</div><div class="s">heap 2.38 GB · 64 threads · 1 critical</div></div>
+        </div>
+        <div class="cmp-sum">
+          <div class="vital"><div class="lbl">Heap</div><div class="v up">+1.17 GB</div><div class="d">+97% in 9h 44m</div></div>
+          <div class="vital"><div class="lbl">Objects</div><div class="v up">+1.6M</div><div class="d">CartSnapshot accounts for 26%</div></div>
+          <div class="vital"><div class="lbl">Blocked threads</div><div class="v up">0 → 33</div><div class="d">new deadlock</div></div>
+          <div class="vital"><div class="lbl">Findings</div><div class="v">+2 / −0</div><div class="d"><span class="up">new:</span> deadlock, starvation</div></div>
+        </div>
+        <div class="scroll">
+          <div class="delta-row lbl"><span>Type</span><span class="r">Count A</span><span class="r">Count B</span><span class="r">Δ size</span><span>Growth</span></div>
+          <div class="delta-row"><span class="mono" style="color:var(--fg-0)">System.Byte[]</span><span class="r">13,990</span><span class="r">14,208</span><span class="r up">+604 MB</span><div class="dbar"><i style="width:100%;background:var(--crit)"></i></div></div>
+          <div class="delta-row"><span class="mono" style="color:var(--fg-0)">Contoso.Orders.CartSnapshot</span><span class="r">6,140</span><span class="r">418,220</span><span class="r up">+211 MB</span><div class="dbar"><i style="width:35%;background:var(--crit)"></i></div></div>
+          <div class="delta-row"><span class="mono" style="color:var(--fg-0)">System.String</span><span class="r">1,880,412</span><span class="r">2,912,004</span><span class="r up">+176 MB</span><div class="dbar"><i style="width:29%;background:var(--warn)"></i></div></div>
+          <div class="delta-row"><span class="mono" style="color:var(--fg-0)">Dictionary&lt;Sku,Item&gt;+Entry[]</span><span class="r">3,104</span><span class="r">3,104</span><span class="r">±0</span><div class="dbar"><i style="width:1%;background:var(--fg-3)"></i></div></div>
+          <div class="delta-row"><span class="mono" style="color:var(--fg-0)">Contoso.Orders.LedgerEntry</span><span class="r">611,002</span><span class="r">604,881</span><span class="r dn">−0.5 MB</span><div class="dbar"><i style="width:1%;background:var(--ok)"></i></div></div>
+          <div class="callout" style="margin:16px 20px"><b>Leak suspect:</b> <code>CartSnapshot</code> grew 68× while request volume was flat. 99% of new instances are rooted through <code>static SessionStore.s_snapshots</code>. <a href="#" data-go="objects">Open retention path →</a></div>
+        </div>
+      </div>
+
+      <!-- REPORT -->
+      <div class="view report" data-view="report">
+        <aside class="side" style="border-left:0;border-right:1px solid var(--line)">
+          <div class="blk"><div class="lbl">Include</div>
+            <label style="display:block;margin-top:8px"><input type="checkbox" checked> Verdict &amp; vitals</label>
+            <label style="display:block"><input type="checkbox" checked> Findings (warning+)</label>
+            <label style="display:block"><input type="checkbox" checked> Pins &amp; notes</label>
+            <label style="display:block"><input type="checkbox"> Full thread groups</label>
+            <label style="display:block"><input type="checkbox"> Top 20 heap types</label>
+          </div>
+          <div class="blk"><div class="lbl">Pins &amp; notes</div>
+            <div class="pin"><span class="chip t"><span class="k">thr</span>#47</span><span class="note">Line 118, lock taken inside foreach. Confirm with Sam.</span></div>
+            <div class="pin"><span class="chip l"><span class="k">lock</span>cycle</span><span class="note">Root cause.</span></div>
+            <div class="pin"><span class="chip o"><span class="k">obj</span>ReportCache</span><span class="note">Separate ticket for eviction.</span></div>
+          </div>
+          <div class="blk" style="display:flex;gap:8px"><button class="btn pri">Export Markdown</button><button class="btn">HTML</button></div>
+        </aside>
+        <div class="scroll">
+          <div class="paper">
+            <div class="lbl">Incident report · generated 2026-11-11 04:31</div>
+            <h1 style="margin-top:8px">Contoso.Orders.Api hang: lock-order deadlock</h1>
+            <p style="color:var(--fg-3);font-family:var(--mono);font-size:12px">w3wp-orders-2026-11-11-0214.dmp · .NET 8.0.11 x64 · 2.4 GB</p>
+            <h2>Summary</h2>
+            <p>Two checkout requests deadlocked on <code>OrderLedger._gate</code> and <code>InventoryCache._sync</code> taken in opposite order. 31 further requests queued behind them, starving the thread pool (48/48 busy, 212 queued).</p>
+            <h2>Evidence</h2>
+            <ul><li>Thread #47 · <code>POST /api/orders/checkout</code> holds <code>_gate</code>, waits <code>_sync</code> (CheckoutService.cs:211)</li><li>Thread #52 · <code>POST /api/inventory/reserve</code> holds <code>_sync</code>, waits <code>_gate</code> (InventoryService.cs:118)</li></ul>
+            <div class="note"><b>Note on #47:</b> Line 118, lock taken inside foreach. Confirm with Sam.</div>
+            <h2>Recommended actions</h2>
+            <ol><li>Restart the app pool (immediate).</li><li>Enforce lock order <code>_gate → _sync</code> in <code>InventoryService.Reserve</code>.</li><li>Remove <code>.Result</code> in <code>PricingClient.GetQuote</code>.</li></ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- PALETTE -->
+      <div class="palette" id="pal">
+        <input value="checkout" spellcheck="false">
+        <div class="pg">
+          <div class="gl">Requests</div>
+          <div class="pi on" data-go="threads"><span style="color:var(--info)">⇢</span><span class="mono">POST /api/orders/checkout <span style="color:var(--fg-3)">· 22 threads</span></span><span class="kbd">↵</span></div>
+          <div class="gl">Threads</div>
+          <div class="pi" data-go="threads"><span>◆</span><span class="mono">#47 CheckoutService.Commit(Order)</span><span class="sev crit">Deadlocked</span></div>
+          <div class="gl">Types</div>
+          <div class="pi" data-go="memory"><span>▦</span><span class="mono">Contoso.Orders.CheckoutContext <span style="color:var(--fg-3)">· 37 instances</span></span><span></span></div>
+          <div class="gl">Commands</div>
+          <div class="pi" data-go="report"><span>⌘</span><span>Export incident report</span><span class="kbd">Ctrl E</span></div>
+        </div>
+      </div>
+
+      </div>
+    </div>
+    <div class="statusbar"><span><span class="dot"></span>worker x64 · pid 18244</span><span>DAC mscordaccore 8.0.11 (cache)</span><span>workspace: .dumpdebugger/</span><span style="margin-left:auto">analysis 9.2s · all analyzers done</span></div>
+  </div>
+  </div>
+</section>
+
+<!-- ===================================================== ROADMAP -->
+<section class="section" id="s-road">
+  <div class="eyebrow">Roadmap</div>
+  <h1 class="h-xl">Nine phases. Engine first, then views, then reach.</h1>
+  <p class="lede">The worker processes and ClrMD analyzers are the valuable, proven part, and they stay. What changes is the contract (query-style, entity-addressed, explanation-carrying) and everything above it. Each phase ends shippable. The full version with acceptance criteria is in <code>docs/redesign/ROADMAP.md</code>.</p>
+
+  <h2 class="h-l">Target architecture</h2>
+  <div class="card" style="padding:10px">
+  <svg viewBox="0 0 1240 230" width="100%">
+    <g font-family="Segoe UI,Inter,sans-serif" font-size="12">
+      <rect x="20" y="30" width="330" height="170" rx="10" fill="#111419" stroke="#2dd4bf"/>
+      <text x="38" y="56" fill="#eef0f3" font-weight="600">React + TS (Vite) — new</text>
+      <text x="38" y="80" fill="#8b93a1">views · inspector · palette · graph (React Flow)</text>
+      <text x="38" y="100" fill="#8b93a1">TanStack Query + Virtual · Radix primitives</text>
+      <text x="38" y="120" fill="#8b93a1">tokens.css · generated TS contracts</text>
+      <rect x="390" y="30" width="250" height="170" rx="10" fill="#111419" stroke="#323944"/>
+      <text x="408" y="56" fill="#eef0f3" font-weight="600">DumpDebugger.Host — new</text>
+      <text x="408" y="80" fill="#8b93a1">WinUI 3 window + WebView2</text>
+      <text x="408" y="100" fill="#8b93a1">JSON-RPC bridge (postMessage)</text>
+      <text x="408" y="120" fill="#8b93a1">worker lifecycle · workspace · export</text>
+      <text x="408" y="140" fill="#8b93a1">file dialogs · drag-drop · recents</text>
+      <rect x="680" y="30" width="250" height="170" rx="10" fill="#111419" stroke="#323944"/>
+      <text x="698" y="56" fill="#eef0f3" font-weight="600">Worker x86 / x64 — kept</text>
+      <text x="698" y="80" fill="#8b93a1">protocol v2: paged, entity-addressed</text>
+      <text x="698" y="100" fill="#8b93a1">streamed findings + progress stages</text>
+      <text x="698" y="120" fill="#8b93a1">InspectObject · FindRoots · HeapSnapshot</text>
+      <rect x="970" y="30" width="250" height="170" rx="10" fill="#111419" stroke="#323944"/>
+      <text x="988" y="56" fill="#eef0f3" font-weight="600">Analysis + Core — extended</text>
+      <text x="988" y="80" fill="#8b93a1">Finding v2 (meaning, next steps)</text>
+      <text x="988" y="100" fill="#8b93a1">+ threadpool, async, exceptions,</text>
+      <text x="988" y="120" fill="#8b93a1">  finalizer, LOH, http, leak-diff</text>
+      <text x="988" y="140" fill="#f2555a">− DumpDebugger.Llm (removed)</text>
+    </g>
+    <g stroke="#5e6673" stroke-width="1.5"><path d="M350 115h40M640 115h40M930 115h40"/></g>
+    <g font-family="Cascadia Code,Consolas,monospace" font-size="10.5" fill="#5e6673"><text x="352" y="108">rpc</text><text x="642" y="108">pipe</text><text x="932" y="108">in-proc</text></g>
+  </svg>
+  </div>
+
+  <h2 class="h-l">Phases</h2>
+  <table class="t">
+    <tr><th style="width:44px">#</th><th style="width:230px">Phase</th><th>Delivers</th><th style="width:300px">Done when</th></tr>
+    <tr><td class="mono">R0</td><td><b>Foundation</b></td><td>New <code>DumpDebugger.Host</code> (WinUI 3 + WebView2), <code>web/</code> React+TS+Vite app with tokens, JSON-RPC bridge, TS types generated from Core contracts, CI builds web+host. Remove <code>DumpDebugger.Llm</code>.</td><td>Host opens a dump and the web app lists threads through the bridge. Old App project deleted.</td></tr>
+    <tr><td class="mono">R1</td><td><b>Engine contract v2</b></td><td>Finding v2 (<code>plainTitle</code>, <code>whatItMeans</code>, <code>nextSteps[]</code>, typed entity refs, <code>symptoms[]</code>). Entity URIs. Paged and streaming worker protocol with named progress stages. First-app-frame classifier (skip runtime/framework frames).</td><td>Existing analyzers emit v2. The deadlock fixture yields an English verdict naming methods, not frames like <code>.InlinedCallFrame</code>.</td></tr>
+    <tr><td class="mono">R2</td><td><b>Shell, Home, Diagnosis</b></td><td>Rail, titlebar, status bar, inspector panel with history, <span class="kbd">Ctrl K</span> palette. Home with recents and verdict badges, drag-drop and sample generator. Analyzing screen. Diagnosis with verdict, vitals, symptom chips and findings.</td><td>Open → verdict in under 5 s on the fixture. All evidence chips open the inspector.</td></tr>
+    <tr><td class="mono">R3</td><td><b>Threads &amp; Locks</b></td><td>Threads grouped by app frame / request / flat with filters. Thread inspector (folded framework frames, held/awaited locks, stack objects). Locks graph (React Flow + ELK layout) with cycle highlighting and explanation card.</td><td>200-thread dumps stay at 60 fps when scrolling. Graph ↔ thread ↔ finding round-trips.</td></tr>
+    <tr><td class="mono">R4</td><td><b>Memory &amp; Object explorer</b></td><td>Treemap and type table (virtualized). Large-object identification v2 (owner-aware names). Object inspector with field tree, "referenced by", and shortest/all GC-root paths via new <code>InspectObject</code> and <code>FindRoots</code> worker calls.</td><td>Any object reachable in 3 clicks from a finding. Root path for a 2 GB heap in under 10 s, cancellable.</td></tr>
+    <tr><td class="mono">R5</td><td><b>Analyzer pack</b></td><td>Thread-pool starvation, sync-over-async / Task.Result, async state-machine "logical stacks", exceptions on stacks + last-thrown, finalizer queue backlog, LOH fragmentation, HttpClient/socket exhaustion, timer leaks. Each ships with authored explanations and fixtures in DumpGen.</td><td>Every analyzer has a DumpGen scenario and a golden findings snapshot test.</td></tr>
+    <tr><td class="mono">R6</td><td><b>Pins, notes &amp; Report</b></td><td>Pin/annotate any entity (stored in the workspace sidecar). Report view with section toggles and live preview. Export Markdown and self-contained HTML.</td><td>Reopening a dump restores pins. The exported HTML renders standalone.</td></tr>
+    <tr><td class="mono">R7</td><td><b>Compare</b></td><td>Heap snapshot persisted in the workspace (type → count/size + sampled roots). Compare picker, type deltas, thread-group deltas, findings diff, and a leak-suspect heuristic with retention-path drill-down into B.</td><td>Compare runs from cached snapshots without reopening A. The DumpGen "leak" scenario is flagged.</td></tr>
+    <tr><td class="mono">R8</td><td><b>Polish &amp; ship</b></td><td>Keyboard map and <span class="kbd">?</span> overlay, glossary, accessibility pass (contrast, focus, screen reader names), reduced motion, MSIX packaging with the bundled web assets, updated README and screenshots.</td><td>No accessibility-blocking issues. Signed MSIX installs cleanly.</td></tr>
+  </table>
+
+  <h2 class="h-l">Risks &amp; open questions</h2>
+  <div class="grid g2">
+    <div class="card"><h4>Bridge chattiness</h4><p>A 4M-object heap must not cross WebView2 as JSON. Mitigation: the worker paginates and aggregates, the UI only asks for what's on screen, and the treemap gets pre-bucketed data.</p></div>
+    <div class="card"><h4>GC-root path cost</h4><p>Full root search on large heaps is slow. Mitigation: BFS with a depth cap, cancellation, a cached reverse-reference index built lazily on first request.</p></div>
+    <div class="card"><h4>"Plain English" accuracy</h4><p>Authored explanations must not overclaim. Each finding carries confidence, and the text is templated from evidence, never free-form.</p></div>
+    <div class="card"><h4>Line numbers</h4><p>Mockups show <code>InventoryService.cs:118</code>, which needs PDBs. Fall back to method + IL offset when symbols are missing, and make symbol paths a setting.</p></div>
+  </div>
+</section>
+
+</main>
+
+<script>
+// doc tabs
+document.querySelectorAll('#docTabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#docTabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.section').forEach(s=>s.classList.toggle('on',s.id==='s-'+b.dataset.s));
+  window.scrollTo({top:0});
+});
+// mock nav
+const railMap={home:'home',anz:'home',diag:'diag',threads:'threads',locks:'locks',memory:'memory',objects:'objects',compare:'compare',report:'report'};
+function go(v){
+  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.dataset.view===v));
+  document.querySelectorAll('#rail button').forEach(x=>x.classList.toggle('on',x.dataset.v===railMap[v]));
+  document.querySelectorAll('#pick button').forEach(x=>x.classList.toggle('on',x.dataset.v===v));
+  const home=v==='home'||v==='anz';
+  document.getElementById('tbName').textContent=home?'Dump Debugger':(v==='compare'?'Compare · 2 dumps':'w3wp-orders-2026-11-11-0214.dmp');
+  document.getElementById('tbMeta').style.visibility=home?'hidden':'visible';
+  document.getElementById('pal').classList.remove('on');
+}
+document.querySelectorAll('#rail button,#pick button').forEach(b=>b.onclick=()=>go(b.dataset.v));
+document.getElementById('win').addEventListener('click',e=>{
+  const t=e.target.closest('[data-go]'); if(t){e.preventDefault();e.stopPropagation();go(t.dataset.go);}
+});
+// findings expand
+document.querySelectorAll('.find .fh').forEach(h=>h.onclick=()=>h.parentElement.classList.toggle('open'));
+// symptom re-rank
+document.querySelectorAll('#symp button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#symp button').forEach(x=>x.classList.toggle('on',x===b));
+  const s=b.dataset.s, list=document.getElementById('finds');
+  [...list.children].sort((a,c)=>{
+    const am=a.dataset.tags.split(' ').indexOf(s)>-1?0:1, cm=c.dataset.tags.split(' ').indexOf(s)>-1?0:1;
+    if(s==='all') return a.dataset.rank-c.dataset.rank;
+    return am-cm || a.dataset.rank-c.dataset.rank;
+  }).forEach((n,i)=>{list.appendChild(n);n.style.opacity=(s==='all'||n.dataset.tags.includes(s))?1:.45;n.classList.toggle('open',i===0);});
+});
+// thread inspector
+const T={
+ '47':{h:'Thread #47',st:'<span class="state st-blk">Deadlocked</span>',op:'POST /api/orders/checkout',age:'4m 12s',holds:'<span class="chip l" data-go="locks"><span class="k">lock</span>OrderLedger._gate</span>',waits:'<span class="chip l" data-go="locks"><span class="k">lock</span>InventoryCache._sync</span> owned by <span class="chip t"><span class="k">thr</span>#52</span>',
+  stack:['<div class="hot">Monitor.Enter(Object) <span style="opacity:.6">← waiting</span></div>','<div class="app">InventoryCache.TryReserve(Sku, int)</div>','<div class="app">CheckoutService.Commit(Order)  <span style="color:var(--fg-3)">CheckoutService.cs:211</span></div>','<div class="app">OrdersController.Checkout(CheckoutRequest)</div>','<div class="fold">▸ 34 ASP.NET Core frames</div>','<div class="fw">ThreadPoolWorkQueue.Dispatch()</div>']},
+ '52':{h:'Thread #52',st:'<span class="state st-blk">Deadlocked</span>',op:'POST /api/inventory/reserve',age:'4m 11s',holds:'<span class="chip l" data-go="locks"><span class="k">lock</span>InventoryCache._sync</span>',waits:'<span class="chip l" data-go="locks"><span class="k">lock</span>OrderLedger._gate</span> owned by <span class="chip t"><span class="k">thr</span>#47</span>',
+  stack:['<div class="hot">Monitor.Enter(Object) <span style="opacity:.6">← waiting</span></div>','<div class="app">OrderLedger.Append(LedgerEntry)</div>','<div class="app">InventoryService.Reserve(Sku, int)  <span style="color:var(--fg-3)">InventoryService.cs:118</span></div>','<div class="app">InventoryController.Reserve(ReserveRequest)</div>','<div class="fold">▸ 34 ASP.NET Core frames</div>']},
+ 'g1':{h:'21 threads · same stack',st:'<span class="state st-blk">Waiting on #47</span>',op:'POST /api/orders/checkout',age:'oldest 3m 58s',holds:'—',waits:'<span class="chip l" data-go="locks"><span class="k">lock</span>OrderLedger._gate</span>',stack:['<div class="hot">Monitor.Enter(Object)</div>','<div class="app">OrderLedger.Append(LedgerEntry)</div>','<div class="app">CheckoutService.Commit(Order)</div>','<div class="fold">▸ 35 framework frames</div>']},
+ 'g2':{h:'8 threads · same stack',st:'<span class="state st-blk">Waiting on #52</span>',op:'POST /api/inventory/reserve',age:'oldest 3m 40s',holds:'—',waits:'<span class="chip l" data-go="locks"><span class="k">lock</span>InventoryCache._sync</span>',stack:['<div class="hot">Monitor.Enter(Object)</div>','<div class="app">InventoryCache.TryGet(Sku)</div>','<div class="fold">▸ 36 framework frames</div>']},
+ 'g3':{h:'9 threads · same stack',st:'<span class="state st-wait">Task.Result</span>',op:'GET /api/pricing/quote',age:'oldest 2m 02s',holds:'—',waits:'Task&lt;Quote&gt; (not completed)',stack:['<div class="hot">Task.Wait() / .Result</div>','<div class="app">PricingClient.GetQuote(Cart)</div>','<div class="app">PricingController.Quote(Cart)</div>','<div class="fold">▸ 33 framework frames</div>']},
+ 'g4':{h:'4 threads · same stack',st:'<span class="state st-run">Running</span>',op:'background job · ReportWarmup',age:'—',holds:'—',waits:'—',stack:['<div class="app">ReportRenderer.RenderPdf(Report)</div>','<div class="app">ReportWarmupJob.Execute()</div>','<div class="fold">▸ 12 framework frames</div>']}
+};
+function showT(id){
+  const d=T[id]; if(!d) return;
+  document.querySelectorAll('#tlist .trow').forEach(r=>r.classList.toggle('sel',r.dataset.t===id));
+  document.getElementById('insp').innerHTML=`
+  <div class="ih"><div style="display:flex;align-items:center;gap:10px"><h3 style="font-size:16px">${d.h}</h3>${d.st}<span style="margin-left:auto;display:flex;gap:6px"><button class="btn">📌</button><button class="btn ghost">Copy</button></span></div>
+  <dl class="kv"><dt>Serving</dt><dd class="mono" style="color:var(--info)">${d.op}</dd><dt>Running for</dt><dd>${d.age}</dd><dt>Holds</dt><dd>${d.holds}</dd><dt>Waiting for</dt><dd>${d.waits}</dd></dl></div>
+  <div class="ib"><div style="display:flex;align-items:center"><span class="lbl">Stack</span><span style="margin-left:auto" class="seg"><button class="on">App frames</button><button>All</button></span></div><div class="stack">${d.stack.join('')}</div></div>
+  <div class="ib"><span class="lbl">Objects on stack</span><div class="ev" style="margin-top:8px"><span class="chip o" data-go="objects"><span class="k">obj</span>Order #A-88123</span><span class="chip o" data-go="objects"><span class="k">obj</span>HttpContext</span><span class="chip o" data-go="objects"><span class="k">obj</span>CartSnapshot</span></div></div>`;
+}
+document.querySelectorAll('#tlist .trow[data-t]').forEach(r=>r.onclick=()=>showT(r.dataset.t));
+showT('47');
+// palette
+const pal=document.getElementById('pal');
+document.getElementById('openPal').onclick=e=>{e.stopPropagation();pal.classList.toggle('on')};
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'&&document.getElementById('s-mock').classList.contains('on')){e.preventDefault();pal.classList.toggle('on');}
+  if(e.key==='Escape') pal.classList.remove('on');
+});
+</script>
+</body>
+</html>
