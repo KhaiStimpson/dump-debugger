@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Finding, Symptom } from '../contracts.gen';
 import { Chip } from '../components/Chip';
 import { plain, Rich } from '../components/Rich';
@@ -32,6 +32,31 @@ export function Diagnosis() {
       .map((f) => ({ f, match: f.symptoms.includes(symptom) }))
       .sort((a, b) => Number(b.match) - Number(a.match) || b.f.score - a.f.score);
   }, [diagnosis, symptom]);
+  const [focus, setFocus] = useState(-1);
+
+  // Keyboard parity: J/K move between findings, Enter expands or collapses the focused one.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const s = useApp.getState();
+      const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      if (typing || e.ctrlKey || e.altKey || e.metaKey || s.paletteOpen || s.helpOpen) return;
+      const k = e.key.toLowerCase();
+      if (k === 'j' || k === 'k') {
+        e.preventDefault();
+        setFocus((f) => Math.max(0, Math.min(ranked.length - 1, f + (k === 'j' ? 1 : -1))));
+      } else if (e.key === 'Enter' && focus >= 0 && ranked[focus]) {
+        const id = ranked[focus].f.id;
+        setOpen((prev) => {
+          const next = new Set(prev ?? (ranked[0] ? [ranked[0].f.id] : []));
+          if (next.has(id)) next.delete(id);
+          else next.add(id);
+          return next;
+        });
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [ranked, focus]);
 
   if (!diagnosis) {
     return (
@@ -113,15 +138,22 @@ export function Diagnosis() {
               <div className="fh" style={{ cursor: 'default' }}>
                 <Sev severity="ok" />
                 <div>
-                  <h4>No findings</h4>
+                  <h3>No findings</h3>
                   <div className="why">None of the analyzers found anything worth reporting in this dump.</div>
                 </div>
                 <span />
               </div>
             </div>
           )}
-          {ranked.map(({ f, match }) => (
-            <FindingCard key={f.id} f={f} open={openSet.has(f.id)} dim={!match} onToggle={() => toggle(f.id)} />
+          {ranked.map(({ f, match }, i) => (
+            <FindingCard
+              key={f.id}
+              f={f}
+              open={openSet.has(f.id)}
+              dim={!match}
+              focused={i === focus}
+              onToggle={() => toggle(f.id)}
+            />
           ))}
         </div>
       </div>
@@ -130,7 +162,12 @@ export function Diagnosis() {
   );
 }
 
-function FindingCard({ f, open, dim, onToggle }: { f: Finding; open: boolean; dim: boolean; onToggle(): void }) {
+function FindingCard(props: { f: Finding; open: boolean; dim: boolean; focused: boolean; onToggle(): void }) {
+  const { f, open, dim, focused, onToggle } = props;
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (focused) ref.current?.scrollIntoView({ block: 'nearest' });
+  }, [focused]);
   const pins = usePins();
   const entity = { uri: uri.finding(f.id), kind: 'finding' as const, label: f.title.replace(/`/g, ''), detail: null };
   const pinned = pins.isPinned(entity.uri);
@@ -147,20 +184,29 @@ function FindingCard({ f, open, dim, onToggle }: { f: Finding; open: boolean; di
   };
 
   return (
-    <div className={`find ${open ? 'open' : ''}`} style={{ opacity: dim ? 0.45 : 1 }}>
-      <div
-        className="fh"
-        role="button"
-        tabIndex={0}
-        aria-expanded={open}
-        onClick={onToggle}
-        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onToggle()}
-      >
+    <div
+      ref={ref}
+      className={`find ${open ? 'open' : ''} ${focused ? 'focus' : ''}`}
+      style={{ opacity: dim ? 0.45 : 1 }}
+    >
+      {/* The whole header toggles on click; the keyboard/AT control is the title button, so
+          chips in the "why" line stay separately focusable (no nested interactive controls). */}
+      <div className="fh" onClick={onToggle}>
         <Sev severity={f.severity} />
         <div>
-          <h4>
-            <Rich text={f.title} entities={f.evidence} />
-          </h4>
+          <h3>
+            <button
+              type="button"
+              className="fh-title"
+              aria-expanded={open}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle();
+              }}
+            >
+              <Rich text={f.title} entities={f.evidence} terms={false} />
+            </button>
+          </h3>
           <div className="why">
             <Rich text={f.why} entities={f.evidence} />
           </div>

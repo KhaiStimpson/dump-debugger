@@ -15,7 +15,7 @@ export function Titlebar() {
   const diagnosis = useApp((s) => s.diagnosis);
   const setPalette = useApp((s) => s.setPalette);
   const { view } = useRoute();
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const report = () => {
@@ -41,7 +41,7 @@ export function Titlebar() {
   const md = dump?.metadata;
 
   return (
-    <div className="titlebar" ref={ref}>
+    <header className="titlebar" ref={ref}>
       <div className="logo" />
       <span className="dump">{name}</span>
       {md && !atHome && view !== 'compare' && (
@@ -52,7 +52,7 @@ export function Titlebar() {
           <span className="pill">{diagnosis?.dump.threadCount ?? md.threadCount} threads</span>
         </span>
       )}
-      <button className="search" data-interactive onClick={() => setPalette(true)} aria-label="Search (Ctrl+K)">
+      <button className="search" data-interactive onClick={() => setPalette(true)} aria-keyshortcuts="Control+K">
         {icons.search}
         Search threads, types, objects…
         <span style={{ marginLeft: 'auto' }}>
@@ -60,6 +60,6 @@ export function Titlebar() {
         </span>
       </button>
       <span className="wc" />
-    </div>
+    </header>
   );
 }

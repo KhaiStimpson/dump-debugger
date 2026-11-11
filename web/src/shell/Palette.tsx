@@ -195,7 +195,7 @@ function PaletteBody({ close }: { close(): void }) {
             }
           }}
         />
-        <div className="pg" role="listbox">
+        <div className="pg" role="listbox" aria-label="Results">
           {filtered.length === 0 && <div className="gl">No matches</div>}
           {filtered.map((it, i) => {
             const header = it.group !== lastGroup ? <div className="gl">{it.group}</div> : null;
@@ -212,7 +212,7 @@ function PaletteBody({ close }: { close(): void }) {
                 >
                   <span style={{ color: it.iconColor }}>{it.icon}</span>
                   <span className={it.group === 'Commands' || it.group === 'Findings' ? '' : 'mono'}>
-                    {it.label} {it.meta && <span style={{ color: 'var(--fg-3)' }}>· {it.meta}</span>}
+                    {it.label} {it.meta && <span style={{ color: 'var(--fg-2)' }}>· {it.meta}</span>}
                   </span>
                   {it.sev ? (
                     <Sev severity={it.sev.severity} label={it.sev.label} />

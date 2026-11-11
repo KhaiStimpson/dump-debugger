@@ -21,6 +21,8 @@ interface AppState {
   inspector: InspectorState;
   paletteOpen: boolean;
   helpOpen: boolean;
+  helpTab: 'keys' | 'glossary';
+  glossaryFocus?: string;
 
   openDump(path: string, files?: File[]): Promise<void>;
   closeDump(): Promise<void>;
@@ -45,6 +47,7 @@ export const useApp = create<AppState>((set, get) => ({
   inspector: { history: [], index: -1, open: false },
   paletteOpen: false,
   helpOpen: false,
+  helpTab: 'keys',
 
   async openDump(path, files) {
     set({ opening: path || files?.[0]?.name || 'dump', error: null, diagnosis: null, progress: null });
@@ -95,7 +98,7 @@ export const useApp = create<AppState>((set, get) => ({
     set({ paletteOpen: open });
   },
   setHelp(open) {
-    set({ helpOpen: open });
+    set({ helpOpen: open, helpTab: 'keys', glossaryFocus: undefined });
   },
   setPins(pins) {
     set({ pins });

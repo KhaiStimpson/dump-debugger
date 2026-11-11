@@ -60,6 +60,7 @@ function Shell() {
       <div className="body">
         <Rail />
         <main className="main" id="main">
+          <h1 className="sr-only">Dump Debugger · {view}</h1>
           <CurrentView view={view} />
           {inspectorOpen && !docksInspector.includes(view) && <Inspector docked />}
           <Palette />

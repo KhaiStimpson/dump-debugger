@@ -257,7 +257,7 @@ function CompareResultView({ result }: { result: CompareResult }) {
         {result.threadGroups.length > 0 && (
           <>
             <div className="pane-h" style={{ borderTop: '1px solid var(--line)' }}>
-              <h3 style={{ fontSize: 13 }}>Thread groups that changed</h3>
+              <h2 style={{ fontSize: 13 }}>Thread groups that changed</h2>
             </div>
             {result.threadGroups.map((g, i) => (
               <div className="delta-row" key={i}>
@@ -281,7 +281,7 @@ function CompareResultView({ result }: { result: CompareResult }) {
           </>
         )}
         <div className="pane-h" style={{ borderTop: '1px solid var(--line)' }}>
-          <h3 style={{ fontSize: 13 }}>Findings</h3>
+          <h2 style={{ fontSize: 13 }}>Findings</h2>
           <div className="r">
             <button className="btn ghost" onClick={() => useCompare.setState({ result: undefined })}>
               Change dumps

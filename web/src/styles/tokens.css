@@ -11,7 +11,7 @@
   --fg-0: #eef0f3;
   --fg-1: #c5cad3;
   --fg-2: #8b93a1;
-  --fg-3: #5e6673;
+  --fg-3: #7c8491; /* R8 accessibility: the design had #5e6673 (3.4:1 on bg-0); raised to meet WCAG AA for small text */
   --accent: #2dd4bf;
   --accent-dim: #2dd4bf22;
   --accent-ink: #04201c;

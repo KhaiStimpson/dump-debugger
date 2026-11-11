@@ -75,7 +75,7 @@ function LocksInner() {
   return (
     <div className="view on locks">
       <div className="pane-h">
-        <h3>Locks &amp; waits</h3>
+        <h2>Locks &amp; waits</h2>
         <span className="pill">
           {contended} contended lock{contended === 1 ? '' : 's'} · {all.data?.cycles.length ?? 0} cycle
           {all.data?.cycles.length === 1 ? '' : 's'}
@@ -100,7 +100,10 @@ function LocksInner() {
               All contention
             </button>
           </div>
-          <button className="btn" onClick={() => void flow.fitView({ padding: 0.25, maxZoom: 1.1, duration: 300 })}>
+          <button
+            className="btn"
+            onClick={() => void flow.fitView({ padding: 0.25, maxZoom: 1.1, duration: reducedMotion() ? 0 : 300 })}
+          >
             Fit
           </button>
         </div>
@@ -172,9 +175,9 @@ function ExplainCard({ graph, cycleIndex }: { graph: WaitGraph; cycleIndex: numb
   return (
     <div className="explain">
       <Sev severity="critical" label="Cycle" />
-      <h4 style={{ margin: '10px 0 6px' }}>
+      <h3 style={{ margin: '10px 0 6px', fontSize: 15 }}>
         {cycle.threads.length === 2 ? 'Lock-order inversion' : `${cycle.threads.length}-thread lock cycle`}
-      </h4>
+      </h3>
       <p style={{ margin: 0, color: 'var(--fg-2)', fontSize: 13 }}>
         {cycle.threads.map((t) => {
           const held = graph.edges.find(
@@ -309,4 +312,9 @@ function ClusterNode({ data }: NodeProps<Node<GraphNodeData>>) {
 function field(graph: WaitGraph, lockUri: string | undefined) {
   const name = graph.locks.find((l) => l.uri === lockUri)?.name ?? '?';
   return name.slice(name.lastIndexOf('.') + 1);
+}
+
+/** Respect the OS setting: the graph snaps instead of animating. */
+function reducedMotion() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }

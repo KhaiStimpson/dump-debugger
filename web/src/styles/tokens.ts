@@ -11,7 +11,7 @@ export const colors = {
   fg0: '#eef0f3',
   fg1: '#c5cad3',
   fg2: '#8b93a1',
-  fg3: '#5e6673',
+  fg3: '#7c8491',
   accent: '#2dd4bf',
   accentDim: '#2dd4bf22',
   accentInk: '#04201c',

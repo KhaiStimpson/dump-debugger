@@ -83,7 +83,7 @@ export function Threads() {
   const threadsShown = groups.reduce((n, g) => n + g.count, 0);
   const header = (
     <div className="pane-h">
-      <h3>Threads</h3>
+      <h2>Threads</h2>
       <span className="pill">
         {threadsShown} thread{threadsShown === 1 ? '' : 's'} · {groups.length} {groupBy === 'flat' ? 'rows' : 'groups'}
       </span>
@@ -154,7 +154,7 @@ export function Threads() {
           <span>Doing</span>
           <span>State</span>
         </div>
-        <div className="scroll" ref={parent} role="listbox" aria-label="Thread groups">
+        <div className="scroll" ref={parent} role="listbox" aria-label="Thread groups" tabIndex={0}>
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
             {virtualizer.getVirtualItems().map((v) => {
               const g = groups[v.index];

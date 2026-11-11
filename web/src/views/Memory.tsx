@@ -42,7 +42,7 @@ export function Memory() {
     <div className="view on memory">
       <div className="mem-main">
         <div className="pane-h">
-          <h3>Managed heap</h3>
+          <h2>Managed heap</h2>
           {ov && (
             <span className="pill">
               {bytes(ov.totalBytes)} · {count(ov.objectCount)} objects
@@ -90,7 +90,7 @@ export function Memory() {
           </button>
           <span>Share</span>
         </div>
-        <div className="scroll" ref={parent} role="listbox" aria-label="Types">
+        <div className="scroll" ref={parent} role="listbox" aria-label="Types" tabIndex={0}>
           <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
             {virtualizer.getVirtualItems().map((v) => {
               const r = rows[v.index];
@@ -151,7 +151,7 @@ function Treemap({
     [cells],
   );
   return (
-    <div className="treemap-box" role="img" aria-label="Heap treemap by type">
+    <div className="treemap-box" role="group" aria-label="Heap treemap by type">
       {cells.map((c, i) => {
         const r = rects[i];
         if (r.w < 1 || r.h < 1) return null;

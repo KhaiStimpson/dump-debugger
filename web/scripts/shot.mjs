@@ -73,6 +73,15 @@ try {
       console.log(`wrote → ${step.file}`);
     }
     if (step.fill) await page.fill(step.fill, step.value ?? '');
+    if (step.axe) {
+      const axeSource = readFileSync(join(webRoot, 'node_modules', 'axe-core', 'axe.min.js'), 'utf8');
+      const result = await page.evaluate(
+        `${axeSource}; axe.run(document, { resultTypes: ['violations'] }).then(r => r.violations.map(v => ({ id: v.id, impact: v.impact, nodes: v.nodes.length, help: v.help, targets: v.nodes.slice(0, 3).map(n => n.target.join(' ')) })))`,
+      );
+      writeFileSync(join(webRoot, 'shots', `axe-${step.axe}.json`), JSON.stringify(result, null, 2));
+      console.log(`axe ${step.axe}: ${result.length} violation type(s)`);
+      for (const v of result) console.log(`   [${v.impact}] ${v.id} ×${v.nodes}: ${v.help} — ${v.targets.join(' | ')}`);
+    }
     if (step.key) await page.keyboard.press(step.key);
     if (step.type) await page.keyboard.type(step.type);
     if (step.sleep) await new Promise((r) => setTimeout(r, step.sleep));

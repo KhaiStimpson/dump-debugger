@@ -562,7 +562,7 @@ button {
   padding: 12px 14px;
   cursor: pointer;
 }
-.find .fh h4 {
+.find .fh h3 {
   font-size: 14px;
   font-weight: 600;
 }
@@ -1287,7 +1287,7 @@ button {
   text-align: left;
   color: inherit;
 }
-.find .fh h4 code {
+.find .fh h3 code {
   font-size: 13px;
 }
 .find {
@@ -1847,4 +1847,88 @@ button {
 }
 .chg-persisting {
   color: var(--fg-2);
+}
+
+/* ---------- R8 accessibility (axe-core pass; see ROADMAP) ---------- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.chip .k,
+.seg .n,
+.palette .pi .mono > span,
+.cand .s {
+  color: var(--fg-2);
+}
+/* Meaning colors on their own 12% tint fall just under 4.5:1; text on tints uses a lighter step. */
+.sev.crit,
+.st-blk {
+  color: #ff7a7e;
+}
+.find .fh h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.term {
+  color: inherit;
+}
+.term:hover {
+  color: var(--fg-0);
+  border-bottom-color: var(--fg-2);
+}
+.glossary {
+  margin: 0;
+  padding: 8px 18px 18px;
+  max-height: 60vh;
+  overflow: auto;
+}
+.glossary > div {
+  padding: 9px 10px;
+  border-radius: var(--r-2);
+}
+.glossary > div.focus {
+  background: var(--accent-dim);
+}
+.glossary dt {
+  color: var(--fg-0);
+  font-weight: 600;
+}
+.glossary dd {
+  margin: 2px 0 0;
+  color: var(--fg-1);
+  font-size: 13px;
+}
+.find.focus {
+  border-color: var(--accent);
+}
+.pane-h h2 {
+  font-size: 15px;
+}
+.stack .hot span {
+  opacity: 1 !important;
+  color: #ff9a9d;
+}
+.find .fh {
+  cursor: pointer;
+}
+.fh-title {
+  all: unset;
+  cursor: pointer;
+  color: var(--fg-0);
+  font: inherit;
+}
+.fh-title:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.report > .sr-only {
+  grid-area: 1/1;
 }

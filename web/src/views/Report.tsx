@@ -68,6 +68,7 @@ export function Report() {
 
   return (
     <div className="view on report">
+      <h2 className="sr-only">Incident report</h2>
       <aside className="side" style={{ borderLeft: 0, borderRight: '1px solid var(--line)' }}>
         <div className="blk">
           <div className="lbl">Include</div>

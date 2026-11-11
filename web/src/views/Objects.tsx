@@ -43,9 +43,9 @@ function ObjectPane({ address }: { address: number }) {
   return (
     <div className="scroll obj-left">
       <div className="pane-h">
-        <h3 className="obj-title" title={o.identity}>
+        <h2 className="obj-title" title={o.identity}>
           {o.identity}
-        </h3>
+        </h2>
         <span className="pill">
           {shortType(o.typeName)} · {bytes(o.size)} · {o.generation}
         </span>
@@ -104,7 +104,7 @@ function ObjectPane({ address }: { address: number }) {
       )}
       {o.elements && o.elements.length > 0 && <Elements address={address} length={o.length ?? 0} first={o.elements} />}
       <div className="pane-h" style={{ borderTop: '1px solid var(--line)', marginTop: 10 }}>
-        <h3 style={{ fontSize: 13 }}>Referenced by ({referrers.data?.total ?? '…'})</h3>
+        <h2 style={{ fontSize: 13 }}>Referenced by ({referrers.data?.total ?? '…'})</h2>
       </div>
       <div className="fields">
         {referrers.data?.items.map((r) => (
@@ -249,7 +249,7 @@ function RootPane({ address }: { address: number }) {
   return (
     <div className="scroll">
       <div className="pane-h">
-        <h3>Why is it alive?</h3>
+        <h2>Why is it alive?</h2>
         <span className="pill">{mode === 'shortest' ? 'shortest path to a GC root' : 'all paths'}</span>
         <div className="r">
           <div className="seg" role="radiogroup" aria-label="Paths">
