@@ -14,6 +14,7 @@ import { usePins } from './state/pins';
 import { queryClient } from './state/queries';
 import { useApp } from './state/store';
 import { Analyzing } from './views/Analyzing';
+import { Compare } from './views/Compare';
 import { Diagnosis } from './views/Diagnosis';
 import { Home } from './views/Home';
 import { Locks } from './views/Locks';
@@ -88,6 +89,8 @@ function CurrentView({ view }: { view: View }) {
       return <Objects />;
     case 'report':
       return <Report />;
+    case 'compare':
+      return <Compare />;
     default:
       return <Placeholder view={view} />;
   }

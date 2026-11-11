@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 2,
+  "dump": {
+    "path": "C:\\Dev\\repos\\dump-debugger\\fixtures\\leak-baseline.dmp",
+    "fileName": "leak-baseline.dmp",
+    "fileSizeBytes": 330792933,
+    "runtime": ".NET 10.0.15",
+    "architecture": "x64",
+    "threadCount": 4,
+    "processName": "DumpDebugger.DumpGen.exe",
+    "dacSource": "local machine"
+  },
+  "verdict": {
+    "severity": "ok",
+    "confidence": "medium",
+    "headline": "No hang, deadlock or memory problem stood out.",
+    "body": "4 threads (0 blocked) and a 212 MB managed heap. Nothing crossed a warning threshold. The views on the left have the detail if you\u0027re chasing something specific.",
+    "entities": [],
+    "findingId": null
+  },
+  "vitals": [
+    {
+      "key": "threads",
+      "label": "Threads",
+      "value": "4",
+      "detail": "0 blocked \u00B7 0 running",
+      "fraction": 0,
+      "tone": "neutral"
+    },
+    {
+      "key": "threadPool",
+      "label": "Thread pool",
+      "value": "\u2014",
+      "detail": "workers busy \u00B7 0 queued",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "key": "heap",
+      "label": "Managed heap",
+      "value": "212 MB",
+      "detail": "LOH 99% \u00B7 Gen2 0%",
+      "fraction": 0.9906751736066559,
+      "tone": "accent"
+    },
+    {
+      "key": "requests",
+      "label": "Requests in flight",
+      "value": "0",
+      "detail": "none found on threads",
+      "fraction": 0,
+      "tone": "neutral"
+    },
+    {
+      "key": "exceptions",
+      "label": "Exceptions",
+      "value": "0",
+      "detail": "on thread stacks",
+      "fraction": 0,
+      "tone": "neutral"
+    }
+  ],
+  "findings": [],
+  "busiestRequests": [],
+  "stages": [
+    {
+      "id": "runtime",
+      "label": "Matched runtime \u0026 resolved DAC",
+      "status": "done",
+      "seconds": 0.1214049,
+      "detail": "local machine",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "threads",
+      "label": "Read 4 threads \u0026 stacks",
+      "status": "done",
+      "seconds": 0.0833095,
+      "detail": null,
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "locks",
+      "label": "Locks \u0026 wait-for graph",
+      "status": "done",
+      "seconds": 0,
+      "detail": "no contention",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "heap",
+      "label": "Walked the heap",
+      "status": "done",
+      "seconds": 0.0395973,
+      "detail": "212 MB \u00B7 38,540 objects",
+      "fraction": 1,
+      "tone": "neutral"
+    },
+    {
+      "id": "objects",
+      "label": "Large-object identification",
+      "status": "done",
+      "seconds": 0.07630510000000001,
+      "detail": "2 large objects named \u00B7 47,785 references indexed",
+      "fraction": 1,
+      "tone": "neutral"
+    },
+    {
+      "id": "analyzers",
+      "label": "Thread-pool, async \u0026 exception analyzers",
+      "status": "done",
+      "seconds": 0.012416700000000003,
+      "detail": "11 analyzers ran",
+      "fraction": null,
+      "tone": "neutral"
+    }
+  ],
+  "seconds": 0.41514819999999997,
+  "complete": true,
+  "fromCache": false,
+  "analyzedAt": "2026-11-11T09:43:36.4420419+00:00"
+}

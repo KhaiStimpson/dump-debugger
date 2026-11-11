@@ -1776,3 +1776,75 @@ button {
   height: 100%;
   background: var(--bg-0);
 }
+
+/* compare */
+.compare {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.cmp-pick {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 36px 28px;
+  width: 100%;
+}
+.cmp-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.cand {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.cand:last-child {
+  border-bottom: 0;
+}
+.cand:hover {
+  background: var(--bg-2);
+}
+.cand.on {
+  background: var(--accent-dim);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.cand.off {
+  opacity: 0.4;
+  cursor: default;
+}
+.cand .n {
+  color: var(--fg-0);
+}
+.cand .s {
+  font-size: 12px;
+  color: var(--fg-3);
+}
+.delta-row {
+  box-sizing: border-box;
+}
+.delta-row.clickable {
+  cursor: pointer;
+}
+.delta-row.clickable:hover {
+  background: var(--bg-1);
+}
+.fdiff {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.chg-new {
+  color: var(--crit);
+}
+.chg-resolved {
+  color: var(--ok);
+}
+.chg-persisting {
+  color: var(--fg-2);
+}

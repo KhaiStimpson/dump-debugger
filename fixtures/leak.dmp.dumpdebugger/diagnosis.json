@@ -1,0 +1,170 @@
+{
+  "schemaVersion": 2,
+  "dump": {
+    "path": "C:\\Dev\\repos\\dump-debugger\\fixtures\\leak.dmp",
+    "fileName": "leak.dmp",
+    "fileSizeBytes": 433777957,
+    "runtime": ".NET 10.0.15",
+    "architecture": "x64",
+    "threadCount": 4,
+    "processName": "DumpDebugger.DumpGen.exe",
+    "dacSource": "local machine"
+  },
+  "verdict": {
+    "severity": "ok",
+    "confidence": "medium",
+    "headline": "No hang or deadlock found. Worth a look: System.Byte[] is 89% of the heap, mostly 3 PDF documents in ReportCache.",
+    "body": "4 threads (0 blocked) and a 304 MB managed heap. Nothing crossed a warning threshold. The views on the left have the detail if you\u0027re chasing something specific.",
+    "entities": [],
+    "findingId": "heap.dominance.System.Byte[]"
+  },
+  "vitals": [
+    {
+      "key": "threads",
+      "label": "Threads",
+      "value": "4",
+      "detail": "0 blocked \u00B7 0 running",
+      "fraction": 0,
+      "tone": "neutral"
+    },
+    {
+      "key": "threadPool",
+      "label": "Thread pool",
+      "value": "\u2014",
+      "detail": "workers busy \u00B7 0 queued",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "key": "heap",
+      "label": "Managed heap",
+      "value": "304 MB",
+      "detail": "LOH 89% \u00B7 Gen2 10%",
+      "fraction": 0.993732631480484,
+      "tone": "accent"
+    },
+    {
+      "key": "requests",
+      "label": "Requests in flight",
+      "value": "0",
+      "detail": "none found on threads",
+      "fraction": 0,
+      "tone": "neutral"
+    },
+    {
+      "key": "exceptions",
+      "label": "Exceptions",
+      "value": "0",
+      "detail": "on thread stacks",
+      "fraction": 0,
+      "tone": "neutral"
+    }
+  ],
+  "findings": [
+    {
+      "id": "heap.dominance.System.Byte[]",
+      "analyzer": "heap-dominance",
+      "severity": "info",
+      "confidence": "high",
+      "title": "\u0060System.Byte[]\u0060 is 89% of the heap, mostly 3 PDF documents in \u0060ReportCache\u0060",
+      "why": "270 MB across 4 instances \u00B7 top 3 270 MB",
+      "whatItMeans": "Most of this memory is a few big objects rather than many small ones. That isn\u0027t a bug by itself, but objects this size live on the Large Object Heap and are only collected in full GCs, so if they\u0027re held longer than needed the process stays large.",
+      "nextSteps": [
+        "Open the largest one, {{object/0x21f02c00048}}, and check what keeps it alive (its path to a GC root).",
+        "If \u0060ReportCache\u0060 is a cache, give it a size limit or an expiry so entries can be evicted."
+      ],
+      "symptoms": [
+        "highMemory"
+      ],
+      "evidence": [
+        {
+          "uri": "type/System.Byte%5B%5D",
+          "kind": "type",
+          "label": "byte[]",
+          "detail": "270 MB \u00B7 4 instances"
+        },
+        {
+          "uri": "object/0x21f02c00048",
+          "kind": "object",
+          "label": "PDF document \u0022Q3-statements\u0022 in ReportCache",
+          "detail": "System.Byte[] \u00B7 120 MB"
+        },
+        {
+          "uri": "object/0x21f0b000048",
+          "kind": "object",
+          "label": "PDF document \u0022Q3-invoices-EU\u0022 in ReportCache",
+          "detail": "System.Byte[] \u00B7 90.0 MB"
+        },
+        {
+          "uri": "object/0x21f11000048",
+          "kind": "object",
+          "label": "PDF document \u0022Q3-invoices-US\u0022 in ReportCache",
+          "detail": "System.Byte[] \u00B7 60.0 MB"
+        }
+      ],
+      "score": 28.00468758104107,
+      "visual": "heap"
+    }
+  ],
+  "busiestRequests": [],
+  "stages": [
+    {
+      "id": "runtime",
+      "label": "Matched runtime \u0026 resolved DAC",
+      "status": "done",
+      "seconds": 0.1150574,
+      "detail": "local machine",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "threads",
+      "label": "Read 4 threads \u0026 stacks",
+      "status": "done",
+      "seconds": 0.08444760000000001,
+      "detail": null,
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "locks",
+      "label": "Locks \u0026 wait-for graph",
+      "status": "done",
+      "seconds": 0,
+      "detail": "no contention",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "heap",
+      "label": "Walked the heap",
+      "status": "done",
+      "seconds": 0.3908868,
+      "detail": "304 MB \u00B7 843,560 objects",
+      "fraction": 1,
+      "tone": "neutral"
+    },
+    {
+      "id": "objects",
+      "label": "Large-object identification",
+      "status": "done",
+      "seconds": 0.23955939999999998,
+      "detail": "4 large objects named \u00B7 967,820 references indexed",
+      "fraction": 1,
+      "tone": "neutral"
+    },
+    {
+      "id": "analyzers",
+      "label": "Thread-pool, async \u0026 exception analyzers",
+      "status": "done",
+      "seconds": 0.014979499999999923,
+      "detail": "11 analyzers ran",
+      "fraction": null,
+      "tone": "neutral"
+    }
+  ],
+  "seconds": 0.932784,
+  "complete": true,
+  "fromCache": false,
+  "analyzedAt": "2026-11-11T09:43:36.71038+00:00"
+}

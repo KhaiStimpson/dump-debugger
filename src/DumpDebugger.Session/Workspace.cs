@@ -69,6 +69,31 @@ public sealed class Workspace
         Write(ManifestFile, CurrentManifest());
     }
 
+    private const string SnapshotFile = "snapshot.json";
+
+    /// <summary>The compare snapshot, valid under the same rule as the cached diagnosis (same dump file, same engine).</summary>
+    public HeapSnapshot? TryLoadSnapshot()
+    {
+        try
+        {
+            var manifest = Read<WorkspaceManifest>(ManifestFile);
+            if (manifest is null || manifest != CurrentManifest())
+            {
+                return null;
+            }
+
+            return Read<HeapSnapshot>(SnapshotFile) is { SchemaVersion: HeapSnapshot.CurrentSchemaVersion } s ? s : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public bool HasSnapshot => File.Exists(PathOf(SnapshotFile)) && TryLoadSnapshot() is not null;
+
+    public void SaveSnapshot(HeapSnapshot snapshot) => Write(SnapshotFile, snapshot);
+
     public T? Read<T>(string file)
     {
         var path = PathOf(file);

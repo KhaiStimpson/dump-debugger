@@ -42,6 +42,8 @@ public static class RpcCatalog
         Host<PinUpsert, IReadOnlyList<Pin>>("pins.upsert"),
         Host<UriParams, IReadOnlyList<Pin>>("pins.remove"),
         Host<SaveReportParams, SavedReport>("report.save"),
+        Host<NoParams, IReadOnlyList<CompareCandidate>>("compare.candidates"),
+        Host<CompareParams, CompareResult>("compare.run"),
 
         Worker<AnalysisRunParams, Diagnosis>("analysis.run"),
         Worker<ThreadGroupsQuery, ThreadGroupsResult>("threads.groups"),
@@ -55,6 +57,7 @@ public static class RpcCatalog
         Worker<ReferrersQuery, Page<Referrer>>("objects.referrers"),
         Worker<RootsQuery, RootPathsResult>("objects.roots"),
         Worker<NoParams, AsyncStacksResult>("async.stacks"),
+        Worker<SnapshotParams, HeapSnapshot>("snapshot.build"),
     ];
 
     public static readonly IReadOnlyList<RpcNotificationInfo> Notifications =
@@ -62,6 +65,7 @@ public static class RpcCatalog
         new("dump.progress", typeof(ProgressNotification)),
         new("worker.status", typeof(WorkerStatus)),
         new("analysis.updated", typeof(Diagnosis)),
+        new("snapshot.ready", typeof(PathParams)),
     ];
 
     /// <summary>Contract types the web app uses directly that no method signature reaches.</summary>

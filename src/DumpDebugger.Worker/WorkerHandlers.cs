@@ -128,6 +128,16 @@ public sealed class WorkerHandlers : IDisposable
                     return ContractJson.ToElement(index.AsyncStacks);
                 }
 
+            case "snapshot.build":
+                {
+                    var p = Params<SnapshotParams>(@params);
+                    var index = RequireRuntime();
+                    await index.EnsureThreadsAsync(ct);
+                    await index.EnsureHeapAsync(ct);
+                    var explorer = await index.EnsureExplorerAsync(null, ct);
+                    return ContractJson.ToElement(await index.WithClrAsync(() => SnapshotBuilder.Build(index, p.Diagnosis, explorer, ct), ct));
+                }
+
             default:
                 throw new RpcException(new RpcError(RpcError.MethodNotFound, $"Worker has no method '{method}'."));
         }

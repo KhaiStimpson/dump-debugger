@@ -1,0 +1,2287 @@
+{
+  "schemaVersion": 1,
+  "dump": {
+    "path": "C:\\Dev\\repos\\dump-debugger\\fixtures\\leak.dmp",
+    "fileName": "leak.dmp",
+    "fileSizeBytes": 433777957,
+    "runtime": ".NET 10.0.15",
+    "architecture": "x64",
+    "threadCount": 4,
+    "processName": "DumpDebugger.DumpGen.exe",
+    "dacSource": "local machine"
+  },
+  "capturedAt": "2026-11-11T09:28:31+00:00",
+  "totalBytes": 318318550,
+  "objectCount": 843560,
+  "threadCount": 4,
+  "blockedThreads": 0,
+  "types": [
+    {
+      "typeName": "System.Byte[]",
+      "count": 4,
+      "totalSize": 283115616
+    },
+    {
+      "typeName": "Contoso.Orders.CartLine",
+      "count": 240000,
+      "totalSize": 11520000
+    },
+    {
+      "typeName": "System.String",
+      "count": 241327,
+      "totalSize": 8987886
+    },
+    {
+      "typeName": "Contoso.Orders.CartSnapshot",
+      "count": 120000,
+      "totalSize": 4800000
+    },
+    {
+      "typeName": "Contoso.Orders.CartLine[]",
+      "count": 120000,
+      "totalSize": 4800000
+    },
+    {
+      "typeName": "System.Collections.Generic.List\u003CContoso.Orders.CartLine\u003E",
+      "count": 120000,
+      "totalSize": 3840000
+    },
+    {
+      "typeName": "Contoso.Orders.CartSnapshot[]",
+      "count": 2,
+      "totalSize": 1048624
+    },
+    {
+      "typeName": "System.Reflection.RuntimeParameterInfo",
+      "count": 686,
+      "totalSize": 60368
+    },
+    {
+      "typeName": "System.Reflection.RuntimeMethodInfo",
+      "count": 258,
+      "totalSize": 26832
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.Int32, System.Diagnostics.Tracing.EventSource\u002BEventMetadata\u003E\u002BEntry[]",
+      "count": 1,
+      "totalSize": 22088
+    },
+    {
+      "typeName": "System.Reflection.ParameterInfo[]",
+      "count": 291,
+      "totalSize": 17944
+    },
+    {
+      "typeName": "System.Signature",
+      "count": 168,
+      "totalSize": 13440
+    },
+    {
+      "typeName": "System.RuntimeType[]",
+      "count": 173,
+      "totalSize": 10032
+    },
+    {
+      "typeName": "System.Object[]",
+      "count": 10,
+      "totalSize": 8624
+    },
+    {
+      "typeName": "System.Runtime.CompilerServices.GenericCache\u003CSystem.Runtime.CompilerServices.VirtualDispatchHelpers\u002BVirtualResolutionData, System.IntPtr\u003E\u002BEntry[]",
+      "count": 2,
+      "totalSize": 6384
+    },
+    {
+      "typeName": "System.Reflection.Emit.OpCode",
+      "count": 226,
+      "totalSize": 5424
+    },
+    {
+      "typeName": "System.Int32[]",
+      "count": 13,
+      "totalSize": 4444
+    },
+    {
+      "typeName": "System.String[]",
+      "count": 17,
+      "totalSize": 3568
+    },
+    {
+      "typeName": "System.RuntimeType",
+      "count": 87,
+      "totalSize": 3480
+    },
+    {
+      "typeName": "System.Reflection.RuntimeMethodInfo[]",
+      "count": 4,
+      "totalSize": 2160
+    },
+    {
+      "typeName": "System.Char[]",
+      "count": 3,
+      "totalSize": 1100
+    },
+    {
+      "typeName": "System.Collections.Concurrent.ConcurrentQueueSegment\u003CSystem.Object\u003E\u002BSlot[]",
+      "count": 2,
+      "totalSize": 1072
+    },
+    {
+      "typeName": "System.Globalization.CultureData",
+      "count": 2,
+      "totalSize": 896
+    },
+    {
+      "typeName": "System.RuntimeType\u002BRuntimeTypeCache",
+      "count": 5,
+      "totalSize": 840
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.EventSource\u002BOverrideEventProvider",
+      "count": 12,
+      "totalSize": 768
+    },
+    {
+      "typeName": "System.Func\u003CSystem.Threading.Tasks.Task\u003E",
+      "count": 12,
+      "totalSize": 768
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.ScalarTypeInfo",
+      "count": 10,
+      "totalSize": 640
+    },
+    {
+      "typeName": "System.Func\u003CSystem.Object, System.Diagnostics.Tracing.PropertyValue\u003E",
+      "count": 10,
+      "totalSize": 640
+    },
+    {
+      "typeName": "System.IntPtr[]",
+      "count": 6,
+      "totalSize": 552
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.EtwEventProvider",
+      "count": 6,
+      "totalSize": 528
+    },
+    {
+      "typeName": "System.Threading.PortableThreadPool",
+      "count": 1,
+      "totalSize": 520
+    },
+    {
+      "typeName": "Contoso.Scenarios.Scenario",
+      "count": 12,
+      "totalSize": 480
+    },
+    {
+      "typeName": "System.Collections.Concurrent.ConcurrentQueueSegment\u003CSystem.Object\u003E",
+      "count": 2,
+      "totalSize": 464
+    },
+    {
+      "typeName": "System.Buffers.SharedArrayPoolThreadLocalArray[]",
+      "count": 1,
+      "totalSize": 456
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.RuntimeEventSource",
+      "count": 1,
+      "totalSize": 400
+    },
+    {
+      "typeName": "System.Func\u003CSystem.Diagnostics.Tracing.EventSource\u003E",
+      "count": 6,
+      "totalSize": 384
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.EventPipeEventProvider",
+      "count": 6,
+      "totalSize": 384
+    },
+    {
+      "typeName": "System.GCMemoryInfoData",
+      "count": 1,
+      "totalSize": 288
+    },
+    {
+      "typeName": "System.WeakReference\u003CSystem.Diagnostics.Tracing.EventProvider\u003E",
+      "count": 12,
+      "totalSize": 288
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.String, System.Object\u003E\u002BEntry[]",
+      "count": 1,
+      "totalSize": 288
+    },
+    {
+      "typeName": "System.Buffers.SharedArrayPoolPartitions[]",
+      "count": 1,
+      "totalSize": 240
+    },
+    {
+      "typeName": "System.Globalization.CultureInfo",
+      "count": 2,
+      "totalSize": 224
+    },
+    {
+      "typeName": "System.RuntimeType\u002BRuntimeTypeCache\u002BMemberInfoCache\u003CSystem.Reflection.RuntimeMethodInfo\u003E",
+      "count": 4,
+      "totalSize": 224
+    },
+    {
+      "typeName": "Contoso.Reports.CachedReport",
+      "count": 3,
+      "totalSize": 216
+    },
+    {
+      "typeName": "System.Collections.Generic.HashSet\u003CSystem.RuntimeType\u003E\u002BEntry[]",
+      "count": 1,
+      "totalSize": 200
+    },
+    {
+      "typeName": "System.Object",
+      "count": 8,
+      "totalSize": 192
+    },
+    {
+      "typeName": "System.Threading.Tasks.TplEventSource",
+      "count": 1,
+      "totalSize": 192
+    },
+    {
+      "typeName": "System.Threading.ThreadPoolWorkQueue",
+      "count": 1,
+      "totalSize": 192
+    },
+    {
+      "typeName": "System.Reflection.MemberFilter",
+      "count": 3,
+      "totalSize": 192
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.FrameworkEventSource",
+      "count": 1,
+      "totalSize": 184
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.NativeRuntimeEventSource",
+      "count": 1,
+      "totalSize": 184
+    },
+    {
+      "typeName": "System.Buffers.ArrayPoolEventSource",
+      "count": 1,
+      "totalSize": 184
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.EventCommandEventArgs",
+      "count": 2,
+      "totalSize": 176
+    },
+    {
+      "typeName": "System.Threading.LowLevelLock",
+      "count": 4,
+      "totalSize": 160
+    },
+    {
+      "typeName": "System.Reflection.RuntimeMethodInfo[][]",
+      "count": 2,
+      "totalSize": 160
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.String, System.String\u003E",
+      "count": 2,
+      "totalSize": 160
+    },
+    {
+      "typeName": "Program\u002B\u003C\u003CMain\u003E$\u003Ed__0",
+      "count": 1,
+      "totalSize": 160
+    },
+    {
+      "typeName": "System.Runtime.CompilerServices.ConditionalWeakTable\u003CSystem.Buffers.SharedArrayPoolThreadLocalArray[], System.Object\u003E\u002BEntry[]",
+      "count": 1,
+      "totalSize": 152
+    },
+    {
+      "typeName": "System.WeakReference\u003CSystem.Diagnostics.Tracing.EventSource\u003E[]",
+      "count": 2,
+      "totalSize": 144
+    },
+    {
+      "typeName": "System.Threading.Thread",
+      "count": 2,
+      "totalSize": 144
+    },
+    {
+      "typeName": "System.Action\u003CSystem.Object\u003E",
+      "count": 2,
+      "totalSize": 128
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.TraceLoggingEventHandleTable",
+      "count": 5,
+      "totalSize": 120
+    },
+    {
+      "typeName": "System.WeakReference\u003CSystem.Diagnostics.Tracing.EventSource\u003E",
+      "count": 5,
+      "totalSize": 120
+    },
+    {
+      "typeName": "System.OutOfMemoryException",
+      "count": 1,
+      "totalSize": 120
+    },
+    {
+      "typeName": "System.StackOverflowException",
+      "count": 1,
+      "totalSize": 120
+    },
+    {
+      "typeName": "System.ExecutionEngineException",
+      "count": 1,
+      "totalSize": 120
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.Guid, System.Diagnostics.Tracing.EventSource\u002BOverrideEventProvider\u003E\u002BEntry[]",
+      "count": 1,
+      "totalSize": 120
+    },
+    {
+      "typeName": "Contoso.Scenarios.Scenario[]",
+      "count": 1,
+      "totalSize": 120
+    },
+    {
+      "typeName": "System.IO.StreamWriter",
+      "count": 1,
+      "totalSize": 104
+    },
+    {
+      "typeName": "System.Reflection.RuntimePropertyInfo",
+      "count": 1,
+      "totalSize": 104
+    },
+    {
+      "typeName": "System.Reflection.RuntimeAssembly",
+      "count": 2,
+      "totalSize": 96
+    },
+    {
+      "typeName": "System.Text.UTF8Encoding\u002BUTF8EncodingSealed",
+      "count": 2,
+      "totalSize": 96
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.String, System.Globalization.CultureData\u003E\u002BEntry[]",
+      "count": 1,
+      "totalSize": 96
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.String, System.Diagnostics.Tracing.EventSource\u002BOverrideEventProvider\u003E\u002BEntry[]",
+      "count": 1,
+      "totalSize": 96
+    },
+    {
+      "typeName": "Contoso.Reports.RenderOptions",
+      "count": 3,
+      "totalSize": 96
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.String, Contoso.Reports.CachedReport\u003E\u002BEntry[]",
+      "count": 1,
+      "totalSize": 96
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.EtwEventProvider\u002BSessionInfo[]",
+      "count": 1,
+      "totalSize": 88
+    },
+    {
+      "typeName": "System.Runtime.CompilerServices.AsyncTaskMethodBuilder\u003CSystem.Threading.Tasks.VoidTaskResult\u003E\u002BAsyncStateMachineBox\u003CContoso.Scenarios.ScenarioCatalog\u002B\u003CReadyAndParkAsync\u003Ed__2\u003E",
+      "count": 1,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.Runtime.CompilerServices.AsyncTaskMethodBuilder\u003CSystem.Int32\u003E\u002BAsyncStateMachineBox\u003CProgram\u002B\u003C\u003CMain\u003E$\u003Ed__0\u003E",
+      "count": 1,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.Collections.Concurrent.ConcurrentQueue\u003CSystem.Object\u003E",
+      "count": 2,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.String, System.Object\u003E",
+      "count": 1,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.Func\u003CSystem.Diagnostics.Tracing.EventSource\u003E[]",
+      "count": 2,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.Guid, System.Diagnostics.Tracing.EventSource\u002BOverrideEventProvider\u003E",
+      "count": 1,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.String, System.Diagnostics.Tracing.EventSource\u002BOverrideEventProvider\u003E",
+      "count": 1,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.Int32, System.Diagnostics.Tracing.EventSource\u002BEventMetadata\u003E",
+      "count": 1,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.RuntimeType[][]",
+      "count": 1,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.Buffers.AsciiCharSearchValues\u003CSystem.Buffers.IndexOfAnyAsciiSearcher\u002BDefault, System.Buffers.SearchValues\u002BFalseConst\u003E",
+      "count": 1,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.Reflection.RuntimePropertyInfo[][]",
+      "count": 1,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.Reflection.CerHashtable\u003CSystem.String, System.Reflection.RuntimeMethodInfo[]\u003E\u002BTable",
+      "count": 2,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.Reflection.RuntimeFieldInfo[][]",
+      "count": 1,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.String, System.Globalization.CultureData\u003E",
+      "count": 1,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.String, Contoso.Reports.CachedReport\u003E",
+      "count": 1,
+      "totalSize": 80
+    },
+    {
+      "typeName": "System.DateTime",
+      "count": 3,
+      "totalSize": 72
+    },
+    {
+      "typeName": "System.Text.EncoderReplacementFallback",
+      "count": 3,
+      "totalSize": 72
+    },
+    {
+      "typeName": "System.Text.DecoderReplacementFallback",
+      "count": 3,
+      "totalSize": 72
+    },
+    {
+      "typeName": "System.Threading.Tasks.Task\u003CSystem.Threading.Tasks.VoidTaskResult\u003E",
+      "count": 1,
+      "totalSize": 72
+    },
+    {
+      "typeName": "System.Threading.Tasks.Task\u002BDelayPromise",
+      "count": 1,
+      "totalSize": 72
+    },
+    {
+      "typeName": "System.Reflection.RtFieldInfo",
+      "count": 1,
+      "totalSize": 72
+    },
+    {
+      "typeName": "System.ValueTuple\u003CSystem.String, System.Int32\u003E[]",
+      "count": 1,
+      "totalSize": 72
+    },
+    {
+      "typeName": "System.Guid",
+      "count": 2,
+      "totalSize": 64
+    },
+    {
+      "typeName": "System.Threading.ContextCallback",
+      "count": 1,
+      "totalSize": 64
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.EtwEventProvider\u002BSessionInfoCallback",
+      "count": 1,
+      "totalSize": 64
+    },
+    {
+      "typeName": "Internal.Win32.SafeHandles.SafeRegistryHandle",
+      "count": 2,
+      "totalSize": 64
+    },
+    {
+      "typeName": "System.Collections.Generic.HashSet\u003CSystem.RuntimeType\u003E",
+      "count": 1,
+      "totalSize": 64
+    },
+    {
+      "typeName": "System.Func\u003CSystem.Object, System.Boolean\u003E",
+      "count": 1,
+      "totalSize": 64
+    },
+    {
+      "typeName": "System.Text.ConsoleEncoding",
+      "count": 1,
+      "totalSize": 56
+    },
+    {
+      "typeName": "System.RuntimeType\u002BRuntimeTypeCache\u002BMemberInfoCache\u003CSystem.RuntimeType\u003E",
+      "count": 1,
+      "totalSize": 56
+    },
+    {
+      "typeName": "System.RuntimeType\u002BRuntimeTypeCache\u002BMemberInfoCache\u003CSystem.Reflection.RuntimePropertyInfo\u003E",
+      "count": 1,
+      "totalSize": 56
+    },
+    {
+      "typeName": "System.RuntimeType\u002BRuntimeTypeCache\u002BMemberInfoCache\u003CSystem.Reflection.RuntimeFieldInfo\u003E",
+      "count": 1,
+      "totalSize": 56
+    },
+    {
+      "typeName": "System.Runtime.CompilerServices.ConditionalWeakTable\u003CSystem.Buffers.SharedArrayPoolThreadLocalArray[], System.Object\u003E\u002BContainer",
+      "count": 1,
+      "totalSize": 56
+    },
+    {
+      "typeName": "System.Runtime.CompilerServices.ConditionalWeakTable\u003CSystem.Buffers.SharedArrayPoolThreadLocalArray[], System.Object\u003E\u002BEnumerator",
+      "count": 1,
+      "totalSize": 48
+    },
+    {
+      "typeName": "System.ConsolePal\u002BWindowsConsoleStream",
+      "count": 1,
+      "totalSize": 48
+    },
+    {
+      "typeName": "System.Text.EncoderNLS",
+      "count": 1,
+      "totalSize": 48
+    },
+    {
+      "typeName": "System.IO.TextWriter\u002BSyncTextWriter",
+      "count": 1,
+      "totalSize": 48
+    },
+    {
+      "typeName": "System.OperatingSystem",
+      "count": 1,
+      "totalSize": 48
+    },
+    {
+      "typeName": "System.Threading.ThreadInt64PersistentCounter",
+      "count": 1,
+      "totalSize": 48
+    },
+    {
+      "typeName": "System.Threading.ThreadInt64PersistentCounter\u002BThreadLocalNode",
+      "count": 1,
+      "totalSize": 48
+    },
+    {
+      "typeName": "System.Collections.Generic.NonRandomizedStringEqualityComparer\u002BOrdinalComparer",
+      "count": 2,
+      "totalSize": 48
+    },
+    {
+      "typeName": "Internal.Win32.RegistryKey",
+      "count": 2,
+      "totalSize": 48
+    },
+    {
+      "typeName": "System.Runtime.CompilerServices.GenericCache\u003CSystem.Runtime.CompilerServices.VirtualDispatchHelpers\u002BVirtualResolutionData, System.IntPtr\u003E",
+      "count": 1,
+      "totalSize": 48
+    },
+    {
+      "typeName": "System.Text.ASCIIEncoding\u002BASCIIEncodingSealed",
+      "count": 1,
+      "totalSize": 48
+    },
+    {
+      "typeName": "Contoso.Scenarios.ScenarioCatalog\u002B\u003CReadyAndParkAsync\u003Ed__2",
+      "count": 1,
+      "totalSize": 40
+    },
+    {
+      "typeName": "System.Threading.Tasks.TaskFactory",
+      "count": 1,
+      "totalSize": 40
+    },
+    {
+      "typeName": "System.IO.TextWriter\u002BNullTextWriter",
+      "count": 1,
+      "totalSize": 40
+    },
+    {
+      "typeName": "System.Threading.ExecutionContext",
+      "count": 1,
+      "totalSize": 40
+    },
+    {
+      "typeName": "System.Threading.Tasks.Task\u002BSetOnInvokeMres",
+      "count": 1,
+      "totalSize": 40
+    },
+    {
+      "typeName": "System.Reflection.RuntimeModule",
+      "count": 1,
+      "totalSize": 40
+    },
+    {
+      "typeName": "System.Reflection.CerHashtable\u003CSystem.String, System.RuntimeType[]\u003E\u002BTable",
+      "count": 1,
+      "totalSize": 40
+    },
+    {
+      "typeName": "System.Reflection.CerHashtable\u003CSystem.String, System.Reflection.RuntimePropertyInfo[]\u003E\u002BTable",
+      "count": 1,
+      "totalSize": 40
+    },
+    {
+      "typeName": "System.Reflection.CerHashtable\u003CSystem.String, System.Reflection.RuntimeFieldInfo[]\u003E\u002BTable",
+      "count": 1,
+      "totalSize": 40
+    },
+    {
+      "typeName": "System.Buffers.SharedArrayPool\u003CSystem.Char\u003E",
+      "count": 1,
+      "totalSize": 40
+    },
+    {
+      "typeName": "System.Runtime.CompilerServices.ConditionalWeakTable\u003CSystem.Buffers.SharedArrayPoolThreadLocalArray[], System.Object\u003E",
+      "count": 1,
+      "totalSize": 40
+    },
+    {
+      "typeName": "System.Gen2GcCallback",
+      "count": 1,
+      "totalSize": 40
+    },
+    {
+      "typeName": "System.Version",
+      "count": 1,
+      "totalSize": 32
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.ActivityTracker",
+      "count": 1,
+      "totalSize": 32
+    },
+    {
+      "typeName": "System.Collections.Generic.List\u003CSystem.Func\u003CSystem.Diagnostics.Tracing.EventSource\u003E\u003E",
+      "count": 1,
+      "totalSize": 32
+    },
+    {
+      "typeName": "System.Collections.Generic.List\u003CSystem.Diagnostics.Tracing.EtwEventProvider\u002BSessionInfo\u003E",
+      "count": 1,
+      "totalSize": 32
+    },
+    {
+      "typeName": "System.Collections.Generic.List\u003CSystem.WeakReference\u003CSystem.Diagnostics.Tracing.EventSource\u003E\u003E",
+      "count": 1,
+      "totalSize": 32
+    },
+    {
+      "typeName": "System.Reflection.RuntimePropertyInfo[]",
+      "count": 1,
+      "totalSize": 32
+    },
+    {
+      "typeName": "System.Reflection.RuntimeFieldInfo[]",
+      "count": 1,
+      "totalSize": 32
+    },
+    {
+      "typeName": "System.DateTime\u002BLeapSecondCache",
+      "count": 1,
+      "totalSize": 32
+    },
+    {
+      "typeName": "System.Collections.Generic.List\u003CContoso.Orders.CartSnapshot\u003E",
+      "count": 1,
+      "totalSize": 32
+    },
+    {
+      "typeName": "System.Collections.Generic.KeyValuePair\u003CSystem.Diagnostics.Tracing.EtwEventProvider\u002BSessionInfo, System.Boolean\u003E[]",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Reflection.Metadata.TypeNameParseOptions",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Reflection.CustomAttributeRecord[]",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.UInt64[]",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.IO.Stream\u002BNullStream",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Threading.Tasks.Task\u002B\u003C\u003Ec",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.TimeProvider\u002BSystemTimeProvider",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Collections.Concurrent.ConcurrentQueue\u003CSystem.Object\u003E[]",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Threading.ThreadPool\u002B\u003C\u003Ec",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Collections.Generic.StringEqualityComparer",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.OrdinalCaseSensitiveComparer",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Collections.Generic.NonRandomizedStringEqualityComparer\u002BOrdinalIgnoreCaseComparer",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.OrdinalIgnoreCaseComparer",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Collections.Generic.ObjectEqualityComparer\u003CSystem.RuntimeType\u003E",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Type[]",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Reflection.Missing",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Type\u002B\u003C\u003Ec",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.DBNull",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Collections.Generic.GenericEqualityComparer\u003CSystem.UInt64\u003E",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Collections.Generic.GenericEqualityComparer\u003CSystem.Int32\u003E",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.Int32, System.Diagnostics.Tracing.EventSource\u002BEventMetadata\u003E\u002BKeyCollection",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Collections.Generic.GenericArraySortHelper\u003CSystem.Int32\u003E",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Collections.Generic.GenericArraySortHelper\u003CSystem.UInt64\u003E",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Collections.Generic.GenericArraySortHelper\u003CSystem.String\u003E",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Collections.Generic.GenericComparer\u003CSystem.String\u003E",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.EventPipeMetadataGenerator",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.PropertyValue\u002B\u003C\u003Ec",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "\u003C\u003Ez__ReadOnlyArray\u003CContoso.Scenarios.Scenario\u003E",
+      "count": 1,
+      "totalSize": 24
+    },
+    {
+      "typeName": "System.Buffers.SharedArrayPool\u003CSystem.Char\u003E\u002B\u003C\u003Ec",
+      "count": 1,
+      "totalSize": 24
+    }
+  ],
+  "threadGroups": [
+    {
+      "where": "Program.Main(string[])",
+      "request": null,
+      "stateLabel": "GetAwaiter().GetResult()",
+      "count": 1
+    },
+    {
+      "where": "Native threads (no managed frames)",
+      "request": null,
+      "stateLabel": "No managed code",
+      "count": 2
+    },
+    {
+      "where": "Finalizer",
+      "request": null,
+      "stateLabel": "No managed code",
+      "count": 1
+    }
+  ],
+  "findings": [
+    {
+      "id": "heap.dominance.System.Byte[]",
+      "analyzer": "heap-dominance",
+      "severity": "info",
+      "title": "\u0060System.Byte[]\u0060 is 89% of the heap, mostly 3 PDF documents in \u0060ReportCache\u0060"
+    }
+  ],
+  "rootSamples": [
+    {
+      "typeName": "Contoso.Orders.CartLine",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static SessionStore.s_snapshots",
+          "kind": "static",
+          "count": 12
+        }
+      ],
+      "sampleAddresses": [
+        2332171436264,
+        2332177078312,
+        2332347803808,
+        2332350691480,
+        2332521351312
+      ],
+      "averageDepth": 6
+    },
+    {
+      "typeName": "Contoso.Orders.CartLine[]",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static SessionStore.s_snapshots",
+          "kind": "static",
+          "count": 12
+        }
+      ],
+      "sampleAddresses": [
+        2332171436184,
+        2332177078232,
+        2332347803728,
+        2332350691400,
+        2332521351232
+      ],
+      "averageDepth": 5
+    },
+    {
+      "typeName": "Contoso.Orders.CartSnapshot",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static SessionStore.s_snapshots",
+          "kind": "static",
+          "count": 12
+        }
+      ],
+      "sampleAddresses": [
+        2332171436072,
+        2332177078120,
+        2332347803616,
+        2332350691288,
+        2332521351120
+      ],
+      "averageDepth": 3
+    },
+    {
+      "typeName": "Contoso.Orders.CartSnapshot[]",
+      "sampled": 2,
+      "roots": [
+        {
+          "label": "strong handle",
+          "kind": "strongHandle",
+          "count": 1
+        },
+        {
+          "label": "static SessionStore.s_snapshots",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332176311448,
+        2332180742384
+      ],
+      "averageDepth": 2
+    },
+    {
+      "typeName": "Contoso.Reports.CachedReport",
+      "sampled": 3,
+      "roots": [
+        {
+          "label": "static ReportCache.s_entries",
+          "kind": "static",
+          "count": 3
+        }
+      ],
+      "sampleAddresses": [
+        2332176307136,
+        2332176307888,
+        2332176308424
+      ],
+      "averageDepth": 3
+    },
+    {
+      "typeName": "Contoso.Reports.RenderOptions",
+      "sampled": 3,
+      "roots": [
+        {
+          "label": "static ReportCache.s_entries",
+          "kind": "static",
+          "count": 3
+        }
+      ],
+      "sampleAddresses": [
+        2332176307288,
+        2332176307960,
+        2332176308496
+      ],
+      "averageDepth": 4
+    },
+    {
+      "typeName": "Contoso.Scenarios.Scenario",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static ScenarioCatalog.All",
+          "kind": "static",
+          "count": 12
+        }
+      ],
+      "sampleAddresses": [
+        2332176305280,
+        2332176305384,
+        2332176305488,
+        2332176305592,
+        2332176305696
+      ],
+      "averageDepth": 3
+    },
+    {
+      "typeName": "System.Buffers.SharedArrayPoolThreadLocalArray[]",
+      "sampled": 1,
+      "roots": [
+        {
+          "label": "unrooted",
+          "kind": "other",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332176310528
+      ],
+      "averageDepth": 0
+    },
+    {
+      "typeName": "System.Byte[]",
+      "sampled": 4,
+      "roots": [
+        {
+          "label": "static ReportCache.s_entries",
+          "kind": "static",
+          "count": 3
+        },
+        {
+          "label": "strong handle",
+          "kind": "strongHandle",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2330628022944,
+        2332213379144,
+        2332351791176,
+        2332452454472
+      ],
+      "averageDepth": 3.5
+    },
+    {
+      "typeName": "System.Char[]",
+      "sampled": 3,
+      "roots": [
+        {
+          "label": "static TextWriter.s_coreNewLine",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static Console.s_out",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "unrooted",
+          "kind": "other",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332167250888,
+        2332167250968,
+        2332176309952
+      ],
+      "averageDepth": 2
+    },
+    {
+      "typeName": "System.Collections.Concurrent.ConcurrentQueueSegment\u003CSystem.Object\u003E",
+      "sampled": 2,
+      "roots": [
+        {
+          "label": "static ThreadPool.s_workQueue",
+          "kind": "static",
+          "count": 2
+        }
+      ],
+      "sampleAddresses": [
+        2332167252944,
+        2332167253776
+      ],
+      "averageDepth": 3
+    },
+    {
+      "typeName": "System.Collections.Concurrent.ConcurrentQueueSegment\u003CSystem.Object\u003E\u002BSlot[]",
+      "sampled": 2,
+      "roots": [
+        {
+          "label": "static ThreadPool.s_workQueue",
+          "kind": "static",
+          "count": 2
+        }
+      ],
+      "sampleAddresses": [
+        2332167253176,
+        2332167254008
+      ],
+      "averageDepth": 4
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.Int32, System.Diagnostics.Tracing.EventSource\u002BEventMetadata\u003E\u002BEntry[]",
+      "sampled": 1,
+      "roots": [
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332176010512
+      ],
+      "averageDepth": 3
+    },
+    {
+      "typeName": "System.Collections.Generic.Dictionary\u003CSystem.String, System.Object\u003E\u002BEntry[]",
+      "sampled": 1,
+      "roots": [
+        {
+          "label": "static AppContext.s_dataStore",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332175631008
+      ],
+      "averageDepth": 2
+    },
+    {
+      "typeName": "System.Collections.Generic.List\u003CContoso.Orders.CartLine\u003E",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static SessionStore.s_snapshots",
+          "kind": "static",
+          "count": 12
+        }
+      ],
+      "sampleAddresses": [
+        2332171436152,
+        2332177078200,
+        2332347803696,
+        2332350691368,
+        2332521351200
+      ],
+      "averageDepth": 4
+    },
+    {
+      "typeName": "System.DateTime",
+      "sampled": 3,
+      "roots": [
+        {
+          "label": "strong handle",
+          "kind": "strongHandle",
+          "count": 3
+        }
+      ],
+      "sampleAddresses": [
+        2330628029088,
+        2330628029112,
+        2330628029136
+      ],
+      "averageDepth": 2
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.EtwEventProvider",
+      "sampled": 6,
+      "roots": [
+        {
+          "label": "strong handle",
+          "kind": "strongHandle",
+          "count": 6
+        }
+      ],
+      "sampleAddresses": [
+        2332167252096,
+        2332167255048,
+        2332175699408,
+        2332176303280,
+        2332176303752
+      ],
+      "averageDepth": 1
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.EventPipeEventProvider",
+      "sampled": 6,
+      "roots": [
+        {
+          "label": "strong handle",
+          "kind": "strongHandle",
+          "count": 6
+        }
+      ],
+      "sampleAddresses": [
+        2332167252272,
+        2332167255304,
+        2332175705560,
+        2332176303456,
+        2332176304144
+      ],
+      "averageDepth": 1
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.EventSource\u002BOverrideEventProvider",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static TplEventSource.Log",
+          "kind": "static",
+          "count": 2
+        },
+        {
+          "label": "static FrameworkEventSource.Log",
+          "kind": "static",
+          "count": 2
+        },
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 2
+        },
+        {
+          "label": "static RuntimeEventSource.Log",
+          "kind": "static",
+          "count": 2
+        },
+        {
+          "label": "static ArrayPoolEventSource.Log",
+          "kind": "static",
+          "count": 2
+        },
+        {
+          "label": "static EventSourceInitHelper.s_preregisteredEtwProviders",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static EventSourceInitHelper.s_preregisteredEventPipeProviders",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332167252032,
+        2332167252208,
+        2332167254984,
+        2332167255240,
+        2332175699344
+      ],
+      "averageDepth": 2.1666666666666665
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.RuntimeEventSource",
+      "sampled": 1,
+      "roots": [
+        {
+          "label": "static RuntimeEventSource.Log",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332176302624
+      ],
+      "averageDepth": 1
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.ScalarTypeInfo",
+      "sampled": 10,
+      "roots": [
+        {
+          "label": "static ScalarTypeInfo.s_intptr",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static ScalarTypeInfo.s_uint32",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static ScalarTypeInfo.s_uint16",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static ScalarTypeInfo.s_uint64",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static ScalarTypeInfo.s_double",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static ScalarTypeInfo.s_boolean",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static ScalarTypeInfo.s_byte",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static ScalarTypeInfo.s_guid",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static ScalarTypeInfo.s_int32",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static ScalarTypeInfo.s_int64",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332176242792,
+        2332176243152,
+        2332176243320,
+        2332176244544,
+        2332176245232
+      ],
+      "averageDepth": 1
+    },
+    {
+      "typeName": "System.Diagnostics.Tracing.TraceLoggingEventHandleTable",
+      "sampled": 5,
+      "roots": [
+        {
+          "label": "static TplEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static FrameworkEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static RuntimeEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static ArrayPoolEventSource.Log",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332167251840,
+        2332167254792,
+        2332175698904,
+        2332176303024,
+        2332176309320
+      ],
+      "averageDepth": 2
+    },
+    {
+      "typeName": "System.Func\u003CSystem.Diagnostics.Tracing.EventSource\u003E",
+      "sampled": 6,
+      "roots": [
+        {
+          "label": "static TplEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static FrameworkEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static RuntimeEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static EventSource.\u003C\u003EO.\u003C0\u003E__GetMetricsEventSource",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static ArrayPoolEventSource.Log",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332167251968,
+        2332167254920,
+        2332175699064,
+        2332176303152,
+        2332176303568
+      ],
+      "averageDepth": 2.6666666666666665
+    },
+    {
+      "typeName": "System.Func\u003CSystem.Object, System.Diagnostics.Tracing.PropertyValue\u003E",
+      "sampled": 10,
+      "roots": [
+        {
+          "label": "static PropertyValue.\u003C\u003E9__25_10",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static PropertyValue.\u003C\u003E9__25_7",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static PropertyValue.\u003C\u003E9__25_5",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static PropertyValue.\u003C\u003E9__25_9",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static PropertyValue.\u003C\u003E9__25_13",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static PropertyValue.\u003C\u003E9__25_0",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static PropertyValue.\u003C\u003E9__25_1",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static PropertyValue.\u003C\u003E9__25_14",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static PropertyValue.\u003C\u003E9__25_6",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static PropertyValue.\u003C\u003E9__25_8",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332176243088,
+        2332176243256,
+        2332176243592,
+        2332176244816,
+        2332176245504
+      ],
+      "averageDepth": 1
+    },
+    {
+      "typeName": "System.Func\u003CSystem.Threading.Tasks.Task\u003E",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static ScenarioCatalog.All",
+          "kind": "static",
+          "count": 12
+        }
+      ],
+      "sampleAddresses": [
+        2332176305216,
+        2332176305320,
+        2332176305424,
+        2332176305528,
+        2332176305632
+      ],
+      "averageDepth": 4
+    },
+    {
+      "typeName": "System.GCMemoryInfoData",
+      "sampled": 1,
+      "roots": [
+        {
+          "label": "unrooted",
+          "kind": "other",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332167241768
+      ],
+      "averageDepth": 0
+    },
+    {
+      "typeName": "System.Globalization.CultureData",
+      "sampled": 2,
+      "roots": [
+        {
+          "label": "static CultureData.Invariant",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static CultureInfo.s_userDefaultUICulture",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332175700496,
+        2332176241928
+      ],
+      "averageDepth": 1.5
+    },
+    {
+      "typeName": "System.Int32[]",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "strong handle",
+          "kind": "strongHandle",
+          "count": 2
+        },
+        {
+          "label": "static CultureData.Invariant",
+          "kind": "static",
+          "count": 2
+        },
+        {
+          "label": "static AppContext.s_dataStore",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static CastHelpers.s_table",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static PseudoCustomAttribute.s_pca",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static CultureData.s_cachedCultures",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static EventSourceInitHelper.s_preregisteredEtwProviders",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static EventSourceInitHelper.s_preregisteredEventPipeProviders",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static ReportCache.s_entries",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2330628030056,
+        2332175630376,
+        2332175630936,
+        2332175631320,
+        2332175700944
+      ],
+      "averageDepth": 1.9166666666666667
+    },
+    {
+      "typeName": "System.IntPtr[]",
+      "sampled": 6,
+      "roots": [
+        {
+          "label": "static TplEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static FrameworkEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static PortableThreadPool.ThreadPoolInstance",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static RuntimeEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static ArrayPoolEventSource.Log",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332167251864,
+        2332167254816,
+        2332167256704,
+        2332175698928,
+        2332176303048
+      ],
+      "averageDepth": 2.8333333333333335
+    },
+    {
+      "typeName": "System.Object",
+      "sampled": 8,
+      "roots": [
+        {
+          "label": "static ThreadPool.s_workQueue",
+          "kind": "static",
+          "count": 2
+        },
+        {
+          "label": "static Console.s_syncObject",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static Task.s_taskCompletionSentinel",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "local in Monitor.Wait",
+          "kind": "stack",
+          "count": 1
+        },
+        {
+          "label": "pinned handle",
+          "kind": "pinnedHandle",
+          "count": 1
+        },
+        {
+          "label": "static CultureData.s_lock",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "strong handle",
+          "kind": "strongHandle",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332167250032,
+        2332167250624,
+        2332167252920,
+        2332167253752,
+        2332167256776
+      ],
+      "averageDepth": 1.875
+    },
+    {
+      "typeName": "System.Object[]",
+      "sampled": 10,
+      "roots": [
+        {
+          "label": "thread-static field",
+          "kind": "threadStatic",
+          "count": 5
+        },
+        {
+          "label": "unrooted",
+          "kind": "other",
+          "count": 3
+        },
+        {
+          "label": "strong handle",
+          "kind": "strongHandle",
+          "count": 2
+        }
+      ],
+      "sampleAddresses": [
+        2332133687336,
+        2332167252504,
+        2332167252616,
+        2332175777872,
+        2332176241416
+      ],
+      "averageDepth": 1.1428571428571428
+    },
+    {
+      "typeName": "System.Reflection.Emit.OpCode",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "strong handle",
+          "kind": "strongHandle",
+          "count": 12
+        }
+      ],
+      "sampleAddresses": [
+        2330628011584,
+        2330628012016,
+        2330628012448,
+        2330628012880,
+        2330628013312
+      ],
+      "averageDepth": 2
+    },
+    {
+      "typeName": "System.Reflection.MemberFilter",
+      "sampled": 3,
+      "roots": [
+        {
+          "label": "static Type.FilterAttribute",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static Type.FilterName",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static Type.FilterNameIgnoreCase",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332175743744,
+        2332175743808,
+        2332175743896
+      ],
+      "averageDepth": 1
+    },
+    {
+      "typeName": "System.Reflection.ParameterInfo[]",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 11
+        },
+        {
+          "label": "strong handle",
+          "kind": "strongHandle",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332175744936,
+        2332175842848,
+        2332175880592,
+        2332175901224,
+        2332175937552
+      ],
+      "averageDepth": 3.8333333333333335
+    },
+    {
+      "typeName": "System.Reflection.RuntimeMethodInfo",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 12
+        }
+      ],
+      "sampleAddresses": [
+        2332175705896,
+        2332175708656,
+        2332175711376,
+        2332175713584,
+        2332175716816
+      ],
+      "averageDepth": 8
+    },
+    {
+      "typeName": "System.Reflection.RuntimeMethodInfo[]",
+      "sampled": 4,
+      "roots": [
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static InvokerEmitUtil.Methods.s_Span_get_Item",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static InvokerEmitUtil.Methods.s_Object_GetRawData",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static InvokerEmitUtil.Methods.s_NextCallReturnAddress",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332175736744,
+        2332175778488,
+        2332175779448,
+        2332175780376
+      ],
+      "averageDepth": 5.25
+    },
+    {
+      "typeName": "System.Reflection.RuntimeParameterInfo",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 12
+        }
+      ],
+      "sampleAddresses": [
+        2332175774712,
+        2332175855296,
+        2332175893072,
+        2332175941080,
+        2332175975960
+      ],
+      "averageDepth": 5
+    },
+    {
+      "typeName": "System.Runtime.CompilerServices.GenericCache\u003CSystem.Runtime.CompilerServices.VirtualDispatchHelpers\u002BVirtualResolutionData, System.IntPtr\u003E\u002BEntry[]",
+      "sampled": 2,
+      "roots": [
+        {
+          "label": "strong handle",
+          "kind": "strongHandle",
+          "count": 2
+        }
+      ],
+      "sampleAddresses": [
+        2332176235032,
+        2332176235200
+      ],
+      "averageDepth": 3
+    },
+    {
+      "typeName": "System.RuntimeType",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "unrooted",
+          "kind": "other",
+          "count": 4
+        },
+        {
+          "label": "static Enum.s_underlyingTypes",
+          "kind": "static",
+          "count": 3
+        },
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 2
+        },
+        {
+          "label": "static RuntimeType.StringType",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static PseudoCustomAttribute.s_pca",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static InvokerEmitUtil.Methods.s_Object_GetRawData",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2330627997728,
+        2330628004320,
+        2330628004720,
+        2330628005000,
+        2330628008128
+      ],
+      "averageDepth": 4.5
+    },
+    {
+      "typeName": "System.RuntimeType\u002BRuntimeTypeCache",
+      "sampled": 5,
+      "roots": [
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static InvokerEmitUtil.Methods.s_Span_get_Item",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static InvokerEmitUtil.Methods.s_Object_GetRawData",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static InvokerEmitUtil.Methods.s_NextCallReturnAddress",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static InvokerEmitUtil.Methods.s_ByReferenceOfByte_Value",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332175705672,
+        2332175777176,
+        2332175779120,
+        2332175780048,
+        2332175782128
+      ],
+      "averageDepth": 3
+    },
+    {
+      "typeName": "System.RuntimeType\u002BRuntimeTypeCache\u002BMemberInfoCache\u003CSystem.Reflection.RuntimeMethodInfo\u003E",
+      "sampled": 4,
+      "roots": [
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static InvokerEmitUtil.Methods.s_Span_get_Item",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static InvokerEmitUtil.Methods.s_Object_GetRawData",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static InvokerEmitUtil.Methods.s_NextCallReturnAddress",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332175705840,
+        2332175778432,
+        2332175779288,
+        2332175780216
+      ],
+      "averageDepth": 4.25
+    },
+    {
+      "typeName": "System.RuntimeType[]",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 12
+        }
+      ],
+      "sampleAddresses": [
+        2332175747344,
+        2332175813224,
+        2332175849304,
+        2332175881880,
+        2332175916720
+      ],
+      "averageDepth": 7.333333333333333
+    },
+    {
+      "typeName": "System.Signature",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 12
+        }
+      ],
+      "sampleAddresses": [
+        2332175770144,
+        2332175828776,
+        2332175860520,
+        2332175891496,
+        2332175927736
+      ],
+      "averageDepth": 6.833333333333333
+    },
+    {
+      "typeName": "System.String",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static SessionStore.s_snapshots",
+          "kind": "static",
+          "count": 11
+        },
+        {
+          "label": "static string.Empty",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2330627997704,
+        2332176902432,
+        2332347643760,
+        2332350547296,
+        2332521223120
+      ],
+      "averageDepth": 6.5
+    },
+    {
+      "typeName": "System.String[]",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "static CultureData.Invariant",
+          "kind": "static",
+          "count": 2
+        },
+        {
+          "label": "static Number.s_smallNumberCache",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static Number.s_posCurrencyFormats",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static Number.s_negCurrencyFormats",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static Number.s_posPercentFormats",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static Number.s_negPercentFormats",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static Number.s_negNumberFormats",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "strong handle",
+          "kind": "strongHandle",
+          "count": 1
+        },
+        {
+          "label": "static NativeRuntimeEventSource.Log",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static InvokerEmitUtil.Methods.s_Span_get_Item",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static InvokerEmitUtil.Methods.s_Object_GetRawData",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332175701008,
+        2332175701040,
+        2332175701128,
+        2332175703552,
+        2332175703608
+      ],
+      "averageDepth": 2.6666666666666665
+    },
+    {
+      "typeName": "System.Text.DecoderReplacementFallback",
+      "sampled": 3,
+      "roots": [
+        {
+          "label": "static Encoding.s_defaultEncoding",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static UTF8Encoding.s_default",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static DecoderReplacementFallback.s_default",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332167250224,
+        2332175744088,
+        2332176306688
+      ],
+      "averageDepth": 1.6666666666666667
+    },
+    {
+      "typeName": "System.Text.EncoderReplacementFallback",
+      "sampled": 3,
+      "roots": [
+        {
+          "label": "static Encoding.s_defaultEncoding",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static UTF8Encoding.s_default",
+          "kind": "static",
+          "count": 1
+        },
+        {
+          "label": "static EncoderReplacementFallback.s_default",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332167250200,
+        2332175744064,
+        2332176306664
+      ],
+      "averageDepth": 1.6666666666666667
+    },
+    {
+      "typeName": "System.Threading.LowLevelLock",
+      "sampled": 4,
+      "roots": [
+        {
+          "label": "static PortableThreadPool.ThreadPoolInstance",
+          "kind": "static",
+          "count": 3
+        },
+        {
+          "label": "static ThreadPool.s_workQueue",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332167254568,
+        2332167256576,
+        2332167256664,
+        2332167256736
+      ],
+      "averageDepth": 2.25
+    },
+    {
+      "typeName": "System.Threading.PortableThreadPool",
+      "sampled": 1,
+      "roots": [
+        {
+          "label": "static PortableThreadPool.ThreadPoolInstance",
+          "kind": "static",
+          "count": 1
+        }
+      ],
+      "sampleAddresses": [
+        2332167256008
+      ],
+      "averageDepth": 1
+    },
+    {
+      "typeName": "System.WeakReference\u003CSystem.Diagnostics.Tracing.EventProvider\u003E",
+      "sampled": 12,
+      "roots": [
+        {
+          "label": "strong handle",
+          "kind": "strongHandle",
+          "count": 12
+        }
+      ],
+      "sampleAddresses": [
+        2332167252184,
+        2332167252336,
+        2332167255136,
+        2332167255368,
+        2332175699496
+      ],
+      "averageDepth": 2
+    },
+    {
+      "typeName": "System.WeakReference\u003CSystem.Diagnostics.Tracing.EventSource\u003E",
+      "sampled": 5,
+      "roots": [
+        {
+          "label": "static EventListener.s_EventSources",
+          "kind": "static",
+          "count": 5
+        }
+      ],
+      "sampleAddresses": [
+        2332167252360,
+        2332167255392,
+        2332175705648,
+        2332176303544,
+        2332176309840
+      ],
+      "averageDepth": 3
+    }
+  ]
+}

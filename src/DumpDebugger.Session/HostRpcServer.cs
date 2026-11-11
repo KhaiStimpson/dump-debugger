@@ -195,6 +195,12 @@ public sealed partial class HostRpcServer : IAsyncDisposable
                     return ContractJson.ToElement(new SavedReport(path));
                 }
 
+            case "compare.candidates":
+                return ContractJson.ToElement(CompareCandidates());
+
+            case "compare.run":
+                return ContractJson.ToElement(await CompareAsync(Params<CompareParams>(@params), ct).ConfigureAwait(false));
+
             case "analysis.cancel":
                 _analysisCts?.Cancel();
                 return ContractJson.ToElement(new Ack());
@@ -236,6 +242,7 @@ public sealed partial class HostRpcServer : IAsyncDisposable
             {
                 _latest = cached with { FromCache = true };
                 await NotifyWebAsync("analysis.updated", _latest).ConfigureAwait(false);
+                EnsureSnapshotInBackground(session, workspace, cached);
             }
             else if (metadata.Runtimes.Any(r => r.IsManagedAnalysisAvailable))
             {
@@ -269,6 +276,7 @@ public sealed partial class HostRpcServer : IAsyncDisposable
                     _latest = final;
                     workspace.SaveDiagnosis(final);
                     await OnAnalysisCompletedAsync(workspace, final).ConfigureAwait(false);
+                    EnsureSnapshotInBackground(session, workspace, final);
                 }
             }
             catch (Exception ex) when (ex is OperationCanceledException or RpcException or IOException)

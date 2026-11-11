@@ -47,6 +47,46 @@ export interface AsyncStacksResult {
   pending: number;
 }
 
+export interface CompareCandidate {
+  path: string;
+  fileName: string;
+  folder: string;
+  hasSnapshot: boolean;
+  exists: boolean;
+  openedAt: string;
+  runtime: string | null;
+  verdictSeverity: Severity | null;
+  verdictLabel: string | null;
+}
+
+export interface CompareParams {
+  baselinePath: string;
+  currentPath: string | null;
+}
+
+export interface CompareResult {
+  a: CompareSide;
+  b: CompareSide;
+  summary: Vital[];
+  types: TypeDelta[];
+  threadGroups: ThreadGroupDelta[];
+  findings: FindingDiff[];
+  leakSuspects: LeakSuspect[];
+}
+
+export interface CompareSide {
+  path: string;
+  fileName: string;
+  capturedAt: string | null;
+  heapBytes: number;
+  objects: number;
+  threads: number;
+  blockedThreads: number;
+  critical: number;
+  runtime: string;
+  isOpen: boolean;
+}
+
 export type Confidence = 'low' | 'medium' | 'high';
 export const ConfidenceValues: readonly Confidence[] = ['low', 'medium', 'high'];
 
@@ -140,6 +180,16 @@ export interface Finding {
   visual: FindingVisual;
 }
 
+export type FindingChange = 'new' | 'resolved' | 'persisting';
+export const FindingChangeValues: readonly FindingChange[] = ['new', 'resolved', 'persisting'];
+
+export interface FindingDiff {
+  change: FindingChange;
+  severity: Severity;
+  title: string;
+  analyzer: string;
+}
+
 export type FindingVisual = 'none' | 'waitGraph' | 'heap';
 export const FindingVisualValues: readonly FindingVisual[] = ['none', 'waitGraph', 'heap'];
 
@@ -168,6 +218,20 @@ export interface HeapOverview {
   typeCount: number;
   generations: GenerationSize[];
   walked: boolean;
+}
+
+export interface HeapSnapshot {
+  schemaVersion: number;
+  dump: DumpSummary;
+  capturedAt: string | null;
+  totalBytes: number;
+  objectCount: number;
+  threadCount: number;
+  blockedThreads: number;
+  types: TypeStat[];
+  threadGroups: SnapshotThreadGroup[];
+  findings: SnapshotFinding[];
+  rootSamples: TypeRootSample[];
 }
 
 export type HeapSort = 'size' | 'count' | 'name';
@@ -211,6 +275,18 @@ export interface LargeObject {
   identity: string;
   detail: string | null;
   pinned: boolean;
+}
+
+export interface LeakSuspect {
+  typeName: string;
+  countA: number;
+  countB: number;
+  sizeDelta: number;
+  growth: number | null;
+  dominantRoot: string | null;
+  rootShare: number | null;
+  sampleAddressesInB: number[];
+  explanation: string;
 }
 
 export interface LockCycle {
@@ -383,6 +459,12 @@ export interface RootPathsResult {
   explanation: string;
 }
 
+export interface RootShare {
+  label: string;
+  kind: RootKind;
+  count: number;
+}
+
 export interface RootsQuery {
   address: number;
   mode: RootPathMode;
@@ -419,6 +501,24 @@ export interface SavedReport {
 
 export type Severity = 'ok' | 'info' | 'warning' | 'critical';
 export const SeverityValues: readonly Severity[] = ['ok', 'info', 'warning', 'critical'];
+
+export interface SnapshotFinding {
+  id: string;
+  analyzer: string;
+  severity: Severity;
+  title: string;
+}
+
+export interface SnapshotParams {
+  diagnosis: Diagnosis;
+}
+
+export interface SnapshotThreadGroup {
+  where: string;
+  request: string | null;
+  stateLabel: string;
+  count: number;
+}
 
 export interface StackFrame {
   display: string;
@@ -457,6 +557,14 @@ export interface ThreadGroup {
   stateLabel: string;
   threadIds: number[];
   inDeadlock: boolean;
+}
+
+export interface ThreadGroupDelta {
+  where: string;
+  request: string | null;
+  stateLabel: string;
+  countA: number;
+  countB: number;
 }
 
 export type ThreadGrouping = 'stack' | 'request' | 'flat';
@@ -524,6 +632,25 @@ export interface TreemapCell {
   otherCount: number;
 }
 
+export interface TypeDelta {
+  typeName: string;
+  countA: number;
+  countB: number;
+  sizeA: number;
+  sizeB: number;
+  sizeDelta: number;
+  countDelta: number;
+  growth: number | null;
+}
+
+export interface TypeRootSample {
+  typeName: string;
+  sampled: number;
+  roots: RootShare[];
+  sampleAddresses: number[];
+  averageDepth: number;
+}
+
 export interface TypeRow {
   name: string;
   count: number;
@@ -531,6 +658,12 @@ export interface TypeRow {
   lohSize: number;
   share: number;
   isApp: boolean;
+}
+
+export interface TypeStat {
+  typeName: string;
+  count: number;
+  totalSize: number;
 }
 
 export interface UriParams {
@@ -617,6 +750,8 @@ export interface RpcMethods {
   'pins.upsert': { params: PinUpsert; result: Pin[] };
   'pins.remove': { params: UriParams; result: Pin[] };
   'report.save': { params: SaveReportParams; result: SavedReport };
+  'compare.candidates': { params: NoParams; result: CompareCandidate[] };
+  'compare.run': { params: CompareParams; result: CompareResult };
   'analysis.run': { params: AnalysisRunParams; result: Diagnosis };
   'threads.groups': { params: ThreadGroupsQuery; result: ThreadGroupsResult };
   'threads.get': { params: ThreadQuery; result: ThreadDetail };
@@ -629,6 +764,7 @@ export interface RpcMethods {
   'objects.referrers': { params: ReferrersQuery; result: PageOfReferrer };
   'objects.roots': { params: RootsQuery; result: RootPathsResult };
   'async.stacks': { params: NoParams; result: AsyncStacksResult };
+  'snapshot.build': { params: SnapshotParams; result: HeapSnapshot };
 }
 
 export type RpcMethod = keyof RpcMethods;
@@ -638,6 +774,7 @@ export interface RpcNotifications {
   'dump.progress': ProgressNotification;
   'worker.status': WorkerStatus;
   'analysis.updated': Diagnosis;
+  'snapshot.ready': PathParams;
 }
 
 export type RpcNotification = keyof RpcNotifications;
