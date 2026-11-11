@@ -70,14 +70,14 @@ Each phase ends shippable.
 
 ### R5 — Analyzer pack
 Each analyzer ships with authored explanations, a DumpGen scenario and a golden snapshot test.
-- [ ] Thread-pool starvation
-- [ ] Sync-over-async (`Task.Result` / `.Wait()`)
-- [ ] Async logical stacks (state-machine walking)
-- [ ] Exceptions on stacks + last thrown per thread
-- [ ] Finalizer queue backlog
-- [ ] LOH fragmentation
-- [ ] HttpClient / socket exhaustion
-- [ ] Timer leaks
+- [x] Thread-pool starvation
+- [x] Sync-over-async (`Task.Result` / `.Wait()`)
+- [x] Async logical stacks (state-machine walking)
+- [x] Exceptions on stacks + last thrown per thread
+- [x] Finalizer queue backlog
+- [x] LOH fragmentation
+- [x] HttpClient / socket exhaustion
+- [x] Timer leaks
 
 ### R6 — Pins, notes & Report
 - [ ] Pin and annotate any entity URI, persisted in the workspace sidecar
@@ -110,3 +110,4 @@ Each analyzer ships with authored explanations, a DumpGen scenario and a golden 
 - **R2.** The inspector docks as a column on Diagnosis (replacing the side panel while open) and slides over the right edge elsewhere. Pins & notes storage landed here rather than R6 because the Diagnosis page shows them; R6 adds the report. Drag-drop uses WebView2's `postMessageWithAdditionalObjects`, so the host gets the dropped file's real path. "Generate a sample" runs the bundled DumpGen (`Tools\DumpGen` next to the host). The open-to-verdict time on the deadlock fixture is asserted in tests (< 5 s; ~0.5 s in practice). Types join the palette with the heap queries in R4.
 - **R3.** React Flow + ELK (layered, top-down) worked as planned; "queued behind" edges are reversed for layout only, so clusters sit under their lock as in the mockup. The inspector now docks as a column in every view rather than sliding over (an overlay covered view toolbars). Measured on the DumpGen `syncoverasync` fixture (229 threads, Flat grouping, scrolled continuously in the real WebView2 through CDP): 60.4 fps with 44 of 229 rows in the DOM. Round-trips: graph node → inspector; inspector "Show in graph" → `#/locks/thread/{id}` with the node highlighted; explanation card "Back to finding" → Diagnosis with the finding in the inspector.
 - **R4.** The reverse-reference index is CSR int arrays over an address-ordered object table that the heap walk fills (no second walk); the reference pass runs across cores when ClrMD reports the runtime thread-safe. It's built as the analysis stage "Large-object identification" (which also warms the root and static-field maps), so root paths are usually instant by the time someone asks. Measured on the DumpGen `bigheap` fixture (1.99 GB, 12.0M objects, 12.0M references, Release): heap walk 5.9 s, index 2.9 s, root path 0.04 s; cold (nothing built yet) under 10 s, asserted by an opt-in perf test (`DUMPDEBUGGER_PERF=1`). A naive version took 12 s to index and 2.6 s per root path: labeling an edge out of a 4M-element array enumerated every element, now replaced by a raw memory scan. Root labels prefer static fields (from a static-field map over loaded types) over the handles that store them. Large objects are named by content sniffing (PDF, PNG, JSON…) + an identifying field of the nearest app-type owner + the static/app type that holds it ("PDF document "Q3-statements" in ReportCache"). Heap-dominance findings now cite those objects. New DumpGen scenarios: `leak`, `leak-baseline`, `bigheap`.
+- **R5.** Scenario ↔ analyzer: `threadpool` (starvation, with the queue length read from `ThreadPoolWorkQueue`'s ConcurrentQueue segments and the per-thread work-stealing queues), `syncoverasync` (sync-over-async + async logical stacks, which show the 200 blocked `.Result`s are waiting on a downstream stuck in `Task.Delay`), `exceptions` (in flight on threads + exception storm with its holder), `crash` (unhandled exception), `finalizer`, `loh`, `httpclient`, `timers`. Goldens snapshot the verdict and the scenario's own findings; numbers that depend on background-I/O timing are kept out (or normalized) so goldens stay stable across fresh captures (verified by regenerating every fixture twice). Deviation: dumps written by the runtime's own crash dumper (createdump, `DOTNET_DbgEnableMiniDump`) carry no minidump exception stream, so the crashing thread is identified as the one caught mid-dispatch (`System.Runtime.EH` frames on top) and the crash is reported at *medium* confidence; a dump with an exception stream (e.g. WER/procdump `-e`) gives high confidence. A lone socket count is no longer a finding (a busy server has plenty); many HttpClient instances is. Wait labels now name the primitive the app called (`SemaphoreSlim.Wait`, not the `Monitor.Wait` inside it).

@@ -39,7 +39,31 @@ var psi = new ProcessStartInfo(Environment.ProcessPath!, $"--victim \"{scenario}
     RedirectStandardOutput = true,
 };
 
+// Crash scenarios are dumped by the runtime itself as the process dies (createdump), the way
+// a real crash dump is captured, rather than by us while it's alive.
+var crash = scenario == "crash";
+if (crash)
+{
+    Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+    File.Delete(outputPath);
+    psi.Environment["DOTNET_DbgEnableMiniDump"] = "1";
+    psi.Environment["DOTNET_DbgMiniDumpType"] = "4";
+    psi.Environment["DOTNET_DbgMiniDumpName"] = outputPath;
+}
+
 using var victim = Process.Start(psi) ?? throw new InvalidOperationException("Failed to start victim process.");
+if (crash)
+{
+    await victim.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(90));
+    for (var i = 0; i < 100 && !File.Exists(outputPath); i++)
+    {
+        await Task.Delay(100);
+    }
+
+    Console.WriteLine(File.Exists(outputPath) ? $"Wrote dump: {outputPath}" : "The runtime did not write a crash dump.");
+    return File.Exists(outputPath) ? 0 : 1;
+}
+
 var deadline = Task.Delay(TimeSpan.FromSeconds(90));
 string? line;
 while (true)

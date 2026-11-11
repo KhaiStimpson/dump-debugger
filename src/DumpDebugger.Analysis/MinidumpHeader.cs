@@ -12,7 +12,7 @@ public static class MinidumpHeader
     private const ulong MiniDumpWithFullMemory = 0x00000002;
     private const uint ExceptionStream = 6;
 
-    public sealed record Info(bool IsFullMemory, DateTimeOffset? CapturedAt, bool HasException);
+    public sealed record Info(bool IsFullMemory, DateTimeOffset? CapturedAt, bool HasException, int? CrashThreadOsId = null, uint? ExceptionCode = null);
 
     public static Info Read(string dumpPath)
     {
@@ -32,11 +32,19 @@ public static class MinidumpHeader
         var flags = reader.ReadUInt64();
 
         var hasException = false;
+        int? crashThread = null;
+        uint? code = null;
         for (var i = 0; i < streamCount; i++)
         {
             stream.Position = directoryRva + (i * 12);
             if (reader.ReadUInt32() == ExceptionStream)
             {
+                reader.ReadUInt32(); // DataSize
+                var rva = reader.ReadUInt32();
+                stream.Position = rva;
+                crashThread = (int)reader.ReadUInt32(); // MINIDUMP_EXCEPTION_STREAM.ThreadId
+                reader.ReadUInt32();                    // alignment
+                code = reader.ReadUInt32();             // ExceptionRecord.ExceptionCode
                 hasException = true;
                 break;
             }
@@ -45,6 +53,8 @@ public static class MinidumpHeader
         return new Info(
             (flags & MiniDumpWithFullMemory) != 0,
             timestamp == 0 ? null : DateTimeOffset.FromUnixTimeSeconds(timestamp),
-            hasException);
+            hasException,
+            crashThread,
+            code);
     }
 }

@@ -1,0 +1,12 @@
+verdict: Critical/Medium
+  The process was crashing with an unhandled InvalidOperationException thrown in InvoiceExporter.Render.
+  "No invoice template is configured (customer C-1001)." on [#N].
+finding exceptions.crash Critical/Medium [Crash]
+  title: The process was crashing: unhandled `InvalidOperationException` in `InvoiceExporter.Render`
+  why: "No invoice template is configured (customer C-1001)." · thread #N
+  means: An exception reached the top of a thread without being caught, so the runtime terminated the process. This dump was written as it went down; the thread below is where it happened.
+  next: Open [#N] and read the stack: the exception was thrown at the first application frame.
+  next: Handle the failure where it's thrown, or catch it at the thread's entry point (background threads and fire-and-forget tasks need their own try/catch).
+  evidence: Thread #N
+group: 1 × CrashScenario.RunAsync() |  | Thread.Join
+group: 1 × InvoiceExporter.Render(string) |  | Running

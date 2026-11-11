@@ -34,6 +34,19 @@ export interface AppInfo {
   startupDumpPath: string | null;
 }
 
+export interface AsyncStackGroup {
+  count: number;
+  frames: string[];
+  awaiting: string;
+  firstAppFrame: string | null;
+  samples: number[];
+}
+
+export interface AsyncStacksResult {
+  groups: AsyncStackGroup[];
+  pending: number;
+}
+
 export type Confidence = 'low' | 'medium' | 'high';
 export const ConfidenceValues: readonly Confidence[] = ['low', 'medium', 'high'];
 
@@ -69,6 +82,8 @@ export interface DumpMetadata {
   runtimes: RuntimeInfo[];
   threadCount: number;
   moduleCount: number;
+  crashThreadOsId: number | null;
+  crashExceptionCode: number | null;
 }
 
 export interface DumpOpened {
@@ -599,6 +614,7 @@ export interface RpcMethods {
   'objects.inspect': { params: ObjectQuery; result: ObjectView };
   'objects.referrers': { params: ReferrersQuery; result: PageOfReferrer };
   'objects.roots': { params: RootsQuery; result: RootPathsResult };
+  'async.stacks': { params: NoParams; result: AsyncStacksResult };
 }
 
 export type RpcMethod = keyof RpcMethods;

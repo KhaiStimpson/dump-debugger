@@ -2,6 +2,7 @@ using System.Diagnostics;
 using DumpDebugger.Analysis.Findings;
 using DumpDebugger.Analysis.Heap;
 using DumpDebugger.Analysis.Locks;
+using DumpDebugger.Analysis.Threads;
 using DumpDebugger.Core.Contracts;
 using static DumpDebugger.Analysis.Findings.Text;
 
@@ -59,7 +60,8 @@ public sealed class AnalysisPipeline
             tone: cycles > 0 ? Tone.Critical : Tone.Neutral);
 
         _overview = await _index.WithClrAsync(() => HeapWalker.QuickOverview(_index.Runtime.Heap), ct).ConfigureAwait(false);
-        _context = new AnalysisContext { Runtime = _index.Runtime, Threads = threads, Locks = locks };
+        _pool = await _index.WithClrAsync(() => ThreadPoolInspector.Read(_index.Runtime), ct).ConfigureAwait(false);
+        _context = new AnalysisContext { Runtime = _index.Runtime, Threads = threads, Locks = locks, Metadata = _index.Loaded.Metadata, Pool = _pool };
         RunAnalyzers(AnalyzerStage.Threads);
         await PublishAsync(false).ConfigureAwait(false);
 
@@ -69,7 +71,18 @@ public sealed class AnalysisPipeline
             _index.Heap = heap;
             _overview = heap.Overview;
             await IdentifyLargeObjectsAsync(ct).ConfigureAwait(false);
-            _context = new AnalysisContext { Runtime = _index.Runtime, Threads = threads, Locks = locks, Heap = heap, Explorer = _index.Explorer, LargeObjects = _index.LargeObjects };
+            _context = new AnalysisContext
+            {
+                Runtime = _index.Runtime,
+                Threads = threads,
+                Locks = locks,
+                Heap = heap,
+                Explorer = _index.Explorer,
+                LargeObjects = _index.LargeObjects,
+                Metadata = _index.Loaded.Metadata,
+                Pool = _pool,
+                AsyncStacks = _index.AsyncStacks,
+            };
 
             var ta = _clock.Elapsed.TotalSeconds;
             SetStage("analyzers", "Thread-pool, async & exception analyzers", StageStatus.Running);
@@ -136,7 +149,11 @@ public sealed class AnalysisPipeline
         {
             // Warm the root and static-field maps now, so the first "why is it alive?" is instant.
             explorer.Roots();
-            explorer.Statics();
+            var statics = explorer.Statics();
+
+            // Locks held through a static field (common for app-wide gates) get named here.
+            LockModelBuilder.ApplyHeapNames(_index.Locks!, _index.Locks!.Locks.Keys.Where(statics.ContainsKey).ToDictionary(a => a, a => statics[a]));
+            _index.AsyncStacks = AsyncStackWalker.Walk(_index.Runtime, explorer.Index, ct);
             return explorer.LargeObjects();
         }, ct).ConfigureAwait(false);
         SetStage("objects", "Large-object identification", StageStatus.Done, _clock.Elapsed.TotalSeconds - t0,
@@ -256,6 +273,14 @@ public static class AnalyzerCatalog
     [
         new DeadlockAnalyzer(),
         new ContentionAnalyzer(),
+        new ThreadPoolStarvationAnalyzer(),
+        new SyncOverAsyncAnalyzer(),
+        new AsyncStacksAnalyzer(),
+        new ExceptionsAnalyzer(),
+        new FinalizerAnalyzer(),
         new HeapDominanceAnalyzer(),
+        new LohFragmentationAnalyzer(),
+        new HttpClientAnalyzer(),
+        new TimerLeakAnalyzer(),
     ];
 }

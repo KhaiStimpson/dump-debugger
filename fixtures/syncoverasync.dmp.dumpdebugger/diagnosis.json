@@ -3,26 +3,57 @@
   "dump": {
     "path": "C:\\Dev\\repos\\dump-debugger\\fixtures\\syncoverasync.dmp",
     "fileName": "syncoverasync.dmp",
-    "fileSizeBytes": 174964876,
+    "fileSizeBytes": 173945732,
     "runtime": ".NET 10.0.15",
     "architecture": "x64",
-    "threadCount": 229,
+    "threadCount": 227,
     "processName": "DumpDebugger.DumpGen.exe",
     "dacSource": "local machine"
   },
   "verdict": {
-    "severity": "ok",
-    "confidence": "medium",
-    "headline": "No hang, deadlock or memory problem stood out.",
-    "body": "229 threads (0 blocked) and a 12.0 MB managed heap. Nothing crossed a warning threshold. The views on the left have the detail if you\u0027re chasing something specific.",
-    "entities": [],
-    "findingId": null
+    "severity": "warning",
+    "confidence": "high",
+    "headline": "Sync-over-async: 200 threads block on Task.Result in PricingClient.GetQuote.",
+    "body": "Each thread is parked waiting for an async operation to finish. That operation\u0027s continuation usually needs a pool thread too, so under load the waiting threads starve the pool, and with a synchronization context it can deadlock outright.",
+    "entities": [
+      {
+        "uri": "request/GET%20%2Fapi%2Fpricing%2Fquote",
+        "kind": "request",
+        "label": "GET /api/pricing/quote",
+        "detail": "200 threads"
+      },
+      {
+        "uri": "thread/6",
+        "kind": "thread",
+        "label": "#6",
+        "detail": "GET /api/pricing/quote"
+      },
+      {
+        "uri": "thread/8",
+        "kind": "thread",
+        "label": "#8",
+        "detail": "GET /api/pricing/quote"
+      },
+      {
+        "uri": "thread/10",
+        "kind": "thread",
+        "label": "#10",
+        "detail": "GET /api/pricing/quote"
+      },
+      {
+        "uri": "thread/11",
+        "kind": "thread",
+        "label": "#11",
+        "detail": "GET /api/pricing/quote"
+      }
+    ],
+    "findingId": "sync-over-async.PricingClient.GetQuote"
   },
   "vitals": [
     {
       "key": "threads",
       "label": "Threads",
-      "value": "229",
+      "value": "227",
       "detail": "0 blocked \u00B7 0 running",
       "fraction": 0,
       "tone": "neutral"
@@ -30,15 +61,15 @@
     {
       "key": "threadPool",
       "label": "Thread pool",
-      "value": "200/221",
-      "detail": "workers busy",
-      "fraction": 0.9049773755656109,
+      "value": "200/219",
+      "detail": "workers busy \u00B7 0 queued",
+      "fraction": 0.91324200913242,
       "tone": "neutral"
     },
     {
       "key": "heap",
       "label": "Managed heap",
-      "value": "12.0 MB",
+      "value": "11.9 MB",
       "detail": "LOH 0% \u00B7 Gen2 0%",
       "fraction": 0,
       "tone": "accent"
@@ -60,7 +91,87 @@
       "tone": "neutral"
     }
   ],
-  "findings": [],
+  "findings": [
+    {
+      "id": "sync-over-async.PricingClient.GetQuote",
+      "analyzer": "sync-over-async",
+      "severity": "warning",
+      "confidence": "high",
+      "title": "Sync-over-async: 200 threads block on \u0060Task.Result\u0060 in \u0060PricingClient.GetQuote\u0060",
+      "why": "Serving \u0060GET /api/pricing/quote\u0060 \u00B7 each holds a thread-pool thread while it waits",
+      "whatItMeans": "Each thread is parked waiting for an async operation to finish. That operation\u0027s continuation usually needs a pool thread too, so under load the waiting threads starve the pool, and with a synchronization context it can deadlock outright.",
+      "nextSteps": [
+        "Make the call chain async end to end: \u0060await\u0060 the task in \u0060PricingClient.GetQuote\u0060 instead of \u0060Task.Result\u0060, and make its callers async too.",
+        "See what the awaited work is itself waiting for: Threads \u203A Async stacks.",
+        "If it can\u0027t be async yet, at least bound how many requests can block like this at once."
+      ],
+      "symptoms": [
+        "hang",
+        "slowCpu"
+      ],
+      "evidence": [
+        {
+          "uri": "request/GET%20%2Fapi%2Fpricing%2Fquote",
+          "kind": "request",
+          "label": "GET /api/pricing/quote",
+          "detail": "200 threads"
+        },
+        {
+          "uri": "thread/6",
+          "kind": "thread",
+          "label": "#6",
+          "detail": "GET /api/pricing/quote"
+        },
+        {
+          "uri": "thread/8",
+          "kind": "thread",
+          "label": "#8",
+          "detail": "GET /api/pricing/quote"
+        },
+        {
+          "uri": "thread/10",
+          "kind": "thread",
+          "label": "#10",
+          "detail": "GET /api/pricing/quote"
+        },
+        {
+          "uri": "thread/11",
+          "kind": "thread",
+          "label": "#11",
+          "detail": "GET /api/pricing/quote"
+        }
+      ],
+      "score": 69,
+      "visual": "none"
+    },
+    {
+      "id": "async.suspended.SyncOverAsyncScenario.RunAsync lambda",
+      "analyzer": "async-stacks",
+      "severity": "info",
+      "confidence": "medium",
+      "title": "200 async operations are suspended in \u0060SyncOverAsyncScenario.RunAsync lambda\u0060, awaiting Task.Delay",
+      "why": "Logical stack: \u0060SyncOverAsyncScenario.RunAsync lambda\u0060 \u2190 \u0060RequestDelegateFactory.ExecuteAwaited\u0060 \u2190 \u0060HttpProtocol.ProcessRequests\u0060 \u2190 \u0060HttpProtocol.ProcessRequestsAsync\u0060 \u2190 \u2026",
+      "whatItMeans": "These operations aren\u0027t on any thread: they\u0027re awaiting something and will resume when it completes. Many of them stopped at the same place means whatever they await is slow or never finishes.",
+      "nextSteps": [
+        "Find out why Task.Delay doesn\u0027t complete: a downstream that doesn\u0027t answer, a missing timeout, or a TaskCompletionSource nobody sets.",
+        "Give outbound calls a timeout or CancellationToken so they fail fast instead of piling up."
+      ],
+      "symptoms": [
+        "hang",
+        "slowCpu"
+      ],
+      "evidence": [
+        {
+          "uri": "object/0x16236927120",
+          "kind": "object",
+          "label": "SyncOverAsyncScenario.RunAsync lambda",
+          "detail": "innermost async state machine"
+        }
+      ],
+      "score": 24,
+      "visual": "none"
+    }
+  ],
   "busiestRequests": [
     {
       "route": "GET /api/pricing/quote",
@@ -72,16 +183,16 @@
       "id": "runtime",
       "label": "Matched runtime \u0026 resolved DAC",
       "status": "done",
-      "seconds": 0.1050298,
+      "seconds": 0.1069921,
       "detail": "local machine",
       "fraction": null,
       "tone": "neutral"
     },
     {
       "id": "threads",
-      "label": "Read 229 threads \u0026 stacks",
+      "label": "Read 227 threads \u0026 stacks",
       "status": "done",
-      "seconds": 0.6816589,
+      "seconds": 0.6673173,
       "detail": null,
       "fraction": null,
       "tone": "neutral"
@@ -99,8 +210,17 @@
       "id": "heap",
       "label": "Walked the heap",
       "status": "done",
-      "seconds": 0.09745189999999992,
-      "detail": "12.0 MB \u00B7 93,859 objects",
+      "seconds": 0.10098299999999993,
+      "detail": "11.9 MB \u00B7 93,701 objects",
+      "fraction": 1,
+      "tone": "neutral"
+    },
+    {
+      "id": "objects",
+      "label": "Large-object identification",
+      "status": "done",
+      "seconds": 0.2984641,
+      "detail": "0 large objects named \u00B7 241,910 references indexed",
       "fraction": 1,
       "tone": "neutral"
     },
@@ -108,14 +228,14 @@
       "id": "analyzers",
       "label": "Thread-pool, async \u0026 exception analyzers",
       "status": "done",
-      "seconds": 0.0018828000000000733,
-      "detail": "3 analyzers ran",
+      "seconds": 0.016952899999999937,
+      "detail": "11 analyzers ran",
       "fraction": null,
       "tone": "neutral"
     }
   ],
-  "seconds": 0.9408728,
+  "seconds": 1.3003912,
   "complete": true,
   "fromCache": false,
-  "analyzedAt": "2026-11-11T09:01:19.6894246+00:00"
+  "analyzedAt": "2026-11-11T09:31:19.5273225+00:00"
 }

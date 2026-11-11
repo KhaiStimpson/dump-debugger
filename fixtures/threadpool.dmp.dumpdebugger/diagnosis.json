@@ -1,0 +1,214 @@
+{
+  "schemaVersion": 2,
+  "dump": {
+    "path": "C:\\Dev\\repos\\dump-debugger\\fixtures\\threadpool.dmp",
+    "fileName": "threadpool.dmp",
+    "fileSizeBytes": 154365264,
+    "runtime": ".NET 10.0.15",
+    "architecture": "x64",
+    "threadCount": 32,
+    "processName": "DumpDebugger.DumpGen.exe",
+    "dacSource": "local machine"
+  },
+  "verdict": {
+    "severity": "critical",
+    "confidence": "high",
+    "headline": "The app is unresponsive: all 24 thread-pool workers are blocked and 200 work items are waiting for a thread.",
+    "body": "24 of them are waiting in \u0060CatalogService.Search\u0060 (SemaphoreSlim.Wait). Until they\u0027re released, nothing else that needs a pool thread can run.",
+    "entities": [
+      {
+        "uri": "request/GET%20%2Fapi%2Fcatalog%2Fsearch",
+        "kind": "request",
+        "label": "GET /api/catalog/search",
+        "detail": "24 threads"
+      },
+      {
+        "uri": "thread/6",
+        "kind": "thread",
+        "label": "#6",
+        "detail": "GET /api/catalog/search"
+      },
+      {
+        "uri": "thread/8",
+        "kind": "thread",
+        "label": "#8",
+        "detail": "GET /api/catalog/search"
+      },
+      {
+        "uri": "thread/10",
+        "kind": "thread",
+        "label": "#10",
+        "detail": "GET /api/catalog/search"
+      },
+      {
+        "uri": "thread/11",
+        "kind": "thread",
+        "label": "#11",
+        "detail": "GET /api/catalog/search"
+      }
+    ],
+    "findingId": "threadpool.starved"
+  },
+  "vitals": [
+    {
+      "key": "threads",
+      "label": "Threads",
+      "value": "32",
+      "detail": "0 blocked \u00B7 0 running",
+      "fraction": 0,
+      "tone": "neutral"
+    },
+    {
+      "key": "threadPool",
+      "label": "Thread pool",
+      "value": "24/24",
+      "detail": "workers busy \u00B7 200 queued",
+      "fraction": 1,
+      "tone": "warning"
+    },
+    {
+      "key": "heap",
+      "label": "Managed heap",
+      "value": "4.52 MB",
+      "detail": "LOH 0% \u00B7 Gen2 0%",
+      "fraction": 0,
+      "tone": "accent"
+    },
+    {
+      "key": "requests",
+      "label": "Requests in flight",
+      "value": "24",
+      "detail": "0 blocked",
+      "fraction": 0,
+      "tone": "neutral"
+    },
+    {
+      "key": "exceptions",
+      "label": "Exceptions",
+      "value": "0",
+      "detail": "on thread stacks",
+      "fraction": 0,
+      "tone": "neutral"
+    }
+  ],
+  "findings": [
+    {
+      "id": "threadpool.starved",
+      "analyzer": "threadpool-starvation",
+      "severity": "critical",
+      "confidence": "high",
+      "title": "Thread pool starved: all 24 workers busy, 200 work items queued",
+      "why": "24 blocked in \u0060CatalogService.Search\u0060 (SemaphoreSlim.Wait) \u00B7 pool at its maximum of 24",
+      "whatItMeans": "Every thread-pool thread is stuck waiting, so new work (including requests that have nothing to do with the stuck code) can\u0027t start until one frees up. The pool is also at its configured maximum (24), so it can\u0027t add threads at all.",
+      "nextSteps": [
+        "Find what the workers wait on: \u0060CatalogService.Search\u0060 is waiting on \u0060SemaphoreSlim.Wait\u0060 while serving {{request/GET%20%2Fapi%2Fcatalog%2Fsearch}}.",
+        "Don\u0027t block pool threads: make the waiting call async (\u0060await\u0060 the I/O, \u0060await semaphore.WaitAsync()\u0060), so the thread returns to the pool while it waits.",
+        "Check why the pool is capped at 24 (\u0060ThreadPool.SetMaxThreads\u0060 or \u0060System.Threading.ThreadPool.MaxThreads\u0060 in runtimeconfig)."
+      ],
+      "symptoms": [
+        "hang",
+        "slowCpu"
+      ],
+      "evidence": [
+        {
+          "uri": "request/GET%20%2Fapi%2Fcatalog%2Fsearch",
+          "kind": "request",
+          "label": "GET /api/catalog/search",
+          "detail": "24 threads"
+        },
+        {
+          "uri": "thread/6",
+          "kind": "thread",
+          "label": "#6",
+          "detail": "GET /api/catalog/search"
+        },
+        {
+          "uri": "thread/8",
+          "kind": "thread",
+          "label": "#8",
+          "detail": "GET /api/catalog/search"
+        },
+        {
+          "uri": "thread/10",
+          "kind": "thread",
+          "label": "#10",
+          "detail": "GET /api/catalog/search"
+        },
+        {
+          "uri": "thread/11",
+          "kind": "thread",
+          "label": "#11",
+          "detail": "GET /api/catalog/search"
+        }
+      ],
+      "score": 116.72,
+      "visual": "none"
+    }
+  ],
+  "busiestRequests": [
+    {
+      "route": "GET /api/catalog/search",
+      "threads": 24
+    }
+  ],
+  "stages": [
+    {
+      "id": "runtime",
+      "label": "Matched runtime \u0026 resolved DAC",
+      "status": "done",
+      "seconds": 0.1214841,
+      "detail": "local machine",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "threads",
+      "label": "Read 32 threads \u0026 stacks",
+      "status": "done",
+      "seconds": 0.1711794,
+      "detail": null,
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "locks",
+      "label": "Locks \u0026 wait-for graph",
+      "status": "done",
+      "seconds": 0,
+      "detail": "no contention",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "heap",
+      "label": "Walked the heap",
+      "status": "done",
+      "seconds": 0.03932019999999997,
+      "detail": "4.52 MB \u00B7 40,871 objects",
+      "fraction": 1,
+      "tone": "neutral"
+    },
+    {
+      "id": "objects",
+      "label": "Large-object identification",
+      "status": "done",
+      "seconds": 0.17483150000000003,
+      "detail": "0 large objects named \u00B7 90,167 references indexed",
+      "fraction": 1,
+      "tone": "neutral"
+    },
+    {
+      "id": "analyzers",
+      "label": "Thread-pool, async \u0026 exception analyzers",
+      "status": "done",
+      "seconds": 0.017041699999999993,
+      "detail": "11 analyzers ran",
+      "fraction": null,
+      "tone": "neutral"
+    }
+  ],
+  "seconds": 0.6246423,
+  "complete": true,
+  "fromCache": false,
+  "analyzedAt": "2026-11-11T09:31:09.6716466+00:00"
+}

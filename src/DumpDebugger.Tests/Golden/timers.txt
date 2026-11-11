@@ -1,0 +1,13 @@
+verdict: Warning/High
+  5,000 timers waiting to call SessionCache.Touch lambda, kept by SessionCache.
+  Each `System.Threading.Timer` stays registered, and keeps its callback, its state and everything they reference alive, until it's disposed. A timer created per session or per request and stored somewhere piles up, and so does everything it captures.
+finding timers.leak Warning/High [HighMemory,SlowCpu]
+  title: 5,000 timers waiting to call `SessionCache.Touch lambda`, kept by `SessionCache`
+  why: 5,000 timers registered in total · next due in 0:20:00
+  means: Each `System.Threading.Timer` stays registered, and keeps its callback, its state and everything they reference alive, until it's disposed. A timer created per session or per request and stored somewhere piles up, and so does everything it captures.
+  next: Dispose (and remove) the timer when its entry goes away in `SessionCache`.
+  next: Use one timer that sweeps all entries instead of one timer per entry.
+  next: For cache expiry, `MemoryCache` with an expiration does this without a timer per item.
+  evidence: Object TimerQueueTimer
+  evidence: Type TimerQueueTimer
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()

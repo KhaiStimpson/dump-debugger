@@ -41,6 +41,14 @@ public sealed class ThreadRecord
     public required string? Request { get; init; }
     public required string? RequestPath { get; init; }
     public required string? Exception { get; init; }
+
+    public string? ExceptionMessage { get; init; }
+
+    /// <summary>The exception is mid-dispatch (the runtime's exception-handling frames are on top): no handler has run yet.</summary>
+    public bool ExceptionDispatching { get; init; }
+
+    /// <summary>Where the in-flight exception was thrown: the first application frame of its stack trace.</summary>
+    public string? ExceptionThrownIn { get; init; }
     public required string StackSignature { get; init; }
 
     public ThreadState State { get; set; }
@@ -132,9 +140,14 @@ public static class ThreadModelBuilder
         var signature = Hash(frames.Where(f => f.Kind == FrameKind.App).Select(f => f.Display).Append(wait.ToString()));
 
         string? exception = null;
+        string? exceptionMessage = null;
+        string? thrownIn = null;
         try
         {
-            exception = thread.CurrentException?.Type?.Name;
+            var ex = thread.CurrentException;
+            exception = ex?.Type?.Name;
+            exceptionMessage = ex?.Message;
+            thrownIn = ex?.StackTrace.Select(f => f.Method).FirstOrDefault(m => m is not null && FrameClassifier.IsAppType(m.Type?.Name, m.Type?.Module)) is { } m ? FrameClassifier.DisplayName(m) : null;
         }
         catch
         {
@@ -156,6 +169,11 @@ public static class ThreadModelBuilder
             Request = request?.Route,
             RequestPath = request?.Path,
             Exception = exception,
+            ExceptionMessage = exceptionMessage,
+            ExceptionThrownIn = thrownIn,
+            ExceptionDispatching = exception is not null && frames.Take(8).Any(f =>
+                f.FullName?.StartsWith("System.Runtime.EH.", StringComparison.Ordinal) == true
+                || f.Display is "[SoftwareExceptionFrame]" or "[FaultingExceptionFrame]" or "[HelperMethodFrame]"),
             StackSignature = signature,
             State = state,
             StateLabel = stateLabel,
@@ -247,10 +265,16 @@ public static class ThreadModelBuilder
             if (name is "Wait" or "WaitOne" or "WaitOneNoCheck" or "WaitAny" or "WaitAnyMultiple" or "WaitMultiple" or "WaitCore"
                 && (type.StartsWith("System.Threading.", StringComparison.Ordinal)))
             {
-                var label = type switch
+                // Name the primitive the app actually called: Monitor.Wait inside SemaphoreSlim.Wait is a semaphore wait.
+                var primitive = managed.Skip(managed.ToList().IndexOf(m)).Take(6).Select(x => x.Type?.Name)
+                    .LastOrDefault(t => t is "System.Threading.SemaphoreSlim" or "System.Threading.ManualResetEventSlim" or "System.Threading.CountdownEvent" or "System.Threading.Barrier" or "System.Threading.ReaderWriterLockSlim") ?? type;
+                var label = primitive switch
                 {
                     "System.Threading.SemaphoreSlim" => "SemaphoreSlim.Wait",
                     "System.Threading.ManualResetEventSlim" => "Waiting · event",
+                    "System.Threading.CountdownEvent" => "CountdownEvent.Wait",
+                    "System.Threading.Barrier" => "Barrier.SignalAndWait",
+                    "System.Threading.ReaderWriterLockSlim" => "ReaderWriterLockSlim",
                     "System.Threading.Monitor" => "Monitor.Wait",
                     _ => "Waiting · handle",
                 };

@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 2,
+  "dump": {
+    "path": "C:\\Dev\\repos\\dump-debugger\\fixtures\\timers.dmp",
+    "fileName": "timers.dmp",
+    "fileSizeBytes": 106589902,
+    "runtime": ".NET 10.0.15",
+    "architecture": "x64",
+    "threadCount": 4,
+    "processName": "DumpDebugger.DumpGen.exe",
+    "dacSource": "local machine"
+  },
+  "verdict": {
+    "severity": "warning",
+    "confidence": "high",
+    "headline": "5,000 timers waiting to call SessionCache.Touch lambda, kept by SessionCache.",
+    "body": "Each \u0060System.Threading.Timer\u0060 stays registered, and keeps its callback, its state and everything they reference alive, until it\u0027s disposed. A timer created per session or per request and stored somewhere piles up, and so does everything it captures.",
+    "entities": [
+      {
+        "uri": "object/0x24dce8a77d0",
+        "kind": "object",
+        "label": "TimerQueueTimer",
+        "detail": "one of 5,000"
+      },
+      {
+        "uri": "type/System.Threading.TimerQueueTimer",
+        "kind": "type",
+        "label": "TimerQueueTimer",
+        "detail": "5,000 instances"
+      }
+    ],
+    "findingId": "timers.leak"
+  },
+  "vitals": [
+    {
+      "key": "threads",
+      "label": "Threads",
+      "value": "4",
+      "detail": "0 blocked \u00B7 0 running",
+      "fraction": 0,
+      "tone": "neutral"
+    },
+    {
+      "key": "threadPool",
+      "label": "Thread pool",
+      "value": "\u2014",
+      "detail": "workers busy \u00B7 0 queued",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "key": "heap",
+      "label": "Managed heap",
+      "value": "2.86 MB",
+      "detail": "LOH 5% \u00B7 Gen2 0%",
+      "fraction": 0.04601872152713046,
+      "tone": "accent"
+    },
+    {
+      "key": "requests",
+      "label": "Requests in flight",
+      "value": "0",
+      "detail": "none found on threads",
+      "fraction": 0,
+      "tone": "neutral"
+    },
+    {
+      "key": "exceptions",
+      "label": "Exceptions",
+      "value": "0",
+      "detail": "on thread stacks",
+      "fraction": 0,
+      "tone": "neutral"
+    }
+  ],
+  "findings": [
+    {
+      "id": "timers.leak",
+      "analyzer": "timers",
+      "severity": "warning",
+      "confidence": "high",
+      "title": "5,000 timers waiting to call \u0060SessionCache.Touch lambda\u0060, kept by \u0060SessionCache\u0060",
+      "why": "5,000 timers registered in total \u00B7 next due in 0:20:00",
+      "whatItMeans": "Each \u0060System.Threading.Timer\u0060 stays registered, and keeps its callback, its state and everything they reference alive, until it\u0027s disposed. A timer created per session or per request and stored somewhere piles up, and so does everything it captures.",
+      "nextSteps": [
+        "Dispose (and remove) the timer when its entry goes away in \u0060SessionCache\u0060.",
+        "Use one timer that sweeps all entries instead of one timer per entry.",
+        "For cache expiry, \u0060MemoryCache\u0060 with an expiration does this without a timer per item."
+      ],
+      "symptoms": [
+        "highMemory",
+        "slowCpu"
+      ],
+      "evidence": [
+        {
+          "uri": "object/0x24dce8a77d0",
+          "kind": "object",
+          "label": "TimerQueueTimer",
+          "detail": "one of 5,000"
+        },
+        {
+          "uri": "type/System.Threading.TimerQueueTimer",
+          "kind": "type",
+          "label": "TimerQueueTimer",
+          "detail": "5,000 instances"
+        }
+      ],
+      "score": 62.25,
+      "visual": "none"
+    }
+  ],
+  "busiestRequests": [],
+  "stages": [
+    {
+      "id": "runtime",
+      "label": "Matched runtime \u0026 resolved DAC",
+      "status": "done",
+      "seconds": 0.1200685,
+      "detail": "local machine",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "threads",
+      "label": "Read 4 threads \u0026 stacks",
+      "status": "done",
+      "seconds": 0.09662690000000002,
+      "detail": null,
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "locks",
+      "label": "Locks \u0026 wait-for graph",
+      "status": "done",
+      "seconds": 0,
+      "detail": "no contention",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "heap",
+      "label": "Walked the heap",
+      "status": "done",
+      "seconds": 0.039071999999999996,
+      "detail": "2.86 MB \u00B7 50,970 objects",
+      "fraction": 1,
+      "tone": "neutral"
+    },
+    {
+      "id": "objects",
+      "label": "Large-object identification",
+      "status": "done",
+      "seconds": 0.06864180000000003,
+      "detail": "1 large object named \u00B7 102,641 references indexed",
+      "fraction": 1,
+      "tone": "neutral"
+    },
+    {
+      "id": "analyzers",
+      "label": "Thread-pool, async \u0026 exception analyzers",
+      "status": "done",
+      "seconds": 0.07982830000000002,
+      "detail": "11 analyzers ran",
+      "fraction": null,
+      "tone": "neutral"
+    }
+  ],
+  "seconds": 0.48805770000000004,
+  "complete": true,
+  "fromCache": false,
+  "analyzedAt": "2026-11-11T09:31:15.7359421+00:00"
+}

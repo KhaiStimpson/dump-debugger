@@ -3,7 +3,7 @@
   "dump": {
     "path": "C:\\Dev\\repos\\dump-debugger\\fixtures\\deadlock.dmp",
     "fileName": "deadlock.dmp",
-    "fileSizeBytes": 150603014,
+    "fileSizeBytes": 151269310,
     "runtime": ".NET 10.0.15",
     "architecture": "x64",
     "threadCount": 33,
@@ -14,12 +14,12 @@
     "severity": "critical",
     "confidence": "high",
     "headline": "The app is hung: 2 requests are deadlocked, and 10 more threads are queued behind them.",
-    "body": "{{thread/14}} holds {{lock/0x222350a5dd0}} and wants {{lock/0x222350a5e40}}. {{thread/6}} holds {{lock/0x222350a5e40}} and wants {{lock/0x222350a5dd0}}. Neither can proceed, so everything that needs either lock is stuck.",
+    "body": "{{thread/13}} holds {{lock/0x226f18a6230}} and wants {{lock/0x226f18a62a0}}. {{thread/6}} holds {{lock/0x226f18a62a0}} and wants {{lock/0x226f18a6230}}. Neither can proceed, so everything that needs either lock is stuck.",
     "entities": [
       {
-        "uri": "thread/14",
+        "uri": "thread/13",
         "kind": "thread",
-        "label": "#14",
+        "label": "#13",
         "detail": "POST /api/orders/checkout"
       },
       {
@@ -29,16 +29,16 @@
         "detail": "POST /api/inventory/reserve"
       },
       {
-        "uri": "lock/0x222350a5e40",
+        "uri": "lock/0x226f18a62a0",
         "kind": "lock",
         "label": "InventoryCache._sync",
-        "detail": "0x222350a5e40"
+        "detail": "0x226f18a62a0"
       },
       {
-        "uri": "lock/0x222350a5dd0",
+        "uri": "lock/0x226f18a6230",
         "kind": "lock",
         "label": "OrderLedger._gate",
-        "detail": "0x222350a5dd0"
+        "detail": "0x226f18a6230"
       },
       {
         "uri": "request/POST%20%2Fapi%2Forders%2Fcheckout",
@@ -68,14 +68,14 @@
       "key": "threadPool",
       "label": "Thread pool",
       "value": "12/25",
-      "detail": "workers busy",
+      "detail": "workers busy \u00B7 0 queued",
       "fraction": 0.48,
       "tone": "neutral"
     },
     {
       "key": "heap",
       "label": "Managed heap",
-      "value": "2.33 MB",
+      "value": "2.57 MB",
       "detail": "LOH 0% \u00B7 Gen2 0%",
       "fraction": 0,
       "tone": "accent"
@@ -84,7 +84,7 @@
       "key": "requests",
       "label": "Requests in flight",
       "value": "12",
-      "detail": "12 blocked",
+      "detail": "12 stuck waiting",
       "fraction": 1,
       "tone": "warning"
     },
@@ -108,8 +108,8 @@
       "whatItMeans": "Two pieces of code take the same two locks in opposite order. Under load they eventually interleave: each grabs its first lock, then waits forever for the other\u0027s. Anything else that needs either lock queues behind them. The process won\u0027t recover without a restart.",
       "nextSteps": [
         "Restart the process (or recycle the app pool) to recover now. A deadlocked process doesn\u0027t heal on its own.",
-        "Take the locks in one order everywhere: {{lock/0x222350a5dd0}} before {{lock/0x222350a5e40}}, as \u0060CheckoutService.Commit\u0060 does. \u0060InventoryService.Reserve\u0060 takes them the other way round.",
-        "Or don\u0027t call out while holding a lock: \u0060CheckoutService.Commit\u0060 calls \u0060InventoryCache.TryReserve\u0060 while it holds {{lock/0x222350a5dd0}}."
+        "Take the locks in one order everywhere: {{lock/0x226f18a6230}} before {{lock/0x226f18a62a0}}, as \u0060CheckoutService.Commit\u0060 does. \u0060InventoryService.Reserve\u0060 takes them the other way round.",
+        "Or don\u0027t call out while holding a lock: \u0060CheckoutService.Commit\u0060 calls \u0060InventoryCache.TryReserve\u0060 while it holds {{lock/0x226f18a6230}}."
       ],
       "symptoms": [
         "hang",
@@ -117,9 +117,9 @@
       ],
       "evidence": [
         {
-          "uri": "thread/14",
+          "uri": "thread/13",
           "kind": "thread",
-          "label": "#14",
+          "label": "#13",
           "detail": "POST /api/orders/checkout"
         },
         {
@@ -129,16 +129,16 @@
           "detail": "POST /api/inventory/reserve"
         },
         {
-          "uri": "lock/0x222350a5e40",
+          "uri": "lock/0x226f18a62a0",
           "kind": "lock",
           "label": "InventoryCache._sync",
-          "detail": "0x222350a5e40"
+          "detail": "0x226f18a62a0"
         },
         {
-          "uri": "lock/0x222350a5dd0",
+          "uri": "lock/0x226f18a6230",
           "kind": "lock",
           "label": "OrderLedger._gate",
-          "detail": "0x222350a5dd0"
+          "detail": "0x226f18a6230"
         },
         {
           "uri": "request/POST%20%2Fapi%2Forders%2Fcheckout",
@@ -180,7 +180,7 @@
       "id": "runtime",
       "label": "Matched runtime \u0026 resolved DAC",
       "status": "done",
-      "seconds": 0.1009404,
+      "seconds": 0.1242574,
       "detail": "local machine",
       "fraction": null,
       "tone": "neutral"
@@ -189,7 +189,7 @@
       "id": "threads",
       "label": "Read 33 threads \u0026 stacks",
       "status": "done",
-      "seconds": 0.1750137,
+      "seconds": 0.1688055,
       "detail": null,
       "fraction": null,
       "tone": "neutral"
@@ -207,8 +207,8 @@
       "id": "heap",
       "label": "Walked the heap",
       "status": "done",
-      "seconds": 0.044838900000000015,
-      "detail": "2.33 MB \u00B7 27,901 objects",
+      "seconds": 0.03651549999999998,
+      "detail": "2.57 MB \u00B7 27,923 objects",
       "fraction": 1,
       "tone": "neutral"
     },
@@ -216,8 +216,8 @@
       "id": "objects",
       "label": "Large-object identification",
       "status": "done",
-      "seconds": 0.09827810000000003,
-      "detail": "0 large objects named \u00B7 53,782 references indexed",
+      "seconds": 0.15639390000000003,
+      "detail": "0 large objects named \u00B7 53,768 references indexed",
       "fraction": 1,
       "tone": "neutral"
     },
@@ -225,14 +225,14 @@
       "id": "analyzers",
       "label": "Thread-pool, async \u0026 exception analyzers",
       "status": "done",
-      "seconds": 0.0023315999999999892,
-      "detail": "3 analyzers ran",
+      "seconds": 0.050869399999999954,
+      "detail": "11 analyzers ran",
       "fraction": null,
       "tone": "neutral"
     }
   ],
-  "seconds": 0.48449929999999997,
+  "seconds": 0.643905,
   "complete": true,
   "fromCache": false,
-  "analyzedAt": "2026-11-11T09:16:05.5794921+00:00"
+  "analyzedAt": "2026-11-11T09:33:21.7427511+00:00"
 }

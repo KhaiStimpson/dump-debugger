@@ -53,6 +53,7 @@ public static class RpcCatalog
         Worker<ObjectQuery, ObjectView>("objects.inspect"),
         Worker<ReferrersQuery, Page<Referrer>>("objects.referrers"),
         Worker<RootsQuery, RootPathsResult>("objects.roots"),
+        Worker<NoParams, AsyncStacksResult>("async.stacks"),
     ];
 
     public static readonly IReadOnlyList<RpcNotificationInfo> Notifications =

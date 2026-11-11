@@ -1,0 +1,17 @@
+verdict: Critical/High
+  The app is unresponsive: all 24 thread-pool workers are blocked and N work items are waiting for a thread.
+  24 of them are waiting in `CatalogService.Search` (SemaphoreSlim.Wait). Until they're released, nothing else that needs a pool thread can run.
+finding threadpool.starved Critical/High [Hang,SlowCpu]
+  title: Thread pool starved: all 24 workers busy, N work items queued
+  why: 24 blocked in `CatalogService.Search` (SemaphoreSlim.Wait) · pool at its maximum of 24
+  means: Every thread-pool thread is stuck waiting, so new work (including requests that have nothing to do with the stuck code) can't start until one frees up. The pool is also at its configured maximum (24), so it can't add threads at all.
+  next: Find what the workers wait on: `CatalogService.Search` is waiting on `SemaphoreSlim.Wait` while serving [GET /api/catalog/search].
+  next: Don't block pool threads: make the waiting call async (`await` the I/O, `await semaphore.WaitAsync()`), so the thread returns to the pool while it waits.
+  next: Check why the pool is capped at 24 (`ThreadPool.SetMaxThreads` or `System.Threading.ThreadPool.MaxThreads` in runtimeconfig).
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Request GET /api/catalog/search
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()
+group: 24 × CatalogService.Search(string) | GET /api/catalog/search | SemaphoreSlim.Wait

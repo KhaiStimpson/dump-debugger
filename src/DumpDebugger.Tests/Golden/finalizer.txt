@@ -1,0 +1,17 @@
+verdict: Critical/High
+  Finalizer thread is blocked; 50,010 objects are waiting to be finalized.
+  One thread runs every finalizer, one at a time. While it's stuck, nothing that needs finalizing is released, so memory and any native handles those objects own keep growing until the process runs out.
+finding finalizer.backlog Critical/High [HighMemory,Hang]
+  title: Finalizer thread is blocked; 50,010 objects are waiting to be finalized
+  why: Finalizer thread stuck in `LegacyConnection.Finalize` waiting for [LegacyConnectionPool.Gate] held by [#N] · mostly `LegacyConnection` (49,998)
+  means: One thread runs every finalizer, one at a time. While it's stuck, nothing that needs finalizing is released, so memory and any native handles those objects own keep growing until the process runs out.
+  next: Never block in a finalizer: remove the lock or I/O from `LegacyConnection.Finalize`; wrap native resources in a `SafeHandle` instead.
+  next: Dispose `LegacyConnection` deterministically (`using`) and call `GC.SuppressFinalize`, so the finalizer has nothing to do.
+  next: See why [#N] holds the lock and never releases it.
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Lock LegacyConnectionPool.Gate
+  evidence: Type LegacyConnection
+group: 1 × FinalizerScenario.RunAsync lambda() |  | Sleeping
+group: 1 × LegacyConnection.Finalize() |  | Waiting on #N
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()

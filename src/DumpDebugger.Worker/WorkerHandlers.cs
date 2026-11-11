@@ -116,6 +116,18 @@ public sealed class WorkerHandlers : IDisposable
                     return ContractJson.ToElement(await RequireRuntime().WithClrAsync(() => explorer.FindRoots(q, ct), ct));
                 }
 
+            case "async.stacks":
+                {
+                    var index = RequireRuntime();
+                    if (index.AsyncStacks is null)
+                    {
+                        var explorer = await index.EnsureExplorerAsync(null, ct);
+                        index.AsyncStacks = await index.WithClrAsync(() => AsyncStackWalker.Walk(index.Runtime, explorer.Index, ct), ct);
+                    }
+
+                    return ContractJson.ToElement(index.AsyncStacks);
+                }
+
             default:
                 throw new RpcException(new RpcError(RpcError.MethodNotFound, $"Worker has no method '{method}'."));
         }

@@ -91,11 +91,15 @@ internal static partial class Golden
         s = Address().Replace(s, "0x…");
         s = ThreadUri().Replace(s, "thread/N");
         s = ThreadNumber().Replace(s, "#N");
+        s = WorkItems().Replace(s, "N work items");
         return s;
     }
 
     [GeneratedRegex(@"{{([^}]+)}}")]
     private static partial Regex Chip();
+
+    [GeneratedRegex(@"\d[\d,]* work items?")]
+    private static partial Regex WorkItems();
 
     [GeneratedRegex("0x[0-9a-f]{6,}")]
     private static partial Regex Address();

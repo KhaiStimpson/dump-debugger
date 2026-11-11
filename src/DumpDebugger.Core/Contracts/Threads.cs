@@ -98,3 +98,8 @@ public sealed record ThreadDetail(
     EntityRef? WaitingForOwner,
     IReadOnlyList<EntityRef> StackObjects,
     IReadOnlyList<int> SameStack);
+
+/// <summary>Pending async operations with the same logical stack (innermost method first) and the same thing awaited.</summary>
+public sealed record AsyncStackGroup(int Count, IReadOnlyList<string> Frames, string Awaiting, string? FirstAppFrame, IReadOnlyList<ulong> Samples);
+
+public sealed record AsyncStacksResult(IReadOnlyList<AsyncStackGroup> Groups, int Pending);

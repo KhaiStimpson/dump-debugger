@@ -1,0 +1,12 @@
+verdict: Warning/High
+  Large Object Heap is 49% free space (fragmented).
+  Objects of 85 KB or more go on the Large Object Heap, which the GC doesn't compact by default. When large buffers are allocated and dropped in mixed order, the gaps they leave are often too small or badly placed for the next allocation, so the process holds memory it isn't using.
+finding loh.fragmentation Warning/High [HighMemory]
+  title: Large Object Heap is 49% free space (fragmented)
+  why: 193 MB free between 201 MB of live large objects
+  means: Objects of 85 KB or more go on the Large Object Heap, which the GC doesn't compact by default. When large buffers are allocated and dropped in mixed order, the gaps they leave are often too small or badly placed for the next allocation, so the process holds memory it isn't using.
+  next: Reuse large buffers instead of allocating new ones: `ArrayPool<byte>.Shared`, or `RecyclableMemoryStream` for streams.
+  next: Keep buffers under 85 KB where you can (chunk large payloads).
+  next: As a stopgap, set `GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce` before a full GC to compact it once.
+  evidence: Type byte[]
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()

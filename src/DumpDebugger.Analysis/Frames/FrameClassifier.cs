@@ -89,6 +89,13 @@ public static partial class FrameClassifier
         return $"{typePart}.{methodPart}({parameters})";
     }
 
+    /// <summary>An async state machine type (<c>Contoso.RatesClient+&lt;GetRateAsync&gt;d__1</c>) as its method: <c>RatesClient.GetRateAsync</c>.</summary>
+    public static string AsyncMethodName(string stateMachineType)
+    {
+        var (typePart, methodPart) = Unwrap(stateMachineType, "MoveNext");
+        return $"{typePart}.{methodPart.Replace(" (async)", "")}";
+    }
+
     /// <summary>Display without parameters, for titles: <c>CheckoutService.Commit</c>.</summary>
     public static string DisplayName(ClrMethod method)
     {

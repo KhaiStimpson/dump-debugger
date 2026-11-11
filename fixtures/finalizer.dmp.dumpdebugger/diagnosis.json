@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 2,
+  "dump": {
+    "path": "C:\\Dev\\repos\\dump-debugger\\fixtures\\finalizer.dmp",
+    "fileName": "finalizer.dmp",
+    "fileSizeBytes": 106950649,
+    "runtime": ".NET 10.0.15",
+    "architecture": "x64",
+    "threadCount": 4,
+    "processName": "DumpDebugger.DumpGen.exe",
+    "dacSource": "local machine"
+  },
+  "verdict": {
+    "severity": "critical",
+    "confidence": "high",
+    "headline": "Finalizer thread is blocked; 50,010 objects are waiting to be finalized.",
+    "body": "One thread runs every finalizer, one at a time. While it\u0027s stuck, nothing that needs finalizing is released, so memory and any native handles those objects own keep growing until the process runs out.",
+    "entities": [
+      {
+        "uri": "thread/1",
+        "kind": "thread",
+        "label": "#1",
+        "detail": "LegacyConnection.Finalize"
+      },
+      {
+        "uri": "lock/0x1c3ae0a7048",
+        "kind": "lock",
+        "label": "LegacyConnectionPool.Gate",
+        "detail": "0x1c3ae0a7048"
+      },
+      {
+        "uri": "thread/4",
+        "kind": "thread",
+        "label": "#4",
+        "detail": "FinalizerScenario.RunAsync lambda"
+      },
+      {
+        "uri": "type/Contoso.Data.LegacyConnection",
+        "kind": "type",
+        "label": "LegacyConnection",
+        "detail": "49,998 waiting"
+      }
+    ],
+    "findingId": "finalizer.backlog"
+  },
+  "vitals": [
+    {
+      "key": "threads",
+      "label": "Threads",
+      "value": "4",
+      "detail": "1 blocked \u00B7 0 running",
+      "fraction": 0.25,
+      "tone": "critical"
+    },
+    {
+      "key": "threadPool",
+      "label": "Thread pool",
+      "value": "\u2014",
+      "detail": "workers busy \u00B7 0 queued",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "key": "heap",
+      "label": "Managed heap",
+      "value": "1.49 MB",
+      "detail": "LOH 0% \u00B7 Gen2 0%",
+      "fraction": 0,
+      "tone": "accent"
+    },
+    {
+      "key": "requests",
+      "label": "Requests in flight",
+      "value": "0",
+      "detail": "none found on threads",
+      "fraction": 0,
+      "tone": "neutral"
+    },
+    {
+      "key": "exceptions",
+      "label": "Exceptions",
+      "value": "0",
+      "detail": "on thread stacks",
+      "fraction": 0,
+      "tone": "neutral"
+    }
+  ],
+  "findings": [
+    {
+      "id": "finalizer.backlog",
+      "analyzer": "finalizer",
+      "severity": "critical",
+      "confidence": "high",
+      "title": "Finalizer thread is blocked; 50,010 objects are waiting to be finalized",
+      "why": "Finalizer thread stuck in \u0060LegacyConnection.Finalize\u0060 waiting for {{lock/0x1c3ae0a7048}} held by {{thread/4}} \u00B7 mostly \u0060LegacyConnection\u0060 (49,998)",
+      "whatItMeans": "One thread runs every finalizer, one at a time. While it\u0027s stuck, nothing that needs finalizing is released, so memory and any native handles those objects own keep growing until the process runs out.",
+      "nextSteps": [
+        "Never block in a finalizer: remove the lock or I/O from \u0060LegacyConnection.Finalize\u0060; wrap native resources in a \u0060SafeHandle\u0060 instead.",
+        "Dispose \u0060LegacyConnection\u0060 deterministically (\u0060using\u0060) and call \u0060GC.SuppressFinalize\u0060, so the finalizer has nothing to do.",
+        "See why {{thread/4}} holds the lock and never releases it."
+      ],
+      "symptoms": [
+        "highMemory",
+        "hang"
+      ],
+      "evidence": [
+        {
+          "uri": "thread/1",
+          "kind": "thread",
+          "label": "#1",
+          "detail": "LegacyConnection.Finalize"
+        },
+        {
+          "uri": "lock/0x1c3ae0a7048",
+          "kind": "lock",
+          "label": "LegacyConnectionPool.Gate",
+          "detail": "0x1c3ae0a7048"
+        },
+        {
+          "uri": "thread/4",
+          "kind": "thread",
+          "label": "#4",
+          "detail": "FinalizerScenario.RunAsync lambda"
+        },
+        {
+          "uri": "type/Contoso.Data.LegacyConnection",
+          "kind": "type",
+          "label": "LegacyConnection",
+          "detail": "49,998 waiting"
+        }
+      ],
+      "score": 119,
+      "visual": "waitGraph"
+    }
+  ],
+  "busiestRequests": [],
+  "stages": [
+    {
+      "id": "runtime",
+      "label": "Matched runtime \u0026 resolved DAC",
+      "status": "done",
+      "seconds": 0.1228521,
+      "detail": "local machine",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "threads",
+      "label": "Read 4 threads \u0026 stacks",
+      "status": "done",
+      "seconds": 0.0896883,
+      "detail": null,
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "locks",
+      "label": "Locks \u0026 wait-for graph",
+      "status": "done",
+      "seconds": 0,
+      "detail": "1 contended lock",
+      "fraction": null,
+      "tone": "neutral"
+    },
+    {
+      "id": "heap",
+      "label": "Walked the heap",
+      "status": "done",
+      "seconds": 0.0930087,
+      "detail": "1.49 MB \u00B7 53,864 objects",
+      "fraction": 1,
+      "tone": "neutral"
+    },
+    {
+      "id": "objects",
+      "label": "Large-object identification",
+      "status": "done",
+      "seconds": 0.08681669999999997,
+      "detail": "0 large objects named \u00B7 8,421 references indexed",
+      "fraction": 1,
+      "tone": "neutral"
+    },
+    {
+      "id": "analyzers",
+      "label": "Thread-pool, async \u0026 exception analyzers",
+      "status": "done",
+      "seconds": 0.047927799999999965,
+      "detail": "11 analyzers ran",
+      "fraction": null,
+      "tone": "neutral"
+    }
+  ],
+  "seconds": 0.5211275,
+  "complete": true,
+  "fromCache": false,
+  "analyzedAt": "2026-11-11T09:31:12.7972969+00:00"
+}

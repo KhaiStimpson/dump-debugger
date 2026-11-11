@@ -1,0 +1,13 @@
+verdict: Warning/Medium
+  201 HttpClient instances and 802 sockets: a new client per call in RatesClient.GetRateAsync.
+  Each HttpClient gets its own handler and connection pool, so connections aren't shared or reused. Every call pays for a new TCP (and TLS) handshake, and under load the machine runs out of outbound ports ("Only one usage of each socket address is normally permitted").
+finding http.client-per-call Warning/Medium [SlowCpu,Hang]
+  title: 201 `HttpClient` instances and 802 sockets: a new client per call in `RatesClient.GetRateAsync`
+  why: 402 handlers, each with its own connection pool
+  means: Each HttpClient gets its own handler and connection pool, so connections aren't shared or reused. Every call pays for a new TCP (and TLS) handshake, and under load the machine runs out of outbound ports ("Only one usage of each socket address is normally permitted").
+  next: Create one `HttpClient` and reuse it for the life of the app, or use `IHttpClientFactory`.
+  next: If you need DNS changes to be picked up, set `SocketsHttpHandler.PooledConnectionLifetime` on the shared handler instead of recreating clients.
+  next: Start in `RatesClient.GetRateAsync`, which creates them.
+  evidence: Type HttpClient
+  evidence: Type Socket
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()

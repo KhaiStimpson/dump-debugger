@@ -1,0 +1,24 @@
+verdict: Warning/High
+  TimeoutException in flight on 5 threads, in RetryPolicy.Backoff.
+  Each of these threads caught an exception and is now waiting inside the handling code. Whatever it's waiting for keeps the request open; retry or back-off logic that never gives up looks exactly like this.
+finding exceptions.inflight.System.TimeoutException.RetryPolicy.Backoff Warning/High [Crash,Hang]
+  title: `TimeoutException` in flight on 5 threads, in `RetryPolicy.Backoff`
+  why: "Payment gateway did not answer within 30 s for cart C-1." · sleeping
+  means: Each of these threads caught an exception and is now waiting inside the handling code. Whatever it's waiting for keeps the request open; retry or back-off logic that never gives up looks exactly like this.
+  next: These threads are waiting inside the handler (`RetryPolicy.Backoff`): bound the retry or back-off (attempts and total time) and fail the request instead of waiting forever.
+  next: Fix the cause: `TimeoutException` is thrown in `PaymentGateway.Authorize`.
+  next: Open a thread to see the full stack and the exception's message.
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Thread #N
+finding exceptions.storm Info/High [HighMemory,SlowCpu]
+  title: 2,005 exception objects are alive, mostly `InvalidOperationException` kept by `ErrorLog.s_recent`
+  why: e.g. "Cart C-0 is locked by another checkout." · 2,000 × InvalidOperationException
+  means: Exceptions are expensive to throw (stack capture) and, kept in a list or log, they keep their stack traces and everything they reference alive. Thousands of them usually mean an exception used for control flow, or an error log with no cap.
+  next: Cap or flush `ErrorLog.s_recent`: keep the last N, or log and drop the object.
+  next: If the same exception is thrown on a hot path, check the condition up front instead of throwing.
+  evidence: Type InvalidOperationException
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()
+group: 5 × RetryPolicy.Backoff(Exception) | POST /api/payments/charge | Sleeping

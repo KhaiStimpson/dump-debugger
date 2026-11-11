@@ -1,0 +1,24 @@
+verdict: Warning/High
+  Sync-over-async: 200 threads block on Task.Result in PricingClient.GetQuote.
+  Each thread is parked waiting for an async operation to finish. That operation's continuation usually needs a pool thread too, so under load the waiting threads starve the pool, and with a synchronization context it can deadlock outright.
+finding sync-over-async.PricingClient.GetQuote Warning/High [Hang,SlowCpu]
+  title: Sync-over-async: 200 threads block on `Task.Result` in `PricingClient.GetQuote`
+  why: Serving `GET /api/pricing/quote` · each holds a thread-pool thread while it waits
+  means: Each thread is parked waiting for an async operation to finish. That operation's continuation usually needs a pool thread too, so under load the waiting threads starve the pool, and with a synchronization context it can deadlock outright.
+  next: Make the call chain async end to end: `await` the task in `PricingClient.GetQuote` instead of `Task.Result`, and make its callers async too.
+  next: See what the awaited work is itself waiting for: Threads › Async stacks.
+  next: If it can't be async yet, at least bound how many requests can block like this at once.
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Request GET /api/pricing/quote
+finding async.suspended.SyncOverAsyncScenario.RunAsync lambda Info/Medium [Hang,SlowCpu]
+  title: 200 async operations are suspended in `SyncOverAsyncScenario.RunAsync lambda`, awaiting Task.Delay
+  why: Logical stack: `SyncOverAsyncScenario.RunAsync lambda` ← `RequestDelegateFactory.ExecuteAwaited` ← `HttpProtocol.ProcessRequests` ← `HttpProtocol.ProcessRequestsAsync` ← …
+  means: These operations aren't on any thread: they're awaiting something and will resume when it completes. Many of them stopped at the same place means whatever they await is slow or never finishes.
+  next: Find out why Task.Delay doesn't complete: a downstream that doesn't answer, a missing timeout, or a TaskCompletionSource nobody sets.
+  next: Give outbound calls a timeout or CancellationToken so they fail fast instead of piling up.
+  evidence: Object SyncOverAsyncScenario.RunAsync lambda
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()
+group: 200 × PricingClient.GetQuote(Cart) | GET /api/pricing/quote | Task.Result

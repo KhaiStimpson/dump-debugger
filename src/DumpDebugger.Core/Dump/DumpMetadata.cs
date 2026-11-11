@@ -43,4 +43,6 @@ public sealed record DumpMetadata(
     int ProcessId,
     IReadOnlyList<RuntimeInfo> Runtimes,
     int ThreadCount,
-    int ModuleCount);
+    int ModuleCount,
+    int? CrashThreadOsId = null,
+    uint? CrashExceptionCode = null);

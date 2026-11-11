@@ -19,6 +19,12 @@ public sealed class AnalysisContext
 
     public IReadOnlyList<LargeObject>? LargeObjects { get; init; }
 
+    public required Core.Dump.DumpMetadata Metadata { get; init; }
+
+    public ThreadPoolStats? Pool { get; init; }
+
+    public AsyncStacksResult? AsyncStacks { get; init; }
+
     public IReadOnlyDictionary<int, ThreadRecord> ThreadsById => _byId ??= Threads.ToDictionary(t => t.Id);
 
     private IReadOnlyDictionary<int, ThreadRecord>? _byId;

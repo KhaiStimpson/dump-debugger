@@ -43,6 +43,15 @@ public static class SampleGenerator
     public static readonly IReadOnlyList<SampleScenario> Scenarios =
     [
         new("deadlock", "Deadlock", "Two requests take two locks in opposite order; more requests queue behind them."),
+        new("threadpool", "Thread-pool starvation", "Every pool worker is blocked on a gate; requests and background work queue up."),
+        new("syncoverasync", "Sync-over-async", "200 requests block on .Result of a downstream call that never answers."),
+        new("exceptions", "Exceptions", "Requests stuck in a retry back-off inside catch blocks, plus an exception storm."),
+        new("finalizer", "Finalizer backlog", "The finalizer thread is blocked on a lock; 50,000 objects wait behind it."),
+        new("leak", "Memory: cached reports", "Rendered PDFs cached forever in a static, plus a list of cart snapshots that only grows."),
+        new("loh", "LOH fragmentation", "Large buffers kept and dropped alternately: half the Large Object Heap is free space."),
+        new("httpclient", "HttpClient per call", "A new HttpClient for every request: hundreds of handlers and sockets."),
+        new("timers", "Timer leak", "A timer per session in a dictionary nobody cleans."),
+        new("crash", "Crash", "An unhandled exception on a background thread; the runtime writes the dump as the process dies."),
     ];
 
     public static string? FindDumpGen()

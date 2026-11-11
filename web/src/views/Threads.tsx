@@ -5,6 +5,7 @@ import { StatePill } from '../components/Sev';
 import { threadIdOf, uri } from '../entities';
 import { Inspector } from '../inspector/Inspector';
 import { useRpc } from '../state/queries';
+import { AsyncStacks } from './AsyncStacks';
 import { useApp } from '../state/store';
 
 const groupings: { id: ThreadGrouping; label: string }[] = [
@@ -30,6 +31,7 @@ const ROW = 37;
  */
 export function Threads() {
   const [groupBy, setGroupBy] = useState<ThreadGrouping>('stack');
+  const [mode, setMode] = useState<'threads' | 'async'>('threads');
   const [state, setState] = useState<ThreadStateFilter>('all');
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
@@ -79,51 +81,73 @@ export function Threads() {
   });
 
   const threadsShown = groups.reduce((n, g) => n + g.count, 0);
+  const header = (
+    <div className="pane-h">
+      <h3>Threads</h3>
+      <span className="pill">
+        {threadsShown} thread{threadsShown === 1 ? '' : 's'} · {groups.length} {groupBy === 'flat' ? 'rows' : 'groups'}
+      </span>
+      <input
+        className="filter"
+        placeholder="Filter by frame, request or #id"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        aria-label="Filter threads"
+      />
+      <div className="r">
+        <div className="seg" role="radiogroup" aria-label="Grouping">
+          {groupings.map((g) => (
+            <button
+              key={g.id}
+              role="radio"
+              aria-checked={mode === 'threads' && groupBy === g.id}
+              className={mode === 'threads' && groupBy === g.id ? 'on' : ''}
+              onClick={() => {
+                setMode('threads');
+                setGroupBy(g.id);
+              }}
+            >
+              {g.label}
+            </button>
+          ))}
+          <button
+            role="radio"
+            aria-checked={mode === 'async'}
+            className={mode === 'async' ? 'on' : ''}
+            onClick={() => setMode('async')}
+          >
+            Async stacks
+          </button>
+        </div>
+        <div className="seg" role="radiogroup" aria-label="State filter">
+          {filters.map((f) => (
+            <button
+              key={f.id}
+              role="radio"
+              aria-checked={state === f.id}
+              className={state === f.id ? 'on' : ''}
+              onClick={() => setState(f.id)}
+            >
+              {f.label} <span className="n">{counts.get(f.id) ?? ''}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (mode === 'async') {
+    return (
+      <div className="view on threads">
+        <AsyncStacks header={header} />
+      </div>
+    );
+  }
+
   return (
     <div className="view on threads">
       <div className="threads-main">
-        <div className="pane-h">
-          <h3>Threads</h3>
-          <span className="pill">
-            {threadsShown} thread{threadsShown === 1 ? '' : 's'} · {groups.length}{' '}
-            {groupBy === 'flat' ? 'rows' : 'groups'}
-          </span>
-          <input
-            className="filter"
-            placeholder="Filter by frame, request or #id"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Filter threads"
-          />
-          <div className="r">
-            <div className="seg" role="radiogroup" aria-label="Grouping">
-              {groupings.map((g) => (
-                <button
-                  key={g.id}
-                  role="radio"
-                  aria-checked={groupBy === g.id}
-                  className={groupBy === g.id ? 'on' : ''}
-                  onClick={() => setGroupBy(g.id)}
-                >
-                  {g.label}
-                </button>
-              ))}
-            </div>
-            <div className="seg" role="radiogroup" aria-label="State filter">
-              {filters.map((f) => (
-                <button
-                  key={f.id}
-                  role="radio"
-                  aria-checked={state === f.id}
-                  className={state === f.id ? 'on' : ''}
-                  onClick={() => setState(f.id)}
-                >
-                  {f.label} <span className="n">{counts.get(f.id) ?? ''}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        {header}
         <div className="thead lbl">
           <span>#</span>
           <span>Where (first app frame)</span>

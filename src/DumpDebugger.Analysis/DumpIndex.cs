@@ -93,6 +93,8 @@ public sealed class DumpIndex : IDisposable
 
     public IReadOnlyList<Core.Contracts.LargeObject>? LargeObjects { get; set; }
 
+    public Core.Contracts.AsyncStacksResult? AsyncStacks { get; set; }
+
     /// <summary>The heap walk's aggregates, walking now if analysis hasn't yet (e.g. the diagnosis came from the workspace cache).</summary>
     public async Task<HeapModel> EnsureHeapAsync(CancellationToken ct)
     {

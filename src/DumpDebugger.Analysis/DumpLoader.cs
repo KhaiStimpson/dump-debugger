@@ -65,7 +65,9 @@ public static class DumpLoader
             ProcessId: dataTarget.DataReader.ProcessId,
             Runtimes: runtimeInfos,
             ThreadCount: runtimes.Count > 0 ? runtimes[0].Threads.Count() : 0,
-            ModuleCount: modules.Count);
+            ModuleCount: modules.Count,
+            CrashThreadOsId: header.CrashThreadOsId,
+            CrashExceptionCode: header.ExceptionCode);
 
         return new LoadedDump
         {
