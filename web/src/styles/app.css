@@ -1130,3 +1130,298 @@ button {
 .win-wrap {
   position: relative;
 }
+
+/* ---------- shell adaptations (not in the mockup's static frame) ---------- */
+.main {
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  overflow: hidden;
+}
+.main > .view {
+  grid-area: 1/1;
+}
+.titlebar {
+  user-select: none;
+}
+.titlebar .search {
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+}
+.titlebar .search:hover {
+  border-color: var(--line-2);
+  color: var(--fg-2);
+}
+.rail button:disabled {
+  opacity: 0.35;
+  cursor: default;
+  background: none;
+}
+.chip {
+  font-family: var(--mono);
+}
+.chip .sfx {
+  color: var(--fg-2);
+}
+.chip.ty .k::before {
+  content: '▦ ';
+}
+.chip.rq .k::before {
+  content: '⇢ ';
+  color: var(--info);
+}
+.chip.f .k::before {
+  content: '! ';
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.btn.pinned {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+.linklike {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--fg-1);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+.linklike:hover {
+  color: var(--accent);
+}
+.view.home,
+.view.anz {
+  overflow: auto;
+}
+
+/* home */
+.drop.over {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+.rrow.empty {
+  color: var(--fg-3);
+  cursor: default;
+  grid-template-columns: 1fr;
+}
+.rrow.missing {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  width: 340px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-3);
+  box-shadow: 0 20px 50px #000c;
+  padding: 6px;
+  text-align: left;
+}
+.menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: var(--fg-1);
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.menu button:hover {
+  background: var(--bg-4);
+}
+.menu button b {
+  display: block;
+  color: var(--fg-0);
+  font-weight: 600;
+}
+.menu button span {
+  font-size: 12px;
+  color: var(--fg-2);
+}
+.bad-callout {
+  border-left-color: var(--crit);
+  background: var(--crit-dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+/* diagnosis */
+.verdict.v-warning {
+  background: linear-gradient(180deg, #f5a52410, transparent);
+}
+.verdict.v-info,
+.verdict.v-ok {
+  background: linear-gradient(180deg, #3ccf9110, transparent);
+}
+.find .fh {
+  border: 0;
+  width: 100%;
+  background: none;
+  text-align: left;
+  color: inherit;
+}
+.find .fh h4 code {
+  font-size: 13px;
+}
+.find {
+  transition: opacity 0.12s;
+}
+
+/* inspector */
+.insp.overlay {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 440px;
+  z-index: 4;
+  box-shadow: -24px 0 60px -20px #000c;
+}
+.insp-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--bg-1);
+  z-index: 1;
+}
+.insp-nav .btn {
+  padding: 3px 9px;
+}
+.insp-nav .crumb {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--fg-3);
+  margin-left: 6px;
+}
+.insp .kv dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.stack .src {
+  color: var(--fg-3);
+  margin-left: 10px;
+}
+.note-input {
+  width: 100%;
+  min-height: 64px;
+  margin-top: 6px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-2);
+  color: var(--fg-0);
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+/* palette & overlays */
+.palette-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  background: #05070999;
+}
+.palette.help {
+  width: 640px;
+}
+.palette.help .keys {
+  grid-template-columns: 260px 1fr;
+  padding: 14px 18px 18px;
+  gap: 10px 14px;
+}
+.ctxmenu {
+  position: fixed;
+  z-index: 50;
+  min-width: 190px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-2);
+  box-shadow: 0 16px 40px #000c;
+  padding: 4px;
+}
+.ctxmenu button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: var(--fg-1);
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.ctxmenu button:hover {
+  background: var(--bg-4);
+  color: var(--fg-0);
+}
+
+/* scrollbars */
+* {
+  scrollbar-color: var(--line-2) transparent;
+  scrollbar-width: thin;
+}
+
+/* focus: 2px accent ring, 2px offset, never removed */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* motion: 120ms for hover/selection; respect the OS setting */
+.btn,
+.chip,
+.rail button,
+.seg button,
+.symp button,
+.trow,
+.rrow,
+.lobj {
+  transition:
+    background-color 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .step.run .ic {
+    border-top-color: var(--accent);
+  }
+}
+.rrow .sev {
+  justify-self: start;
+}

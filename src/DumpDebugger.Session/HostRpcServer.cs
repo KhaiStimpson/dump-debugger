@@ -167,6 +167,21 @@ public sealed partial class HostRpcServer : IAsyncDisposable
                 _recents.Remove(Params<PathParams>(@params).Path);
                 return ContractJson.ToElement(new Ack());
 
+            case "samples.list":
+                return ContractJson.ToElement(SampleGenerator.Scenarios);
+
+            case "samples.generate":
+                return ContractJson.ToElement(await GenerateSampleAsync(Params<GenerateSampleParams>(@params).Scenario, ct).ConfigureAwait(false));
+
+            case "pins.list":
+                return ContractJson.ToElement(ListPins());
+
+            case "pins.upsert":
+                return ContractJson.ToElement(UpsertPin(Params<PinUpsert>(@params)));
+
+            case "pins.remove":
+                return ContractJson.ToElement(RemovePin(Params<UriParams>(@params).Uri));
+
             case "analysis.cancel":
                 _analysisCts?.Cancel();
                 return ContractJson.ToElement(new Ack());

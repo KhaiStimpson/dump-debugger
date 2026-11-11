@@ -51,3 +51,16 @@ public sealed record RecentDump(
     bool IsSample);
 
 public sealed record PathParams(string Path);
+
+public sealed record SampleScenario(string Id, string Title, string Description);
+
+public sealed record GenerateSampleParams(string Scenario);
+
+public sealed record GeneratedSample(string Path);
+
+/// <summary>A pinned entity and its note, stored in the dump's workspace sidecar.</summary>
+public sealed record Pin(string Uri, EntityKind Kind, string Label, string Note, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+
+public sealed record PinUpsert(string Uri, EntityKind Kind, string Label, string? Note);
+
+public sealed record UriParams(string Uri);

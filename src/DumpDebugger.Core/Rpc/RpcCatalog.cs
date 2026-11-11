@@ -36,6 +36,11 @@ public static class RpcCatalog
         Host<NoParams, Ack>("analysis.cancel"),
         Host<NoParams, IReadOnlyList<RecentDump>>("recents.list"),
         Host<PathParams, Ack>("recents.remove"),
+        Host<NoParams, IReadOnlyList<SampleScenario>>("samples.list"),
+        Host<GenerateSampleParams, GeneratedSample>("samples.generate"),
+        Host<NoParams, IReadOnlyList<Pin>>("pins.list"),
+        Host<PinUpsert, IReadOnlyList<Pin>>("pins.upsert"),
+        Host<UriParams, IReadOnlyList<Pin>>("pins.remove"),
 
         Worker<AnalysisRunParams, Diagnosis>("analysis.run"),
         Worker<ThreadGroupsQuery, ThreadGroupsResult>("threads.groups"),

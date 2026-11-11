@@ -121,6 +121,14 @@ export const FindingVisualValues: readonly FindingVisual[] = ['none', 'waitGraph
 export type FrameKind = 'app' | 'framework' | 'runtime';
 export const FrameKindValues: readonly FrameKind[] = ['app', 'framework', 'runtime'];
 
+export interface GenerateSampleParams {
+  scenario: string;
+}
+
+export interface GeneratedSample {
+  path: string;
+}
+
 export interface LockCycle {
   id: string;
   threads: number[];
@@ -153,6 +161,22 @@ export interface PathParams {
 
 export interface PickedFile {
   path: string | null;
+}
+
+export interface Pin {
+  uri: string;
+  kind: EntityKind;
+  label: string;
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PinUpsert {
+  uri: string;
+  kind: EntityKind;
+  label: string;
+  note: string | null;
 }
 
 export interface ProgressNotification {
@@ -197,6 +221,12 @@ export interface RuntimeInfo {
   dacPath: string | null;
   dacTier: DacResolutionTier;
   isManagedAnalysisAvailable: boolean;
+}
+
+export interface SampleScenario {
+  id: string;
+  title: string;
+  description: string;
 }
 
 export type Severity = 'ok' | 'info' | 'warning' | 'critical';
@@ -297,6 +327,10 @@ export interface TitlebarRegions {
 export type Tone = 'neutral' | 'accent' | 'ok' | 'info' | 'warning' | 'critical';
 export const ToneValues: readonly Tone[] = ['neutral', 'accent', 'ok', 'info', 'warning', 'critical'];
 
+export interface UriParams {
+  uri: string;
+}
+
 export interface Verdict {
   severity: Severity;
   confidence: Confidence;
@@ -368,6 +402,11 @@ export interface RpcMethods {
   'analysis.cancel': { params: NoParams; result: Ack };
   'recents.list': { params: NoParams; result: RecentDump[] };
   'recents.remove': { params: PathParams; result: Ack };
+  'samples.list': { params: NoParams; result: SampleScenario[] };
+  'samples.generate': { params: GenerateSampleParams; result: GeneratedSample };
+  'pins.list': { params: NoParams; result: Pin[] };
+  'pins.upsert': { params: PinUpsert; result: Pin[] };
+  'pins.remove': { params: UriParams; result: Pin[] };
   'analysis.run': { params: AnalysisRunParams; result: Diagnosis };
   'threads.groups': { params: ThreadGroupsQuery; result: ThreadGroupsResult };
   'threads.get': { params: ThreadQuery; result: ThreadDetail };

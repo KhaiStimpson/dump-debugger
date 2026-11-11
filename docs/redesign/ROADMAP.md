@@ -47,12 +47,12 @@ Each phase ends shippable.
 - **Done when:** the deadlock fixture produces an English verdict naming methods, not `.InlinedCallFrame`.
 
 ### R2 — Shell, Home, Diagnosis
-- [ ] Left rail, titlebar with dump meta, status bar (worker, DAC, timings)
-- [ ] Shared inspector panel with back/forward history
-- [ ] `Ctrl+K` command palette (requests, threads, types, objects, commands)
-- [ ] Home: drag-drop, recents with last verdict badge, sample generator, compare entry
-- [ ] Analyzing screen with stages and "see early findings"
-- [ ] Diagnosis: verdict, vitals strip, symptom chips (re-rank), expandable findings, mini wait-for graph, pins
+- [x] Left rail, titlebar with dump meta, status bar (worker, DAC, timings)
+- [x] Shared inspector panel with back/forward history
+- [x] `Ctrl+K` command palette (requests, threads, types, objects, commands)
+- [x] Home: drag-drop, recents with last verdict badge, sample generator, compare entry
+- [x] Analyzing screen with stages and "see early findings"
+- [x] Diagnosis: verdict, vitals strip, symptom chips (re-rank), expandable findings, mini wait-for graph, pins
 - **Done when:** a verdict shows in under 5 s on the fixture, and every evidence chip opens the inspector.
 
 ### R3 — Threads & Locks
@@ -107,3 +107,4 @@ Each analyzer ships with authored explanations, a DumpGen scenario and a golden 
 
 - **R0.** Host-side logic lives in a new UI-free library, `DumpDebugger.Session` (worker lifecycle, bridge dispatcher, workspace), so the bridge is tested headlessly; `DumpDebugger.Host` is only the window. The same JSON-RPC message shape is used on both hops (web ⇄ host over `postMessage`, host ⇄ worker over the named pipe); worker methods are forwarded with params untouched. TS types come from a small reflection generator (`tools/DumpDebugger.TsGen`) over Core's `RpcCatalog` rather than NJsonSchema: it also emits the typed method/notification maps, which a schema generator wouldn't. The host is unpackaged + self-contained by default; MSIX is opt-in (`-p:Packaged=true`). Vite 6 rather than 7 because Vite 7 needs Node ≥ 20.19. Screenshots are taken from the real app through WebView2's CDP port (`web/scripts/shot.mjs`).
 - **R1.** Wait-for edges turned out to be readable exactly, so deadlocks are now reported at *high* confidence (v1 said medium): a blocked thread's `Monitor.Enter` frame keeps the wanted lock object as a stack root, and sync-block owners give the held side. Sync blocks with "waiters" but no owner are `Monitor.Wait` condition variables and are ignored. Locks are named after the field that holds them (`OrderLedger._gate`) from objects on the involved stacks, static fields, or, as a fallback, a referrer scan during the heap walk. Requests come from Kestrel's `Http1Connection` (or `DefaultHttpContext`/`HttpResponse` leading to it) among stack roots. Source lines are read from portable PDBs next to the module when present. Instead of streaming findings one at a time, the worker pushes a whole `Diagnosis` snapshot (`analysis.updated`) after each stage: it's small, and the UI just replaces state. The DumpGen `deadlock` scenario is now a real Kestrel app whose checkout and inventory endpoints deadlock under HTTP load. Paging lands with the first unbounded list (heap types, R4); thread lists are aggregated into groups in the worker.
+- **R2.** The inspector docks as a column on Diagnosis (replacing the side panel while open) and slides over the right edge elsewhere. Pins & notes storage landed here rather than R6 because the Diagnosis page shows them; R6 adds the report. Drag-drop uses WebView2's `postMessageWithAdditionalObjects`, so the host gets the dropped file's real path. "Generate a sample" runs the bundled DumpGen (`Tools\DumpGen` next to the host). The open-to-verdict time on the deadlock fixture is asserted in tests (< 5 s; ~0.5 s in practice). Types join the palette with the heap queries in R4.

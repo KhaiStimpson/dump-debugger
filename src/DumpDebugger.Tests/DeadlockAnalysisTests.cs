@@ -45,9 +45,13 @@ public class DeadlockAnalysisTests
 
         await using (var bridge = new BridgeHarness())
         {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
             var opened = await bridge.CallAsync<DumpOpened>("dump.open", new { path = dump });
             Assert.False(opened.CachedAnalysis);
             await bridge.Server.AnalysisTask!.WaitAsync(TimeSpan.FromSeconds(60));
+
+            // R2 done-when: open → verdict in under 5 s on the fixture (worker start included).
+            Assert.True(clock.Elapsed < TimeSpan.FromSeconds(5), $"Open to verdict took {clock.Elapsed.TotalSeconds:F1}s.");
 
             var state = await bridge.CallAsync<AnalysisState>("analysis.get");
             Assert.NotNull(state.Diagnosis);
