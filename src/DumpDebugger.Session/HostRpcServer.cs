@@ -134,7 +134,7 @@ public sealed partial class HostRpcServer : IAsyncDisposable
         {
             case "app.info":
                 return ContractJson.ToElement(new AppInfo(
-                    typeof(HostRpcServer).Assembly.GetName().Version?.ToString() ?? "0.0.0",
+                    typeof(HostRpcServer).Assembly.GetName().Version?.ToString(3) ?? "0.0.0",
                     System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
                     AppPaths.DataRoot,
                     _options.StartupDumpPath));
@@ -181,6 +181,19 @@ public sealed partial class HostRpcServer : IAsyncDisposable
 
             case "pins.remove":
                 return ContractJson.ToElement(RemovePin(Params<UriParams>(@params).Uri));
+
+            case "report.save":
+                {
+                    var p = Params<SaveReportParams>(@params);
+                    var extension = p.Format == ReportFormat.Html ? ".html" : ".md";
+                    var path = await _platform.PickSaveFileAsync(Path.ChangeExtension(p.FileName, extension), extension).ConfigureAwait(false);
+                    if (path is not null)
+                    {
+                        await File.WriteAllTextAsync(path, p.Content, ct).ConfigureAwait(false);
+                    }
+
+                    return ContractJson.ToElement(new SavedReport(path));
+                }
 
             case "analysis.cancel":
                 _analysisCts?.Cancel();

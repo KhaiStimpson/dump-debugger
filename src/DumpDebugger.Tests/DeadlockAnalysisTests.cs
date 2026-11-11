@@ -2,6 +2,7 @@ using DumpDebugger.Core.Contracts;
 
 namespace DumpDebugger.Tests;
 
+[Collection(WorkspaceCollection.Name)]
 public class DeadlockAnalysisTests
 {
     [Fact]

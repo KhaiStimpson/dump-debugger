@@ -41,6 +41,7 @@ public static class RpcCatalog
         Host<NoParams, IReadOnlyList<Pin>>("pins.list"),
         Host<PinUpsert, IReadOnlyList<Pin>>("pins.upsert"),
         Host<UriParams, IReadOnlyList<Pin>>("pins.remove"),
+        Host<SaveReportParams, SavedReport>("report.save"),
 
         Worker<AnalysisRunParams, Diagnosis>("analysis.run"),
         Worker<ThreadGroupsQuery, ThreadGroupsResult>("threads.groups"),

@@ -342,6 +342,9 @@ export interface ReferrersQuery {
   limit: number;
 }
 
+export type ReportFormat = 'markdown' | 'html';
+export const ReportFormatValues: readonly ReportFormat[] = ['markdown', 'html'];
+
 export interface RequestCount {
   route: string;
   threads: number;
@@ -402,6 +405,16 @@ export interface SampleScenario {
   id: string;
   title: string;
   description: string;
+}
+
+export interface SaveReportParams {
+  format: ReportFormat;
+  fileName: string;
+  content: string;
+}
+
+export interface SavedReport {
+  path: string | null;
 }
 
 export type Severity = 'ok' | 'info' | 'warning' | 'critical';
@@ -603,6 +616,7 @@ export interface RpcMethods {
   'pins.list': { params: NoParams; result: Pin[] };
   'pins.upsert': { params: PinUpsert; result: Pin[] };
   'pins.remove': { params: UriParams; result: Pin[] };
+  'report.save': { params: SaveReportParams; result: SavedReport };
   'analysis.run': { params: AnalysisRunParams; result: Diagnosis };
   'threads.groups': { params: ThreadGroupsQuery; result: ThreadGroupsResult };
   'threads.get': { params: ThreadQuery; result: ThreadDetail };

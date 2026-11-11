@@ -8,7 +8,7 @@
 //
 // Screenshots land in web/shots/<name>.png. The host is launched with --cdp and killed at the end.
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
@@ -68,6 +68,11 @@ try {
     if (step.hash) await page.evaluate((h) => (location.hash = h), step.hash);
     if (step.click) await page.click(step.click, { timeout: step.timeout ?? 10_000 });
     if (step.eval) console.log('eval →', await page.evaluate(step.eval));
+    if (step.evalToFile) {
+      writeFileSync(resolve(webRoot, step.file), String(await page.evaluate(step.evalToFile)));
+      console.log(`wrote → ${step.file}`);
+    }
+    if (step.fill) await page.fill(step.fill, step.value ?? '');
     if (step.key) await page.keyboard.press(step.key);
     if (step.type) await page.keyboard.type(step.type);
     if (step.sleep) await new Promise((r) => setTimeout(r, step.sleep));

@@ -54,6 +54,7 @@ internal sealed class BridgeHarness : IAsyncDisposable
     public ValueTask DisposeAsync() => Server.DisposeAsync();
 }
 
+[Collection(WorkspaceCollection.Name)]
 public class HostBridgeTests
 {
     [Fact]

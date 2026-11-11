@@ -19,6 +19,7 @@ import { Home } from './views/Home';
 import { Locks } from './views/Locks';
 import { Memory } from './views/Memory';
 import { Objects } from './views/Objects';
+import { Report } from './views/Report';
 import { Threads } from './views/Threads';
 import { Placeholder } from './views/Placeholder';
 
@@ -85,6 +86,8 @@ function CurrentView({ view }: { view: View }) {
       return <Memory />;
     case 'objects':
       return <Objects />;
+    case 'report':
+      return <Report />;
     default:
       return <Placeholder view={view} />;
   }

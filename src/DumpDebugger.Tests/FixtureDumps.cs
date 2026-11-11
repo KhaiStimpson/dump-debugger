@@ -42,3 +42,10 @@ internal static class FixtureDumps
         return path;
     }
 }
+
+/// <summary>Tests that open fixtures through the bridge write to (and some reset) the fixture's workspace sidecar.</summary>
+[CollectionDefinition(Name)]
+public sealed class WorkspaceCollection
+{
+    public const string Name = "fixture workspaces";
+}

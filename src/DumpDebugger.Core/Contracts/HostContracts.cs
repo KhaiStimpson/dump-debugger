@@ -64,3 +64,14 @@ public sealed record Pin(string Uri, EntityKind Kind, string Label, string Note,
 public sealed record PinUpsert(string Uri, EntityKind Kind, string Label, string? Note);
 
 public sealed record UriParams(string Uri);
+
+public enum ReportFormat
+{
+    Markdown,
+    Html,
+}
+
+public sealed record SaveReportParams(ReportFormat Format, string FileName, string Content);
+
+/// <summary>Where the report was written, or null if the user cancelled the save dialog.</summary>
+public sealed record SavedReport(string? Path);
