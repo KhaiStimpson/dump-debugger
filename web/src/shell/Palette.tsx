@@ -5,6 +5,7 @@ import { uri } from '../entities';
 import { rpc } from '../rpc/client';
 import { navigate, type View } from '../router';
 import { useRpc } from '../state/queries';
+import { themeLabels, useTheme } from '../state/theme';
 import { useApp } from '../state/store';
 
 interface Item {
@@ -138,6 +139,9 @@ function PaletteBody({ close }: { close(): void }) {
     cmd('Compare two dumps', go('compare'), 'G C');
     cmd('Home', go('home'), 'G H');
     cmd('Keyboard shortcuts', () => useApp.getState().setHelp(true), '?');
+    for (const p of ['system', 'light', 'dark'] as const) {
+      cmd(`Theme: ${themeLabels[p]}`, () => useTheme.getState().setPreference(p));
+    }
     return all;
   }, [threads.data, graph.data, types.data, q, diagnosis, dump, inspect, openDump, closeDump]);
 

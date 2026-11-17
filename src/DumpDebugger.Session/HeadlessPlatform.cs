@@ -15,7 +15,11 @@ public sealed class HeadlessPlatform : IHostPlatform
 
     public Task<string?> PickSaveFileAsync(string suggestedName, string extension) => Task.FromResult(NextSavePath);
 
+    public AppTheme Theme { get; private set; } = AppTheme.Dark;
+
     public void SetTitlebarPassthrough(IReadOnlyList<Rect> rects)
     {
     }
+
+    public void SetTheme(AppTheme theme) => Theme = theme;
 }

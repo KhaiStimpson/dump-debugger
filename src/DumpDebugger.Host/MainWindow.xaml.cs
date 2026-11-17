@@ -21,6 +21,7 @@ public sealed partial class MainWindow : Window, IHostPlatform
 
     private readonly HostOptions _options;
     private readonly HostRpcServer _server;
+    private ElementTheme _theme = ElementTheme.Dark;
 
     public MainWindow(HostOptions options)
     {
@@ -31,11 +32,7 @@ public sealed partial class MainWindow : Window, IHostPlatform
         AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Standard;
         AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
         AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
-        AppWindow.TitleBar.ButtonForegroundColor = ColorHelper.FromArgb(0xff, 0x8b, 0x93, 0xa1);
-        AppWindow.TitleBar.ButtonInactiveForegroundColor = ColorHelper.FromArgb(0xff, 0x5e, 0x66, 0x73);
-        AppWindow.TitleBar.ButtonHoverBackgroundColor = ColorHelper.FromArgb(0xff, 0x1e, 0x23, 0x2b);
-        AppWindow.TitleBar.ButtonHoverForegroundColor = ColorHelper.FromArgb(0xff, 0xee, 0xf0, 0xf3);
-        AppWindow.TitleBar.ButtonPressedBackgroundColor = ColorHelper.FromArgb(0xff, 0x26, 0x2c, 0x35);
+        ApplyTheme(AppTheme.Dark);
         var icon = Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico");
         if (File.Exists(icon))
         {
@@ -169,7 +166,7 @@ public sealed partial class MainWindow : Window, IHostPlatform
         var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
         {
             XamlRoot = Content.XamlRoot,
-            RequestedTheme = ElementTheme.Dark,
+            RequestedTheme = _theme,
             Title = "Download matching debugging DLLs?",
             Content = "These runtimes need a matching DAC to read .NET memory:\n\n" + string.Join("\n", missing)
                 + "\n\nDownload them from the Microsoft symbol server (msdl.microsoft.com)? Runtime identifiers are sent; the dump stays on this computer. Downloaded DACs are cached for offline use.",
@@ -195,6 +192,39 @@ public sealed partial class MainWindow : Window, IHostPlatform
                 (int)Math.Round(r.Width * scale),
                 (int)Math.Round(r.Height * scale))).ToArray());
         });
+    }
+
+    public void SetTheme(AppTheme theme) => DispatcherQueue.TryEnqueue(() => ApplyTheme(theme));
+
+    /// <summary>Matches the caption buttons, window background and native dialogs to the page's theme.</summary>
+    private void ApplyTheme(AppTheme theme)
+    {
+        var light = theme == AppTheme.Light;
+        _theme = light ? ElementTheme.Light : ElementTheme.Dark;
+        Root.RequestedTheme = _theme;
+        var background = light ? Colors.White : ColorHelper.FromArgb(0xff, 0x0b, 0x0d, 0x10);
+        Root.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(background);
+        Web.DefaultBackgroundColor = background;
+
+        var bar = AppWindow.TitleBar;
+        if (light)
+        {
+            bar.ButtonForegroundColor = ColorHelper.FromArgb(0xff, 0x4d, 0x4d, 0x4d);
+            bar.ButtonInactiveForegroundColor = ColorHelper.FromArgb(0xff, 0x9e, 0x9e, 0x9e);
+            bar.ButtonHoverBackgroundColor = ColorHelper.FromArgb(0xff, 0xe8, 0xe8, 0xe8);
+            bar.ButtonHoverForegroundColor = ColorHelper.FromArgb(0xff, 0x1b, 0x1b, 0x1b);
+            bar.ButtonPressedBackgroundColor = ColorHelper.FromArgb(0xff, 0xdc, 0xdc, 0xdc);
+            bar.ButtonPressedForegroundColor = ColorHelper.FromArgb(0xff, 0x1b, 0x1b, 0x1b);
+        }
+        else
+        {
+            bar.ButtonForegroundColor = ColorHelper.FromArgb(0xff, 0x8b, 0x93, 0xa1);
+            bar.ButtonInactiveForegroundColor = ColorHelper.FromArgb(0xff, 0x5e, 0x66, 0x73);
+            bar.ButtonHoverBackgroundColor = ColorHelper.FromArgb(0xff, 0x1e, 0x23, 0x2b);
+            bar.ButtonHoverForegroundColor = ColorHelper.FromArgb(0xff, 0xee, 0xf0, 0xf3);
+            bar.ButtonPressedBackgroundColor = ColorHelper.FromArgb(0xff, 0x26, 0x2c, 0x35);
+            bar.ButtonPressedForegroundColor = ColorHelper.FromArgb(0xff, 0xee, 0xf0, 0xf3);
+        }
     }
 
     private Task<T> OnUiThreadAsync<T>(Func<Task<T>> work)

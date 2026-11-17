@@ -595,7 +595,18 @@ button {
   background: var(--sel);
 }
 .trow.sel > * {
-  color: #fff !important;
+  color: var(--sel-fg) !important;
+}
+.trow.sel > .st-blk {
+  color: var(--sel-crit) !important;
+}
+.trow.sel > .st-wait {
+  color: var(--sel-warn) !important;
+}
+.trow.sel,
+.bar-row.sel,
+.cand.on {
+  box-shadow: inset 2px 0 0 var(--sel-edge);
 }
 .trow .cnt {
   color: var(--fg-1);
@@ -744,7 +755,7 @@ button {
 
 /* memory */
 .memory {
-  grid-template-columns: 1fr 400px;
+  grid-template-columns: minmax(0, 1fr) 400px;
 }
 .treemap {
   display: grid;
@@ -758,7 +769,7 @@ button {
   border-radius: 2px;
   padding: 10px;
   font-size: 12px;
-  color: #fff;
+  color: var(--tm-fg);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -865,10 +876,10 @@ button {
   color: var(--code);
 }
 .fields .val.s {
-  color: #a7f3d0;
+  color: var(--val-str);
 }
 .fields .val.n {
-  color: #fcd34d;
+  color: var(--val-num);
 }
 .fields .tw {
   color: var(--fg-3);
@@ -1020,7 +1031,7 @@ button {
   background: var(--bg-2);
   border: 1px solid var(--line-2);
   border-radius: 6px;
-  box-shadow: 0 12px 32px #0009;
+  box-shadow: 0 12px 32px var(--shadow);
   display: none;
   z-index: 5;
 }
@@ -1153,7 +1164,7 @@ button {
   background: var(--bg-2);
   border: 1px solid var(--line-2);
   border-radius: var(--r-3);
-  box-shadow: 0 8px 24px #0008;
+  box-shadow: 0 8px 24px var(--shadow);
   padding: 6px;
   text-align: left;
 }
@@ -1211,7 +1222,7 @@ button {
   bottom: 0;
   width: 440px;
   z-index: 4;
-  box-shadow: -8px 0 24px #0006;
+  box-shadow: -8px 0 24px var(--shadow);
 }
 .insp-nav {
   display: flex;
@@ -1260,7 +1271,7 @@ button {
   position: absolute;
   inset: 0;
   z-index: 30;
-  background: #05070999;
+  background: var(--scrim);
 }
 .palette.help {
   width: 640px;
@@ -1277,7 +1288,7 @@ button {
   background: var(--bg-2);
   border: 1px solid var(--line-2);
   border-radius: var(--r-2);
-  box-shadow: 0 8px 24px #0008;
+  box-shadow: 0 8px 24px var(--shadow);
   padding: 4px;
 }
 .ctxmenu button {
@@ -1297,6 +1308,15 @@ button {
 .ctxmenu button:hover {
   background: var(--bg-4);
   color: var(--fg-0);
+}
+.ctxmenu .menu-note {
+  font-size: 12px;
+  color: var(--fg-3);
+  margin-left: 16px;
+}
+.ctxmenu button[aria-checked='true'] {
+  color: var(--fg-0);
+  font-weight: 600;
 }
 
 /* scrollbars */
@@ -1488,11 +1508,18 @@ button {
 }
 
 /* memory */
+/* minmax(0, …) on both tracks: without it the nowrap header and table rows set a min-content
+   width wider than the column, and the treemap and table spill under the side panel. */
 .mem-main {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto auto 1fr;
   min-height: 0;
   min-width: 0;
+}
+.mem-main .pane-h .r {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 .treemap-box {
   position: relative;
@@ -1505,7 +1532,7 @@ button {
   box-sizing: border-box;
   font: inherit;
   font-size: 12px;
-  color: #fff;
+  color: var(--tm-fg);
   text-align: left;
   align-items: flex-start;
 }
@@ -1555,7 +1582,7 @@ button {
   background: var(--sel);
 }
 .bar-row.sel > span {
-  color: #fff !important;
+  color: var(--sel-fg) !important;
 }
 .bar-row .ty {
   white-space: nowrap;
@@ -1604,7 +1631,7 @@ button {
   word-break: break-all;
   font-family: var(--mono);
   font-size: 12.5px;
-  color: #a7f3d0;
+  color: var(--val-str);
   max-height: 260px;
   overflow: auto;
 }

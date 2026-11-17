@@ -1,6 +1,7 @@
 import type { Diagnosis, EntityRef, Finding, Pin, ThreadGroup, TypeRow } from '../contracts.gen';
 import { refFor } from '../entities';
-import { colors, fonts } from '../styles/tokens';
+import { useTheme } from '../state/theme';
+import { fonts, palettes } from '../styles/tokens';
 
 export interface ReportSections {
   verdict: boolean;
@@ -252,6 +253,9 @@ function toHtml(title: string, blocks: Block[], entities: EntityRef[]): string {
     })
     .join('\n');
 
+  // The exported file can't read the app's CSS variables: bake in the theme active at export.
+  const theme = useTheme.getState().resolved;
+  const colors = palettes[theme];
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -259,7 +263,7 @@ function toHtml(title: string, blocks: Block[], entities: EntityRef[]): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title>
 <style>
-:root{color-scheme:dark}
+:root{color-scheme:${theme}}
 *{box-sizing:border-box}
 body{margin:0;background:${colors.bg0};color:${colors.fg1};font:14px/1.55 ${fonts.sans};padding:28px 16px}
 .paper{max-width:760px;margin:0 auto;background:${colors.bg1};border:1px solid ${colors.line};border-radius:4px;padding:40px 48px}

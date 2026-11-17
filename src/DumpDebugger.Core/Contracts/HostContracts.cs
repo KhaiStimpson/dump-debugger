@@ -14,6 +14,15 @@ public sealed record Rect(double X, double Y, double Width, double Height);
 /// <summary>Titlebar hit-testing: the strip is draggable except over these interactive rects.</summary>
 public sealed record TitlebarRegions(IReadOnlyList<Rect> Passthrough);
 
+/// <summary>The page's resolved colour theme, so the host can match its caption buttons and dialogs.</summary>
+public enum AppTheme
+{
+    Dark,
+    Light,
+}
+
+public sealed record ThemeParams(AppTheme Theme);
+
 public sealed record OpenDumpParams(string Path, bool AllowSymbolServer = false);
 
 public sealed record ProgressNotification(string Stage, double FractionComplete, string? Detail);

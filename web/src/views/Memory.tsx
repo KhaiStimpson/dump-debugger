@@ -13,8 +13,8 @@ const groupings: { id: HeapGrouping; label: string }[] = [
   { id: 'namespace', label: 'By namespace' },
 ];
 
-// Teal ramp from the mockup treemap, largest cell darkest-saturated.
-const shades = ['#2f5d8a', '#34526f', '#37495c', '#383f4a', '#363b42', '#34383d', '#33363a', '#323437', '#313335'];
+// Treemap ramp from tokens.css (--tm-1…--tm-9), largest cell most saturated.
+const shades = Array.from({ length: 9 }, (_, i) => `var(--tm-${i + 1})`);
 const ROW = 28;
 
 /** What's eating memory? Treemap and type table from the worker's aggregates; never raw objects. */
@@ -164,7 +164,7 @@ function Treemap({
               top: `${(r.y / H) * 100}%`,
               width: `${(r.w / W) * 100}%`,
               height: `${(r.h / H) * 100}%`,
-              background: c.isOther ? '#313335' : (shades[i] ?? shades[shades.length - 1]),
+              background: c.isOther ? 'var(--tm-9)' : (shades[i] ?? shades[shades.length - 1]),
             }}
             onClick={() => !c.isOther && onSelect(c.name)}
             title={`${c.name} · ${c.label} · ${Math.round(c.share * 100)}%`}

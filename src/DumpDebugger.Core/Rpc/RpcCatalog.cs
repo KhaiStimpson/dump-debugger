@@ -29,6 +29,7 @@ public static class RpcCatalog
     [
         Host<NoParams, AppInfo>("app.info"),
         Host<TitlebarRegions, Ack>("window.setTitlebar"),
+        Host<ThemeParams, Ack>("window.setTheme"),
         Host<NoParams, PickedFile>("dump.pick"),
         Host<OpenDumpParams, DumpOpened>("dump.open"),
         Host<NoParams, Ack>("dump.close"),

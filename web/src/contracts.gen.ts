@@ -38,6 +38,9 @@ export interface AppInfo {
   startupDumpPath: string | null;
 }
 
+export type AppTheme = 'dark' | 'light';
+export const AppThemeValues: readonly AppTheme[] = ['dark', 'light'];
+
 export interface AsyncStackGroup {
   count: number;
   frames: string[];
@@ -553,6 +556,10 @@ export const StageStatusValues: readonly StageStatus[] = ['pending', 'running', 
 export type Symptom = 'hang' | 'highMemory' | 'crash' | 'slowCpu';
 export const SymptomValues: readonly Symptom[] = ['hang', 'highMemory', 'crash', 'slowCpu'];
 
+export interface ThemeParams {
+  theme: AppTheme;
+}
+
 export interface ThreadDetail {
   thread: ThreadSummary;
   frames: StackFrame[];
@@ -753,6 +760,7 @@ export interface WorkerStatus {
 export interface RpcMethods {
   'app.info': { params: NoParams; result: AppInfo };
   'window.setTitlebar': { params: TitlebarRegions; result: Ack };
+  'window.setTheme': { params: ThemeParams; result: Ack };
   'dump.pick': { params: NoParams; result: PickedFile };
   'dump.open': { params: OpenDumpParams; result: DumpOpened };
   'dump.close': { params: NoParams; result: Ack };

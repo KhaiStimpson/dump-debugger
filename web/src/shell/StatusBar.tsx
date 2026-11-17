@@ -1,6 +1,8 @@
+import { useEffect, useRef, useState } from 'react';
 import { seconds } from '../format';
 import { useApp } from '../state/store';
 import { useDiagnostics } from '../debug/diagnostics';
+import { systemTheme, themeLabels, useTheme, type ThemePreference } from '../state/theme';
 
 /** Worker, DAC, workspace and analysis timing: the facts an expert wants to glance at. */
 export function StatusBar() {
@@ -19,6 +21,7 @@ export function StatusBar() {
       >
         Debug
       </button>
+      <ThemeMenu />
       {worker && worker.state !== 'exited' ? (
         <span>
           Worker {worker.architecture.toLowerCase()}, pid {worker.processId}
@@ -42,5 +45,75 @@ export function StatusBar() {
               : ''}
       </span>
     </footer>
+  );
+}
+
+/** System / Light / Dark, opened upwards from the status bar. */
+function ThemeMenu() {
+  const preference = useTheme((s) => s.preference);
+  const setPreference = useTheme((s) => s.setPreference);
+  const [at, setAt] = useState<{ left: number; bottom: number } | null>(null);
+  const button = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!at) return;
+    const close = (e: Event) => {
+      if (e instanceof KeyboardEvent && e.key !== 'Escape') return;
+      if (e.type === 'pointerdown' && button.current?.contains(e.target as Node)) return;
+      setAt(null);
+    };
+    window.addEventListener('pointerdown', close);
+    window.addEventListener('keydown', close);
+    window.addEventListener('blur', close);
+    return () => {
+      window.removeEventListener('pointerdown', close);
+      window.removeEventListener('keydown', close);
+      window.removeEventListener('blur', close);
+    };
+  }, [at]);
+
+  const toggle = () => {
+    const r = button.current?.getBoundingClientRect();
+    setAt(at || !r ? null : { left: r.left, bottom: window.innerHeight - r.top + 4 });
+  };
+  const choose = (p: ThemePreference) => {
+    setPreference(p);
+    setAt(null);
+    button.current?.focus();
+  };
+
+  return (
+    <>
+      <button
+        ref={button}
+        className="btn ghost"
+        onClick={toggle}
+        aria-haspopup="menu"
+        aria-expanded={!!at}
+        title="Colour theme"
+      >
+        Theme: {themeLabels[preference]}
+      </button>
+      {at && (
+        <div className="ctxmenu" style={{ left: at.left, bottom: at.bottom }} role="menu" aria-label="Colour theme">
+          {(['system', 'light', 'dark'] as const).map((p) => (
+            <button
+              key={p}
+              role="menuitemradio"
+              aria-checked={preference === p}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => choose(p)}
+              autoFocus={preference === p}
+            >
+              {themeLabels[p]}
+              <span className="menu-note">
+                {p === 'system' ? `Windows: ${themeLabels[systemTheme()]}` : ''}
+                {preference === p ? ' ✓' : ''}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </>
   );
 }

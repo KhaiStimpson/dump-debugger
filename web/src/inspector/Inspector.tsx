@@ -434,7 +434,7 @@ function ObjectBody({ entityUri }: { entityUri: string }) {
                   className="mono"
                   style={{
                     fontSize: 12,
-                    color: f.kind === 'string' ? '#a7f3d0' : f.kind === 'null' ? 'var(--fg-3)' : 'var(--code)',
+                    color: f.kind === 'string' ? 'var(--val-str)' : f.kind === 'null' ? 'var(--fg-3)' : 'var(--code)',
                   }}
                 >
                   {f.display}

@@ -16,6 +16,8 @@ public interface IHostPlatform
     Task<bool> RequestDacDownloadAsync(Core.Dump.DumpMetadata metadata, CancellationToken ct);
 
     void SetTitlebarPassthrough(IReadOnlyList<Rect> rects);
+
+    void SetTheme(AppTheme theme);
 }
 
 public sealed record HostRpcServerOptions(string? StartupDumpPath = null);
@@ -149,6 +151,10 @@ public sealed partial class HostRpcServer : IAsyncDisposable
 
             case "window.setTitlebar":
                 _platform.SetTitlebarPassthrough(Params<TitlebarRegions>(@params).Passthrough);
+                return ContractJson.ToElement(new Ack());
+
+            case "window.setTheme":
+                _platform.SetTheme(Params<ThemeParams>(@params).Theme);
                 return ContractJson.ToElement(new Ack());
 
             case "dump.pick":

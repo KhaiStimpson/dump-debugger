@@ -34,7 +34,7 @@ export function MiniWaitGraph({ graph, cycle }: { graph: WaitGraph; cycle: LockC
     >
       <g fill="none" strokeWidth="1.5">
         {cycle.threads.map((_, i) => (
-          <path key={`o${i}`} d={`M${x(i) + 48} 112V60`} stroke={colors.fg1} />
+          <path key={`o${i}`} d={`M${x(i) + 48} 112V60`} style={{ stroke: colors.fg1 }} />
         ))}
         {cycle.threads.map((_, i) => {
           const j = held.indexOf(wants[i]);
@@ -46,7 +46,7 @@ export function MiniWaitGraph({ graph, cycle }: { graph: WaitGraph; cycle: LockC
             <path
               key={`w${i}`}
               d={`M${fromX} ${i < j ? 50 : 50} C${mid} 70 ${mid} 110 ${toX} ${i < j ? 125 : 125}`}
-              stroke={colors.crit}
+              style={{ stroke: colors.crit }}
               strokeDasharray="5 4"
             />
           );
@@ -57,11 +57,18 @@ export function MiniWaitGraph({ graph, cycle }: { graph: WaitGraph; cycle: LockC
           const sub = node(`thread/${t}`)?.sub ?? node(`thread/${t}`)?.detail ?? '';
           return (
             <g key={t} style={{ cursor: 'pointer' }} onClick={() => inspect(`thread/${t}`)}>
-              <rect x={x(i)} y={20} width={boxW} height={40} rx={6} fill={colors.critDim} stroke={colors.crit} />
-              <text x={x(i) + 10} y={37} fill={colors.fg0}>
+              <rect
+                x={x(i)}
+                y={20}
+                width={boxW}
+                height={40}
+                rx={6}
+                style={{ fill: colors.critDim, stroke: colors.crit }}
+              />
+              <text x={x(i) + 10} y={37} style={{ fill: colors.fg0 }}>
                 ◆ #{t}
               </text>
-              <text x={x(i) + 10} y={51} fill={colors.fg2}>
+              <text x={x(i) + 10} y={51} style={{ fill: colors.fg2 }}>
                 {clip(sub.split(' ').pop() ?? sub, 13)}
               </text>
             </g>
@@ -73,11 +80,18 @@ export function MiniWaitGraph({ graph, cycle }: { graph: WaitGraph; cycle: LockC
           const [owner, field] = splitName(lk.name);
           return (
             <g key={l} style={{ cursor: 'pointer' }} onClick={() => inspect(lk.uri)}>
-              <rect x={x(i)} y={112} width={boxW} height={40} rx={6} fill={colors.bg3} stroke={colors.line2} />
-              <text x={x(i) + 10} y={129} fill={colors.fg0}>
+              <rect
+                x={x(i)}
+                y={112}
+                width={boxW}
+                height={40}
+                rx={6}
+                style={{ fill: colors.bg3, stroke: colors.line2 }}
+              />
+              <text x={x(i) + 10} y={129} style={{ fill: colors.fg0 }}>
                 ▲ {clip(field, 11)}
               </text>
-              <text x={x(i) + 10} y={143} fill={colors.fg2}>
+              <text x={x(i) + 10} y={143} style={{ fill: colors.fg2 }}>
                 {clip(owner, 13)}
               </text>
             </g>
