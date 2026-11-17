@@ -15,12 +15,24 @@ namespace DumpDebugger.Session;
 public sealed class WorkerSession : IAsyncDisposable
 {
     private readonly Process _process;
+    private volatile bool _disposing;
 
-    private WorkerSession(Process process, RpcConnection connection, DumpArchitecture architecture)
+    private WorkerSession(Process process, RpcConnection connection, DumpArchitecture architecture, Action<string, JsonElement?> onNotification)
     {
         _process = process;
         Connection = connection;
         Architecture = architecture;
+        process.Exited += (_, _) =>
+        {
+            if (_disposing) return;
+            int exitCode;
+            try { exitCode = process.ExitCode; }
+            catch (InvalidOperationException) { return; } // Dispose may race the exit callback.
+            if (!_disposing)
+                onNotification("worker.status", ContractJson.ToElement(new WorkerStatus(WorkerState.Exited,
+                    architecture.ToString(), null, $"Worker exited unexpectedly (exit code {exitCode}).")));
+        };
+        process.EnableRaisingEvents = true;
     }
 
     public RpcConnection Connection { get; }
@@ -49,7 +61,7 @@ public sealed class WorkerSession : IAsyncDisposable
             var connection = new RpcConnection(pipe);
             connection.NotificationReceived += onNotification;
             connection.Start();
-            return new WorkerSession(process, connection, architecture);
+            return new WorkerSession(process, connection, architecture, onNotification);
         }
         catch
         {
@@ -68,6 +80,7 @@ public sealed class WorkerSession : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        _disposing = true;
         await Connection.DisposeAsync().ConfigureAwait(false);
         TryKill(_process);
         _process.Dispose();

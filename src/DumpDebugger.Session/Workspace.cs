@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using DumpDebugger.Core.Contracts;
+using DumpDebugger.Core.Dump;
 using DumpDebugger.Core.Rpc;
 
 namespace DumpDebugger.Session;
@@ -10,7 +11,7 @@ namespace DumpDebugger.Session;
 /// The sidecar folder for one dump (PLAN.md §3.1): <c>&lt;dump&gt;.dumpdebugger/</c> next to the
 /// .dmp, or under %LOCALAPPDATA% when the dump's folder isn't writable. It caches the
 /// diagnosis (so reopening is instant) and, from R6/R7, pins, notes and the heap snapshot.
-/// Cached analysis is only reused when the dump file and the analysis engine are unchanged.
+/// Cached analysis is only reused when the dump file, the analysis engine and the loaded runtimes are unchanged.
 /// </summary>
 public sealed class Workspace
 {
@@ -44,12 +45,16 @@ public sealed class Workspace
 
     public string PathOf(string file) => Path.Combine(Directory, file);
 
-    public Diagnosis? TryLoadDiagnosis()
+    /// <summary>
+    /// The cached diagnosis, valid only for the same dump file, engine and runtime identity
+    /// (<see cref="DumpMetadataExtensions.RuntimeIdentity"/>): a newly loadable runtime or a
+    /// different primary runtime means the cached result describes other data.
+    /// </summary>
+    public Diagnosis? TryLoadDiagnosis(string runtimeIdentity)
     {
         try
         {
-            var manifest = Read<WorkspaceManifest>(ManifestFile);
-            if (manifest is null || manifest != CurrentManifest())
+            if (Read<WorkspaceManifest>(ManifestFile) != CurrentManifest(runtimeIdentity))
             {
                 return null;
             }
@@ -63,21 +68,26 @@ public sealed class Workspace
         }
     }
 
-    public void SaveDiagnosis(Diagnosis diagnosis)
+    public void SaveDiagnosis(Diagnosis diagnosis, string runtimeIdentity)
     {
         Write(DiagnosisFile, diagnosis with { FromCache = false });
-        Write(ManifestFile, CurrentManifest());
+        Write(ManifestFile, CurrentManifest(runtimeIdentity));
     }
 
     private const string SnapshotFile = "snapshot.json";
+    private const string SnapshotManifestFile = "snapshot.manifest.json";
 
-    /// <summary>The compare snapshot, valid under the same rule as the cached diagnosis (same dump file, same engine).</summary>
-    public HeapSnapshot? TryLoadSnapshot()
+    /// <summary>
+    /// The compare snapshot, valid for the same dump file and engine as when it was built, and,
+    /// when <paramref name="runtimeIdentity"/> is given, the same runtime identity. Compare
+    /// candidates other than the open dump pass null: their snapshot only has to be self-consistent.
+    /// </summary>
+    public HeapSnapshot? TryLoadSnapshot(string? runtimeIdentity = null)
     {
         try
         {
-            var manifest = Read<WorkspaceManifest>(ManifestFile);
-            if (manifest is null || manifest != CurrentManifest())
+            var manifest = Read<WorkspaceManifest>(SnapshotManifestFile);
+            if (manifest is null || manifest != CurrentManifest(runtimeIdentity ?? manifest.RuntimeIdentity))
             {
                 return null;
             }
@@ -90,9 +100,15 @@ public sealed class Workspace
         }
     }
 
-    public bool HasSnapshot => File.Exists(PathOf(SnapshotFile)) && TryLoadSnapshot() is not null;
+    public bool HasSnapshot => HasSnapshotFor(null);
 
-    public void SaveSnapshot(HeapSnapshot snapshot) => Write(SnapshotFile, snapshot);
+    public bool HasSnapshotFor(string? runtimeIdentity) => File.Exists(PathOf(SnapshotFile)) && TryLoadSnapshot(runtimeIdentity) is not null;
+
+    public void SaveSnapshot(HeapSnapshot snapshot, string runtimeIdentity)
+    {
+        Write(SnapshotFile, snapshot);
+        Write(SnapshotManifestFile, CurrentManifest(runtimeIdentity));
+    }
 
     public T? Read<T>(string file)
     {
@@ -108,10 +124,10 @@ public sealed class Workspace
         File.Move(temp, path, overwrite: true);
     }
 
-    private WorkspaceManifest CurrentManifest()
+    private WorkspaceManifest CurrentManifest(string? runtimeIdentity)
     {
         var info = new FileInfo(DumpPath);
-        return new WorkspaceManifest(Engine.Version, info.Length, info.LastWriteTimeUtc.Ticks);
+        return new WorkspaceManifest(Engine.Version, info.Length, info.LastWriteTimeUtc.Ticks, runtimeIdentity);
     }
 
     private static bool TryEnsureWritable(string directory)
@@ -130,5 +146,5 @@ public sealed class Workspace
         }
     }
 
-    private sealed record WorkspaceManifest(string EngineVersion, long DumpSize, long DumpWriteTicks);
+    private sealed record WorkspaceManifest(string EngineVersion, long DumpSize, long DumpWriteTicks, string? RuntimeIdentity);
 }

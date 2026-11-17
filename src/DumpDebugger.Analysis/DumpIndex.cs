@@ -28,6 +28,7 @@ public sealed class DumpIndex : IDisposable
 
     public double OpenSeconds { get; }
 
+    /// <summary>The primary runtime (see RuntimeSelection); DumpLoader orders it first.</summary>
     public ClrRuntime Runtime => Loaded.Runtimes.Count > 0
         ? Loaded.Runtimes[0]
         : throw new InvalidOperationException("The dump has no .NET runtime that could be loaded (DAC not found).");
@@ -42,10 +43,10 @@ public sealed class DumpIndex : IDisposable
 
     public HeapModel? Heap { get; set; }
 
-    public static DumpIndex Open(string path, bool allowSymbolServer = false)
+    public static DumpIndex Open(string path, bool allowSymbolServer = false, Action<string, string>? progress = null, CancellationToken ct = default)
     {
         var sw = Stopwatch.StartNew();
-        var loaded = DumpLoader.Load(path, allowSymbolServer);
+        var loaded = DumpLoader.Load(path, allowSymbolServer, progress, ct);
         return new DumpIndex(loaded, sw.Elapsed.TotalSeconds);
     }
 

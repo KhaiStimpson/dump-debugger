@@ -4,6 +4,7 @@ using DumpDebugger.Analysis.Heap;
 using DumpDebugger.Analysis.Locks;
 using DumpDebugger.Analysis.Threads;
 using DumpDebugger.Core.Contracts;
+using DumpDebugger.Core.Dump;
 using DumpDebugger.Core.Rpc;
 
 namespace DumpDebugger.Worker;
@@ -25,9 +26,24 @@ public sealed class WorkerHandlers : IDisposable
             case "dump.open":
                 {
                     var request = Params<OpenDumpParams>(@params);
-                    await context.NotifyAsync("dump.progress", new ProgressNotification("Loading dump", 0.1, request.Path));
-                    var index = await Task.Run(() => DumpIndex.Open(request.Path, request.AllowSymbolServer), ct);
+                    var assemblyPath = typeof(DumpIndex).Assembly.Location;
+                    await context.NotifyAsync("debug.event", new DebugNotification("worker", "build",
+                        $"{System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}; Analysis DLL: {assemblyPath}; modified {File.GetLastWriteTimeUtc(assemblyPath):O}"));
+                    // The online retry keeps the host's "Downloading" stage rather than regressing to "Loading dump".
+                    await context.NotifyAsync("dump.progress", request.AllowSymbolServer
+                        ? new ProgressNotification("Downloading matching DACs", 0.12, "Contacting the Microsoft symbol server…")
+                        : new ProgressNotification("Loading dump", 0.1, request.Path));
+
+                    // Release the previous DataTarget first: an x86 worker can't afford two views of a multi-GB dump.
                     _index?.Dispose();
+                    _index = null;
+                    var index = await Task.Run(() => DumpIndex.Open(request.Path, request.AllowSymbolServer, (stage, detail) =>
+                    {
+                        if (stage == "Downloading DAC")
+                            context.NotifyAsync("dump.progress", new ProgressNotification("Downloading matching DACs", 0.12, detail)).GetAwaiter().GetResult();
+                        context.NotifyAsync("debug.event", new DebugNotification("worker", stage, detail,
+                            stage is "DAC resolution failed" or "DAC candidate failed" or "DAC cache entry rejected")).GetAwaiter().GetResult();
+                    }, ct), ct);
                     _index = index;
                     return ContractJson.ToElement(index.Loaded.Metadata);
                 }
@@ -36,6 +52,8 @@ public sealed class WorkerHandlers : IDisposable
                 {
                     var p = ContractJson.FromElement<AnalysisRunParams>(@params) ?? new AnalysisRunParams();
                     var index = RequireRuntime();
+                    await context.NotifyAsync("debug.event", new DebugNotification("worker", "analysis runtime",
+                        $"{index.Runtime.ClrInfo.Flavor} {index.Runtime.ClrInfo.Version} (primary of {index.Loaded.Runtimes.Count} loaded); managed threads: {index.Loaded.Metadata.PrimaryRuntime()?.ManagedThreadCount}"));
                     var pipeline = new AnalysisPipeline(index, d => context.NotifyAsync("analysis.updated", d));
                     return ContractJson.ToElement(await pipeline.RunAsync(p.IncludeHeap, ct));
                 }

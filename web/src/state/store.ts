@@ -141,5 +141,11 @@ rpc.on('analysis.updated', (d) => {
     if (location.hash.startsWith('#/analyzing')) navigate('diagnosis');
   }
 });
-rpc.on('worker.status', (w) => useApp.setState({ worker: w }));
+rpc.on('worker.status', (w) =>
+  useApp.setState((s) => ({
+    worker: w,
+    error: w.state === 'exited' && w.message ? w.message : s.error,
+  })),
+);
 rpc.on('dump.progress', (p) => useApp.setState({ progress: p }));
+rpc.on('analysis.failed', (failure) => useApp.setState({ error: failure.message }));

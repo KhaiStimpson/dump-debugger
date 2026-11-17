@@ -81,17 +81,16 @@ web/ (React + TS, Vite)  ── JSON-RPC over postMessage ──  DumpDebugger.H
 Requires Windows, the .NET 10 SDK, Node 20+, and the WebView2 runtime (part of Windows 11).
 
 ```bash
-# 1. Workers: ClrMD must match the dump's bitness, so build both.
-dotnet build src/DumpDebugger.Worker -r win-x64
-dotnet build src/DumpDebugger.Worker -r win-x86
-
-# 2. The web app (served to the host's WebView2).
+# 1. The web app (served to the host's WebView2).
 cd web && npm install && npm run build && cd ..
 
-# 3. The host. Picks up web/dist, both workers, and DumpGen for "Generate a sample".
+# 2. The host. Builds both workers (ClrMD must match the dump's bitness, so there is an x64 and
+#    an x86 one) and picks up web/dist and DumpGen for "Generate a sample".
 dotnet build src/DumpDebugger.DumpGen
 dotnet build src/DumpDebugger.Host -p:Platform=x64
 ```
+
+The host build and publish fail if a bundled worker differs from the worker build it was copied from, or if the x86 worker isn't large-address-aware (the worker build sets that flag so x86 dumps get 4 GB of address space, not 2 GB). Pass `-p:BuildBundledWorkers=false` to bundle workers you built yourself.
 
 Then run `src/DumpDebugger.Host/bin/x64/Debug/net10.0-windows10.0.26100.0/win-x64/DumpDebugger.Host.exe`, optionally with a dump path as the first argument.
 
@@ -113,12 +112,15 @@ Scenarios: `deadlock`, `threadpool`, `syncoverasync`, `exceptions`, `crash`, `fi
 ```bash
 dotnet test src/DumpDebugger.Tests          # missing fixtures are generated with DumpGen on first run
 DUMPDEBUGGER_PERF=1 dotnet test src/DumpDebugger.Tests -c Release   # + the 2 GB root-path timing
+DUMPDEBUGGER_X86_DUMP=path/to/x86.dmp dotnet test src/DumpDebugger.Tests  # + an x86 dump end to end (DumpGen -r win-x86 makes one)
 cd web && npm test && npm run lint && npm run typecheck
 ```
 
 Every analyzer has a golden snapshot of what it says about its scenario (`src/DumpDebugger.Tests/Golden/`; `UPDATE_GOLDEN=1` to accept a deliberate change). After changing a contract in `DumpDebugger.Core`, run `npm run gen:types` in `web/`; a test fails if the generated TypeScript is stale.
 
 `web/scripts/shot.mjs` drives the real app over WebView2's DevTools port to take screenshots and run axe-core accessibility checks (`--cdp <port>` on the host).
+
+For live troubleshooting, click **Debug** in the status bar or press **Ctrl+Shift+D**. The panel shows pending RPC calls with elapsed time, worker identity/build information, runtime/DAC lookup and consent events, analysis stages, and errors. It keeps the most recent 300 events in memory, including activity before the panel was opened. **Save log** downloads a local JSON report; it can contain file paths and error messages, but does not retain RPC arguments, heap pages, or dump contents. Close the panel with the same shortcut or Escape.
 
 ## Package
 

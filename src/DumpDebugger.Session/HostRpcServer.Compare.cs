@@ -1,4 +1,5 @@
 using DumpDebugger.Core.Contracts;
+using DumpDebugger.Core.Dump;
 using DumpDebugger.Core.Rpc;
 
 namespace DumpDebugger.Session;
@@ -8,9 +9,9 @@ public sealed partial class HostRpcServer
     private Task? _snapshotTask;
 
     /// <summary>After analysis, capture the compare snapshot in the background (once per dump and engine version).</summary>
-    private void EnsureSnapshotInBackground(WorkerSession session, Workspace workspace, Diagnosis diagnosis)
+    private void EnsureSnapshotInBackground(WorkerSession session, Workspace workspace, Diagnosis diagnosis, string runtimeIdentity)
     {
-        if (workspace.HasSnapshot)
+        if (workspace.HasSnapshotFor(runtimeIdentity))
         {
             return;
         }
@@ -22,7 +23,7 @@ public sealed partial class HostRpcServer
                 var snapshot = await session.Connection.CallAsync<HeapSnapshot>("snapshot.build", new SnapshotParams(diagnosis)).ConfigureAwait(false);
                 if (snapshot is not null)
                 {
-                    workspace.SaveSnapshot(snapshot);
+                    workspace.SaveSnapshot(snapshot, runtimeIdentity);
                     await NotifyWebAsync("snapshot.ready", new PathParams(workspace.DumpPath)).ConfigureAwait(false);
                 }
             }
@@ -64,13 +65,15 @@ public sealed partial class HostRpcServer
         }
 
         var workspace = Workspace.For(path);
-        if (workspace.TryLoadSnapshot() is { } cached)
+        var isOpen = SamePath(path, _workspace?.DumpPath) && _session is not null;
+        var openIdentity = isOpen ? _session!.Metadata?.RuntimeIdentity() : null;
+        if (workspace.TryLoadSnapshot(openIdentity) is { } cached)
         {
             return cached;
         }
 
         // The open dump: its snapshot is being built (or will be once analysis finishes).
-        if (SamePath(path, _workspace?.DumpPath) && _session is { } session)
+        if (isOpen && _session is { } session && openIdentity is not null)
         {
             if (_analysisTask is { } analysis)
             {
@@ -82,28 +85,28 @@ public sealed partial class HostRpcServer
                 await snap.WaitAsync(ct).ConfigureAwait(false);
             }
 
-            if (workspace.TryLoadSnapshot() is { } built)
+            if (workspace.TryLoadSnapshot(openIdentity) is { } built)
             {
                 return built;
             }
 
             var diagnosis = _latest ?? throw new RpcException(new RpcError(RpcError.InternalError, "The open dump hasn't been analyzed yet."));
             var fresh = await session.Connection.CallAsync<HeapSnapshot>("snapshot.build", new SnapshotParams(diagnosis), ct).ConfigureAwait(false);
-            workspace.SaveSnapshot(fresh!);
+            workspace.SaveSnapshot(fresh!, openIdentity);
             return fresh!;
         }
 
         // Any other dump: analyze it once with a temporary worker, cache diagnosis + snapshot.
         await NotifyWebAsync("dump.progress", new ProgressNotification($"Analyzing {Path.GetFileName(path)} for comparison (once)", 0.1, path)).ConfigureAwait(false);
         await using var temp = await WorkerSession.StartAsync(path, (_, _) => { }, ct).ConfigureAwait(false);
-        await temp.OpenDumpAsync(path, ct).ConfigureAwait(false);
-        var diag = workspace.TryLoadDiagnosis()
+        var identity = (await temp.OpenDumpAsync(path, ct).ConfigureAwait(false)).RuntimeIdentity();
+        var diag = workspace.TryLoadDiagnosis(identity)
                    ?? await temp.Connection.CallAsync<Diagnosis>("analysis.run", new AnalysisRunParams(), ct).ConfigureAwait(false)
                    ?? throw new RpcException(new RpcError(RpcError.InternalError, "Analysis returned nothing."));
-        workspace.SaveDiagnosis(diag);
+        workspace.SaveDiagnosis(diag, identity);
         var snapshot = await temp.Connection.CallAsync<HeapSnapshot>("snapshot.build", new SnapshotParams(diag), ct).ConfigureAwait(false)
                        ?? throw new RpcException(new RpcError(RpcError.InternalError, "Snapshot returned nothing."));
-        workspace.SaveSnapshot(snapshot);
+        workspace.SaveSnapshot(snapshot, identity);
         return snapshot;
     }
 

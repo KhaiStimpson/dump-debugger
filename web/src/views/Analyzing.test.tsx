@@ -33,6 +33,35 @@ describe('Analyzing failures', () => {
     expect(html).not.toContain('role="progressbar"');
   });
 
+  it('labels the dump with the primary runtime, not the first one in the dump', () => {
+    state.dump = {
+      metadata: {
+        dumpPath: 'w3wp.dmp',
+        fileSizeBytes: 1,
+        architecture: 'x86',
+        runtimes: [
+          { family: 'netFramework', productVersion: '4.8', isPrimary: false },
+          { family: 'netCore', productVersion: '10.0.13', isPrimary: true },
+        ],
+      },
+    } as unknown as State['dump'];
+    const html = renderToStaticMarkup(<Analyzing />);
+    expect(html).toContain('10.0.13 x86');
+    expect(html).not.toContain('4.8 x86');
+  });
+
+  it('ends progress when analysis fails after it started', () => {
+    state.dump = { metadata: { dumpPath: 'w3wp.dmp', runtimes: [] } } as unknown as State['dump'];
+    state.diagnosis = {
+      stages: [{ id: 'threads', label: 'Reading threads', status: 'running' }],
+    } as unknown as State['diagnosis'];
+    state.error = 'Worker exited unexpectedly (exit code -532462766).';
+    const html = renderToStaticMarkup(<Analyzing />);
+    expect(html).toContain('Analysis failed');
+    expect(html).toContain('exit code -532462766');
+    expect(html).not.toContain('role="progressbar"');
+  });
+
   it('shows progress while the worker is still opening the dump', () => {
     state.opening = 'w3wp.dmp';
     const html = renderToStaticMarkup(<Analyzing />);

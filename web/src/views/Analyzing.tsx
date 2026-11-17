@@ -1,4 +1,4 @@
-import { bytes, fileName, seconds } from '../format';
+import { bytes, fileName, primaryRuntime, seconds } from '../format';
 import { navigate } from '../router';
 import { useApp } from '../state/store';
 import { toneColor } from '../components/Sev';
@@ -25,9 +25,9 @@ export function Analyzing() {
         <div className="lbl">Analyzing {md ? fileName(md.dumpPath) : opening ? fileName(opening) : ''}</div>
         <h2 style={{ fontSize: 22, marginTop: 8 }}>
           {error
-            ? 'Analysis could not start'
+            ? 'Analysis failed'
             : md
-              ? `Reading ${bytes(md.fileSizeBytes)} · ${diagnosis?.dump.runtime ?? md.runtimes[0]?.productVersion ?? ''} ${md.architecture}`
+              ? `Reading ${bytes(md.fileSizeBytes)} · ${diagnosis?.dump.runtime ?? primaryRuntime(md)?.productVersion ?? ''} ${md.architecture}`
               : (progress?.stage ?? 'Starting worker…')}
         </h2>
         {error ? (

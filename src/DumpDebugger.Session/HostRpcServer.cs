@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using DumpDebugger.Core.Contracts;
+using DumpDebugger.Core.Dump;
 using DumpDebugger.Core.Rpc;
 
 namespace DumpDebugger.Session;
@@ -113,6 +114,9 @@ public sealed partial class HostRpcServer : IAsyncDisposable
     public Task NotifyWebAsync<T>(string method, T payload) =>
         SendAsync(RpcMessage.Notification(method, ContractJson.ToElement(payload)));
 
+    private Task DebugAsync(string stage, string detail, bool error = false) =>
+        NotifyWebAsync("debug.event", new DebugNotification("host", stage, detail, error));
+
     private Task SendAsync(RpcMessage message) =>
         _sendToWeb(JsonSerializer.Serialize(message, ContractJson.Options));
 
@@ -135,6 +139,8 @@ public sealed partial class HostRpcServer : IAsyncDisposable
         switch (method)
         {
             case "app.info":
+                var sessionAssembly = typeof(HostRpcServer).Assembly.Location;
+                await DebugAsync("build", $"Session DLL: {sessionAssembly}; modified {File.GetLastWriteTimeUtc(sessionAssembly):O}").ConfigureAwait(false);
                 return ContractJson.ToElement(new AppInfo(
                     typeof(HostRpcServer).Assembly.GetName().Version?.ToString(3) ?? "0.0.0",
                     System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
@@ -229,32 +235,48 @@ public sealed partial class HostRpcServer : IAsyncDisposable
         {
             await CloseDumpCoreAsync().ConfigureAwait(false);
 
+            await DebugAsync("open", path).ConfigureAwait(false);
             await NotifyWebAsync("dump.progress", new ProgressNotification("Starting worker", 0.02, path)).ConfigureAwait(false);
             var session = await WorkerSession.StartAsync(path, RelayWorkerNotification, ct).ConfigureAwait(false);
             _session = session;
+            await DebugAsync("worker started", $"{session.Architecture}; pid {session.ProcessId}; {WorkerLauncher.FindWorkerExecutable(session.Architecture)}").ConfigureAwait(false);
             await NotifyWebAsync("worker.status", new WorkerStatus(WorkerState.Starting, session.Architecture.ToString(), session.ProcessId, null)).ConfigureAwait(false);
 
             var metadata = await DacConsent.OpenAsync(
                 async (online, token) =>
                 {
+                    await DebugAsync("runtime lookup", online ? "Online retry (consent granted)" : "Offline lookup").ConfigureAwait(false);
                     if (online)
                         await NotifyWebAsync("dump.progress", new ProgressNotification("Downloading matching DACs", 0.12, "Contacting the Microsoft symbol server…")).ConfigureAwait(false);
                     return await session.OpenDumpAsync(path, token, online).ConfigureAwait(false);
-                }, _platform.RequestDacDownloadAsync, ct).ConfigureAwait(false);
+                }, async (metadata, token) =>
+                {
+                    await DebugAsync("consent", "Waiting for Download / Stay offline in the native dialog").ConfigureAwait(false);
+                    var allowed = await _platform.RequestDacDownloadAsync(metadata, token).ConfigureAwait(false);
+                    await DebugAsync("consent", allowed ? "Download approved" : "Staying offline").ConfigureAwait(false);
+                    return allowed;
+                }, ct).ConfigureAwait(false);
             await NotifyWebAsync("worker.status", new WorkerStatus(WorkerState.Ready, session.Architecture.ToString(), session.ProcessId, null)).ConfigureAwait(false);
 
             var workspace = Workspace.For(path);
             _workspace = workspace;
-            var cached = workspace.TryLoadDiagnosis();
+            var identity = metadata.RuntimeIdentity();
+            var cached = workspace.TryLoadDiagnosis(identity);
             if (cached is not null)
             {
+                await DebugAsync("analysis", $"Restoring cached diagnosis for {identity}").ConfigureAwait(false);
                 _latest = cached with { FromCache = true };
                 await NotifyWebAsync("analysis.updated", _latest).ConfigureAwait(false);
-                EnsureSnapshotInBackground(session, workspace, cached);
+                EnsureSnapshotInBackground(session, workspace, cached, identity);
             }
             else if (metadata.Runtimes.Any(r => r.IsManagedAnalysisAvailable))
             {
-                StartAnalysis(session, workspace);
+                await DebugAsync("analysis", $"Starting worker analysis (no cached diagnosis for {identity})").ConfigureAwait(false);
+                StartAnalysis(session, workspace, identity);
+            }
+            else
+            {
+                await DebugAsync("analysis unavailable", DacConsent.AnalysisError(metadata) ?? "No usable runtime", true).ConfigureAwait(false);
             }
 
             await OnDumpOpenedAsync(metadata, workspace, _latest).ConfigureAwait(false);
@@ -269,7 +291,7 @@ public sealed partial class HostRpcServer : IAsyncDisposable
     /// <summary>Hook for recents and other per-open bookkeeping (see HostRpcServer.Recents.cs).</summary>
     private partial Task OnDumpOpenedAsync(Core.Dump.DumpMetadata metadata, Workspace workspace, Diagnosis? diagnosis);
 
-    private void StartAnalysis(WorkerSession session, Workspace workspace)
+    private void StartAnalysis(WorkerSession session, Workspace workspace, string runtimeIdentity)
     {
         _analysisCts = new CancellationTokenSource();
         var ct = _analysisCts.Token;
@@ -282,14 +304,20 @@ public sealed partial class HostRpcServer : IAsyncDisposable
                 if (final is not null)
                 {
                     _latest = final;
-                    workspace.SaveDiagnosis(final);
+                    workspace.SaveDiagnosis(final, runtimeIdentity);
                     await OnAnalysisCompletedAsync(workspace, final).ConfigureAwait(false);
-                    EnsureSnapshotInBackground(session, workspace, final);
+                    EnsureSnapshotInBackground(session, workspace, final, runtimeIdentity);
                 }
             }
-            catch (Exception ex) when (ex is OperationCanceledException or RpcException or IOException)
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
             {
-                // Cancelled, or the worker went away; the UI keeps the last snapshot it saw.
+                await DebugAsync("analysis stopped", "Cancelled").ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                await DebugAsync("analysis failed", ex.Message, true).ConfigureAwait(false);
+                if (ReferenceEquals(_session, session) && !ct.IsCancellationRequested)
+                    await NotifyWebAsync("analysis.failed", new AnalysisFailure(ex.Message)).ConfigureAwait(false);
             }
         });
     }

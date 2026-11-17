@@ -8,6 +8,10 @@ export interface Ack {
   ok: boolean;
 }
 
+export interface AnalysisFailure {
+  message: string;
+}
+
 export interface AnalysisRunParams {
   includeHeap: boolean;
 }
@@ -92,6 +96,13 @@ export const ConfidenceValues: readonly Confidence[] = ['low', 'medium', 'high']
 
 export type DacResolutionTier = 'none' | 'embeddedInDump' | 'localMachine' | 'appCache' | 'symbolServer';
 export const DacResolutionTierValues: readonly DacResolutionTier[] = ['none', 'embeddedInDump', 'localMachine', 'appCache', 'symbolServer'];
+
+export interface DebugNotification {
+  source: string;
+  stage: string;
+  detail: string;
+  error: boolean;
+}
 
 export interface Diagnosis {
   schemaVersion: number;
@@ -484,6 +495,8 @@ export interface RuntimeInfo {
   dacTier: DacResolutionTier;
   isManagedAnalysisAvailable: boolean;
   dacError: string | null;
+  managedThreadCount: number | null;
+  isPrimary: boolean;
 }
 
 export interface SampleScenario {
@@ -775,8 +788,10 @@ export type RpcMethod = keyof RpcMethods;
 /** Server-pushed notifications and their payloads. */
 export interface RpcNotifications {
   'dump.progress': ProgressNotification;
+  'debug.event': DebugNotification;
   'worker.status': WorkerStatus;
   'analysis.updated': Diagnosis;
+  'analysis.failed': AnalysisFailure;
   'snapshot.ready': PathParams;
 }
 

@@ -45,7 +45,7 @@ public sealed class RecentsStore
             var items = Load();
             var existing = items.FirstOrDefault(r => SamePath(r.Path, metadata.DumpPath));
             items.RemoveAll(r => SamePath(r.Path, metadata.DumpPath));
-            var rt = metadata.Runtimes.FirstOrDefault();
+            var rt = metadata.PrimaryRuntime();
             var badge = diagnosis is not null ? Badge(diagnosis) : (existing?.VerdictSeverity, existing?.VerdictLabel);
             items.Insert(0, new RecentDump(
                 Path.GetFullPath(metadata.DumpPath),

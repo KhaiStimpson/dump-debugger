@@ -18,6 +18,11 @@ public sealed record OpenDumpParams(string Path, bool AllowSymbolServer = false)
 
 public sealed record ProgressNotification(string Stage, double FractionComplete, string? Detail);
 
+/// <summary>Small diagnostic events only: never dump contents or heap/query payloads.</summary>
+public sealed record DebugNotification(string Source, string Stage, string Detail, bool Error = false);
+
+public sealed record AnalysisFailure(string Message);
+
 public enum WorkerState
 {
     Starting,

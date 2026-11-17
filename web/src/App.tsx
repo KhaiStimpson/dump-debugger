@@ -22,6 +22,8 @@ import { Objects } from './views/Objects';
 import { Report } from './views/Report';
 import { Threads } from './views/Threads';
 import { Placeholder } from './views/Placeholder';
+import { DebugOverlay } from './debug/DebugOverlay';
+import { recordEvent, useDiagnostics } from './debug/diagnostics';
 
 // React Flow + ELK are most of the bundle; load them when the Locks view is first opened.
 const Locks = lazy(() => import('./views/Locks').then((m) => ({ default: m.Locks })));
@@ -44,6 +46,18 @@ function Shell() {
   const dump = useApp((s) => s.dump);
   const inspectorOpen = useApp((s) => s.inspector.open);
   useGlobalKeys();
+
+  useEffect(() => {
+    const onError = (event: ErrorEvent) => recordEvent('web', 'error', event.message, true);
+    const onRejection = (event: PromiseRejectionEvent) =>
+      recordEvent('web', 'unhandled rejection', String(event.reason), true);
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onRejection);
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onRejection);
+    };
+  }, []);
 
   useEffect(() => {
     rpc.call('app.info', {}).then((info) => {
@@ -70,6 +84,7 @@ function Shell() {
         </main>
       </div>
       <StatusBar />
+      <DebugOverlay />
     </div>
   );
 }
@@ -120,6 +135,11 @@ function useGlobalKeys() {
   useEffect(() => {
     let pendingG = 0;
     const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        useDiagnostics.getState().toggle();
+        return;
+      }
       const s = useApp.getState();
       const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -140,7 +160,8 @@ function useGlobalKeys() {
         return;
       }
       if (e.key === 'Escape') {
-        if (s.paletteOpen) s.setPalette(false);
+        if (useDiagnostics.getState().visible) useDiagnostics.getState().toggle();
+        else if (s.paletteOpen) s.setPalette(false);
         else if (s.helpOpen) s.setHelp(false);
         else if (s.inspector.open) s.closeInspector();
         return;

@@ -17,4 +17,11 @@
     <SelfContained>false</SelfContained>
   </PropertyGroup>
 
+  <Import Project="..\..\build\PeFlags.targets" />
+
+  <!-- Patch the intermediate apphost, which both build and publish copy from. -->
+  <Target Name="MarkWorkerLargeAddressAware" AfterTargets="_CreateAppHost" Condition="'$(RuntimeIdentifier)' == 'win-x86' and '$(UseAppHost)' != 'false' and Exists('$(AppHostIntermediatePath)')">
+    <LargeAddressAware Files="$(AppHostIntermediatePath)" />
+  </Target>
+
 </Project>

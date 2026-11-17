@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { icons } from '../components/Icons';
-import { bytes, fileName } from '../format';
+import { bytes, fileName, primaryRuntime } from '../format';
 import { rpc } from '../rpc/client';
 import { useRoute } from '../router';
 import { useApp } from '../state/store';
@@ -45,7 +45,7 @@ export function Titlebar() {
       <span className="dump">{name}</span>
       {md && !atHome && view !== 'compare' && (
         <span className="meta">
-          {[diagnosis?.dump.runtime ?? md.runtimes[0]?.productVersion, md.architecture, bytes(md.fileSizeBytes)]
+          {[diagnosis?.dump.runtime ?? primaryRuntime(md)?.productVersion, md.architecture, bytes(md.fileSizeBytes)]
             .filter(Boolean)
             .join(' · ')}
         </span>

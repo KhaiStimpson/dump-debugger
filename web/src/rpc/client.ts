@@ -1,4 +1,5 @@
 import type { RpcMethod, RpcMethods, RpcNotification, RpcNotifications } from '../contracts.gen';
+import { finishCall, recordEvent, startCall } from '../debug/diagnostics';
 
 /**
  * Typed JSON-RPC client over the WebView2 bridge. Method names, params and results are all
@@ -57,9 +58,13 @@ type Handler = (payload: unknown) => void;
 
 export class RpcClient {
   private nextId = 1;
-  private readonly pending = new Map<string, { resolve: (v: unknown) => void; reject: (e: unknown) => void }>();
+  private readonly pending = new Map<
+    string,
+    { resolve: (v: unknown) => void; reject: (e: unknown) => void; cleanup: () => void }
+  >();
   private readonly handlers = new Map<string, Set<Handler>>();
   private readonly bridge: WebViewBridge | undefined;
+  private lastAnalysisStage = '';
 
   constructor(bridge: WebViewBridge | undefined) {
     this.bridge = bridge;
@@ -77,6 +82,7 @@ export class RpcClient {
   ): Promise<RpcMethods[M]['result']> {
     const bridge = this.bridge;
     if (!bridge) {
+      recordEvent('rpc', method, 'WebView2 bridge is not connected', true);
       return Promise.reject(new RpcError({ code: -32002, message: 'Not running inside the Dump Debugger host.' }));
     }
 
@@ -88,22 +94,37 @@ export class RpcClient {
         return;
       }
 
-      this.pending.set(id, { resolve: resolve as (v: unknown) => void, reject });
-      options.signal?.addEventListener(
-        'abort',
-        () => {
-          if (this.pending.delete(id)) {
+      const abort = () => {
+        if (this.pending.delete(id)) {
+          finishCall(id, 'cancelled');
+          try {
             bridge.postMessage(JSON.stringify({ method: '$/cancel', params: { id } }));
+          } catch (error) {
+            recordEvent('rpc', '$/cancel', `send failed: ${String(error)}`, true);
+          } finally {
             reject(new RpcError({ code: -32800, message: 'Request cancelled.' }));
           }
-        },
-        { once: true },
-      );
+        }
+      };
+      this.pending.set(id, {
+        resolve: resolve as (v: unknown) => void,
+        reject,
+        cleanup: () => options.signal?.removeEventListener('abort', abort),
+      });
+      startCall(id, method);
+      options.signal?.addEventListener('abort', abort, { once: true });
 
-      if (options.files?.length && bridge.postMessageWithAdditionalObjects) {
-        bridge.postMessageWithAdditionalObjects(message, options.files);
-      } else {
-        bridge.postMessage(message);
+      try {
+        if (options.files?.length && bridge.postMessageWithAdditionalObjects) {
+          bridge.postMessageWithAdditionalObjects(message, options.files);
+        } else {
+          bridge.postMessage(message);
+        }
+      } catch (error) {
+        this.pending.get(id)?.cleanup();
+        this.pending.delete(id);
+        finishCall(id, `send failed: ${String(error)}`, true);
+        reject(error);
       }
     });
   }
@@ -128,6 +149,35 @@ export class RpcClient {
     }
 
     if (msg.method && msg.id === undefined) {
+      if (msg.params && typeof msg.params === 'object') {
+        const p = msg.params as Record<string, unknown>;
+        if (msg.method === 'debug.event') {
+          recordEvent(String(p.source ?? 'host'), String(p.stage ?? 'event'), String(p.detail ?? ''), p.error === true);
+        } else if (msg.method === 'analysis.failed') {
+          recordEvent('analysis', 'failed', String(p.message ?? ''), true);
+        } else if (msg.method === 'dump.progress') {
+          recordEvent('host', String(p.stage ?? 'progress'), String(p.detail ?? ''));
+        } else if (msg.method === 'worker.status') {
+          recordEvent(
+            'worker',
+            String(p.state),
+            `${p.architecture} · pid ${p.processId ?? '—'} ${p.message ?? ''}`,
+            p.state === 'exited' && !!p.message,
+          );
+        } else if (msg.method === 'analysis.updated') {
+          const d = msg.params as RpcNotifications['analysis.updated'];
+          const summary = d.complete
+            ? 'Complete'
+            : d.stages
+                .filter((s) => s.status !== 'pending')
+                .map((s) => `${s.id}: ${s.status}`)
+                .join(', ');
+          if (summary !== this.lastAnalysisStage) {
+            recordEvent('analysis', 'stages', summary);
+            this.lastAnalysisStage = summary;
+          }
+        }
+      }
       this.handlers.get(msg.method)?.forEach((h) => h(msg.params));
       return;
     }
@@ -136,6 +186,8 @@ export class RpcClient {
       const p = this.pending.get(msg.id);
       if (!p) return;
       this.pending.delete(msg.id);
+      p.cleanup();
+      finishCall(msg.id, msg.error ? `${msg.error.code}: ${msg.error.message}` : 'completed', !!msg.error);
       if (msg.error) p.reject(new RpcError(msg.error));
       else p.resolve(msg.result ?? null);
     }

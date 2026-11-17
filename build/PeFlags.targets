@@ -1,0 +1,39 @@
+<Project>
+  <!--
+    LargeAddressAware for 32-bit executables. The x86 worker reads multi-GB dumps; without
+    IMAGE_FILE_LARGE_ADDRESS_AWARE (0x20) Windows gives it 2 GB of address space instead of
+    4 GB on 64-bit Windows. The .NET SDK has no switch for the apphost, and editbin is not part
+    of a plain SDK install, so this sets (or, with VerifyOnly, checks) the COFF flag directly.
+  -->
+  <UsingTask TaskName="LargeAddressAware" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Files ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <VerifyOnly ParameterType="System.Boolean" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+foreach (var item in Files)
+{
+    var path = item.ItemSpec;
+    using var stream = new FileStream(path, FileMode.Open, VerifyOnly ? FileAccess.Read : FileAccess.ReadWrite, FileShare.Read);
+    var reader = new BinaryReader(stream);
+    stream.Position = 0x3C;
+    var pe = reader.ReadInt32();
+    stream.Position = pe;
+    if (reader.ReadUInt32() != 0x00004550) { Log.LogError("{0} is not a PE image.", path); continue; }
+    var machine = reader.ReadUInt16();
+    if (machine != 0x014C) { Log.LogError("{0} is not an x86 image (machine 0x{1}).", path, machine.ToString("X4")); continue; }
+    var characteristicsOffset = pe + 4 + 18;
+    stream.Position = characteristicsOffset;
+    var characteristics = reader.ReadUInt16();
+    if ((characteristics & 0x20) != 0) { Log.LogMessage(MessageImportance.Low, "{0} is large-address-aware (0x{1}).", path, characteristics.ToString("X4")); continue; }
+    if (VerifyOnly) { Log.LogError("{0} is not large-address-aware (characteristics 0x{1}); rebuild the x86 worker.", path, characteristics.ToString("X4")); continue; }
+    stream.Position = characteristicsOffset;
+    new BinaryWriter(stream).Write((ushort)(characteristics | 0x20));
+    Log.LogMessage(MessageImportance.High, "Marked {0} large-address-aware (0x{1} -> 0x{2}).", path, characteristics.ToString("X4"), (characteristics | 0x20).ToString("X4"));
+}
+]]></Code>
+    </Task>
+  </UsingTask>
+</Project>

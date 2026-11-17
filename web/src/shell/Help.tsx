@@ -5,6 +5,7 @@ import { useApp } from '../state/store';
 const keys: [string, string][] = [
   ['Ctrl K', 'Search requests, threads, locks, types, objects, commands'],
   ['Ctrl O', 'Open a dump'],
+  ['Ctrl Shift D', 'Toggle live diagnostics'],
   ['Ctrl E', 'Export incident report'],
   ['G then H / D / T / L / M / O / C / R', 'Go to Home, Diagnosis, Threads, Locks, Memory, Objects, Compare, Report'],
   ['J / K', 'Next / previous row or finding'],

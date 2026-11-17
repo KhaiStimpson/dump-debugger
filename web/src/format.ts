@@ -1,3 +1,5 @@
+import type { DumpMetadata, RuntimeInfo } from './contracts.gen';
+
 export function bytes(n: number): string {
   const units = ['B', 'KB', 'MB', 'GB', 'TB'];
   let v = n;
@@ -39,4 +41,9 @@ export function fileName(path: string): string {
 
 export function cap(s: string): string {
   return s.length ? s[0].toUpperCase() + s.slice(1) : s;
+}
+
+/** The runtime analysis ran against (the host flags it; it is also ordered first). */
+export function primaryRuntime(md: Pick<DumpMetadata, 'runtimes'>): RuntimeInfo | undefined {
+  return md.runtimes.find((r) => r.isPrimary) ?? md.runtimes[0];
 }

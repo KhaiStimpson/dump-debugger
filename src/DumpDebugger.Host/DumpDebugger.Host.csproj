@@ -61,8 +61,14 @@
       Tools\DumpGen        the sample generator behind Home's "Generate a sample"
     Defaults point at the dev build outputs; build/package.ps1 overrides them with
     self-contained publish folders so the package needs no .NET install.
+
+    The workers are not project references (each is built twice, per RID), so with the default
+    folders the host build builds them itself (BuildBundledWorkers; pass false to opt out), and
+    every build or publish fails if a bundled worker differs from its source folder or the x86
+    worker isn't large-address-aware. A stale worker can no longer ship silently.
   -->
   <PropertyGroup>
+    <BuildBundledWorkers Condition="'$(BuildBundledWorkers)' == '' and '$(WorkerX64Dir)' == '' and '$(WorkerX86Dir)' == ''">true</BuildBundledWorkers>
     <WebDist Condition="'$(WebDist)' == ''">$(MSBuildThisFileDirectory)..\..\web\dist</WebDist>
     <WorkerX64Dir Condition="'$(WorkerX64Dir)' == ''">$(MSBuildThisFileDirectory)..\DumpDebugger.Worker\bin\$(Configuration)\net10.0\win-x64</WorkerX64Dir>
     <WorkerX86Dir Condition="'$(WorkerX86Dir)' == ''">$(MSBuildThisFileDirectory)..\DumpDebugger.Worker\bin\$(Configuration)\net10.0\win-x86</WorkerX86Dir>
@@ -71,14 +77,69 @@
 
   <ItemGroup>
     <Content Include="$(WebDist)\**\*" Link="web\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="$(WorkerX64Dir)\**\*" Link="Workers\win-x64\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="$(WorkerX86Dir)\**\*" Link="Workers\win-x86\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="$(DumpGenDir)\**\*" Exclude="$(DumpGenDir)\**\*.dmp" Link="Tools\DumpGen\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <Import Project="..\..\build\PeFlags.targets" />
+
+  <ItemGroup>
+    <BundledWorker Include="win-x64" Dir="$(WorkerX64Dir)" />
+    <BundledWorker Include="win-x86" Dir="$(WorkerX86Dir)" />
+  </ItemGroup>
+
+  <Target Name="BuildBundledWorkers" Condition="'$(BuildBundledWorkers)' == 'true'">
+    <PropertyGroup>
+      <_WorkerProject>$(MSBuildThisFileDirectory)..\DumpDebugger.Worker\DumpDebugger.Worker.csproj</_WorkerProject>
+      <_WorkerRemovedProperties>Platform;PlatformTarget;SelfContained;PublishDir;_IsPublishing;Packaged;OutDir;OutputPath;WindowsPackageType;GenerateAppxPackageOnBuild;AppxPackageDir;PackageCertificateThumbprint;WorkerX64Dir;WorkerX86Dir;DumpGenDir;WebDist;BuildBundledWorkers</_WorkerRemovedProperties>
+    </PropertyGroup>
+    <!-- A fresh session id makes MSBuild re-evaluate after restore, as `dotnet build` does. -->
+    <MSBuild Projects="$(_WorkerProject)" Targets="Restore" Properties="Configuration=$(Configuration);MSBuildRestoreSessionId=$([System.Guid]::NewGuid())" RemoveProperties="$(_WorkerRemovedProperties);RuntimeIdentifier" />
+    <MSBuild Projects="$(_WorkerProject)" Targets="Build" Properties="Configuration=$(Configuration);RuntimeIdentifier=%(BundledWorker.Identity)" RemoveProperties="$(_WorkerRemovedProperties)" />
+  </Target>
+
+  <!-- Items are collected after the workers are built, so new or renamed worker files are bundled too. -->
+  <Target Name="IncludeBundledWorkers" BeforeTargets="AssignTargetPaths" DependsOnTargets="BuildBundledWorkers">
+    <Error Condition="!Exists('$(WorkerX86Dir)\DumpDebugger.Worker.exe') or !Exists('$(WorkerX64Dir)\DumpDebugger.Worker.exe')" Text="A worker isn't built (looked in $(WorkerX64Dir) and $(WorkerX86Dir)); run 'dotnet build src/DumpDebugger.Worker -r win-x64' and '-r win-x86', or build without BuildBundledWorkers=false." />
+    <!-- Also covers MSIX packaging, where the output check below doesn't run. -->
+    <LargeAddressAware Files="$(WorkerX86Dir)\DumpDebugger.Worker.exe" VerifyOnly="true" />
+    <ItemGroup>
+      <_BundledWorkerFile Include="%(BundledWorker.Dir)\**\*" Rid="%(BundledWorker.Identity)" />
+      <Content Include="@(_BundledWorkerFile)" Link="Workers\%(_BundledWorkerFile.Rid)\%(_BundledWorkerFile.RecursiveDir)%(_BundledWorkerFile.Filename)%(_BundledWorkerFile.Extension)" CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="VerifyBundledWorkersInOutput" AfterTargets="CopyFilesToOutputDirectory" Condition="'$(Packaged)' != 'true'">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="VerifyBundledWorkers" Properties="BundleRoot=$(OutDir);WorkerX64Dir=$(WorkerX64Dir);WorkerX86Dir=$(WorkerX86Dir);BuildBundledWorkers=false" />
+  </Target>
+
+  <Target Name="VerifyBundledWorkersInPublish" AfterTargets="Publish" Condition="'$(Packaged)' != 'true'">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="VerifyBundledWorkers" Properties="BundleRoot=$(PublishDir);WorkerX64Dir=$(WorkerX64Dir);WorkerX86Dir=$(WorkerX86Dir);BuildBundledWorkers=false" />
+  </Target>
+
+  <!-- Bundled worker binaries must be byte-identical to the worker build they came from. -->
+  <Target Name="VerifyBundledWorkers">
+    <ItemGroup>
+      <_WorkerCheck Include="DumpDebugger.Worker.exe;DumpDebugger.Worker.dll;DumpDebugger.Analysis.dll;DumpDebugger.Core.dll;Microsoft.Diagnostics.Runtime.dll" />
+      <_WorkerSource Include="@(_WorkerCheck->'$(WorkerX64Dir)\%(Identity)')" Rid="win-x64" Name="%(Identity)" />
+      <_WorkerSource Include="@(_WorkerCheck->'$(WorkerX86Dir)\%(Identity)')" Rid="win-x86" Name="%(Identity)" />
+    </ItemGroup>
+    <Error Condition="!Exists('%(_WorkerSource.FullPath)')" Text="Worker file %(_WorkerSource.FullPath) is missing; build the %(_WorkerSource.Rid) worker." />
+    <GetFileHash Files="@(_WorkerSource)">
+      <Output TaskParameter="Items" ItemName="_WorkerSourceHash" />
+    </GetFileHash>
+    <ItemGroup>
+      <_WorkerBundled Include="@(_WorkerSourceHash->'$(BundleRoot)Workers\%(Rid)\%(Name)')" Expected="%(FileHash)" Source="%(FullPath)" />
+    </ItemGroup>
+    <Error Condition="!Exists('%(_WorkerBundled.FullPath)')" Text="Bundled worker file %(_WorkerBundled.FullPath) is missing." />
+    <GetFileHash Files="@(_WorkerBundled)">
+      <Output TaskParameter="Items" ItemName="_WorkerBundledHash" />
+    </GetFileHash>
+    <Error Condition="'%(_WorkerBundledHash.FileHash)' != '%(_WorkerBundledHash.Expected)'" Text="Bundled worker %(_WorkerBundledHash.FullPath) differs from %(_WorkerBundledHash.Source); the bundle is stale." />
+    <LargeAddressAware Files="$(BundleRoot)Workers\win-x86\DumpDebugger.Worker.exe" VerifyOnly="true" />
+    <Message Importance="high" Text="Bundled workers in $(BundleRoot)Workers match their sources; x86 worker is large-address-aware." />
+  </Target>
+
   <Target Name="WarnMissingBundles" BeforeTargets="Build">
     <Warning Condition="!Exists('$(WebDist)\index.html')" Text="web/dist is missing; run 'npm run build' in web/ before building the host." />
-    <Warning Condition="!Exists('$(WorkerX64Dir)\DumpDebugger.Worker.exe')" Text="The x64 worker isn't built; run 'dotnet build src/DumpDebugger.Worker -r win-x64'." />
-    <Warning Condition="!Exists('$(WorkerX86Dir)\DumpDebugger.Worker.exe')" Text="The x86 worker isn't built; run 'dotnet build src/DumpDebugger.Worker -r win-x86'." />
   </Target>
 </Project>

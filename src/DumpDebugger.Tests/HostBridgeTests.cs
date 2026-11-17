@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using DumpDebugger.Core.Dump;
 using DumpDebugger.Core.Rpc;
 using DumpDebugger.Session;
 
@@ -58,6 +59,46 @@ internal sealed class BridgeHarness : IAsyncDisposable
 public class HostBridgeTests
 {
     [Fact]
+    public async Task Unexpected_worker_exit_is_reported_with_an_exit_code()
+    {
+        var dump = await FixtureDumps.GetAsync("deadlock");
+        var exited = new TaskCompletionSource<Core.Contracts.WorkerStatus>(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var session = await WorkerSession.StartAsync(dump, (method, payload) =>
+        {
+            if (method == "worker.status" && ContractJson.FromElement<Core.Contracts.WorkerStatus>(payload) is { } status)
+                exited.TrySetResult(status);
+        });
+        using var process = System.Diagnostics.Process.GetProcessById(session.ProcessId);
+        process.Kill();
+        var notification = await exited.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Assert.Equal(Core.Contracts.WorkerState.Exited, notification.State);
+        Assert.Contains("exit code", notification.Message);
+    }
+
+    [Fact]
+    public async Task The_consent_reload_replaces_the_open_index_in_the_same_worker()
+    {
+        var dump = await FixtureDumps.GetAsync("deadlock");
+        var events = new ConcurrentQueue<Core.Contracts.DebugNotification>();
+        await using var session = await WorkerSession.StartAsync(dump, (method, payload) =>
+        {
+            if (method == "debug.event" && ContractJson.FromElement<Core.Contracts.DebugNotification>(payload) is { } e)
+                events.Enqueue(e);
+        });
+
+        var offline = await session.OpenDumpAsync(dump);
+        // The local runtime-folder DAC is ClrMD's first candidate, so allowing downloads makes no request here.
+        var online = await session.OpenDumpAsync(dump, default, allowSymbolServer: true);
+
+        Assert.Equal(offline.RuntimeIdentity(), online.RuntimeIdentity());
+        Assert.Equal(Core.Dump.DacResolutionTier.LocalMachine, online.PrimaryRuntime()!.DacTier);
+        Assert.Contains(events, e => e.Stage == "Opening dump" && e.Detail.Contains("msdl.microsoft.com allowed"));
+        Assert.DoesNotContain(events, e => e.Stage == "Downloading DAC");
+        var groups = await session.Connection.CallAsync<Core.Contracts.ThreadGroupsResult>("threads.groups", new Core.Contracts.ThreadGroupsQuery(Core.Contracts.ThreadGrouping.Flat, Core.Contracts.ThreadStateFilter.All, null));
+        Assert.True(groups!.TotalThreads >= 3);
+    }
+
+    [Fact]
     public async Task Opens_the_deadlock_fixture_and_lists_its_threads_through_the_bridge()
     {
         var dump = await FixtureDumps.GetAsync("deadlock");
@@ -65,6 +106,10 @@ public class HostBridgeTests
 
         var opened = await bridge.CallAsync<Core.Contracts.DumpOpened>("dump.open", new { path = dump });
         Assert.Equal(Core.Dump.DumpArchitecture.X64, opened.Metadata.Architecture);
+        Assert.Contains(bridge.Notifications, n => n.Method == "debug.event"
+            && ContractJson.FromElement<Core.Contracts.DebugNotification>(n.Params) is { Source: "worker", Stage: "build" });
+        Assert.Contains(bridge.Notifications, n => n.Method == "debug.event"
+            && ContractJson.FromElement<Core.Contracts.DebugNotification>(n.Params) is { Source: "host", Stage: "runtime lookup" });
 
         var groups = await bridge.CallAsync<Core.Contracts.ThreadGroupsResult>("threads.groups", new { groupBy = "flat", state = "all" });
         Assert.True(groups.TotalThreads >= 3);

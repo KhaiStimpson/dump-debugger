@@ -4,6 +4,7 @@ using DumpDebugger.Analysis.Heap;
 using DumpDebugger.Analysis.Locks;
 using DumpDebugger.Analysis.Threads;
 using DumpDebugger.Core.Contracts;
+using DumpDebugger.Core.Dump;
 using static DumpDebugger.Analysis.Findings.Text;
 
 namespace DumpDebugger.Analysis;
@@ -36,7 +37,7 @@ public sealed class AnalysisPipeline
     public async Task<Diagnosis> RunAsync(bool includeHeap, CancellationToken ct)
     {
         _clock.Start();
-        var dacTier = _index.Loaded.Metadata.Runtimes.FirstOrDefault()?.DacTier;
+        var dacTier = _index.Loaded.Metadata.PrimaryRuntime()?.DacTier;
         SetStage("runtime", "Matched runtime & resolved DAC", StageStatus.Done, _index.OpenSeconds, DacLabel(dacTier));
         SetStage("threads", "Reading threads & stacks", StageStatus.Running);
         SetStage("locks", "Locks & wait-for graph", StageStatus.Pending);
@@ -188,7 +189,7 @@ public sealed class AnalysisPipeline
     {
         var ranked = _results.OrderByDescending(r => r.Finding.Score).ToList();
         var md = _index.Loaded.Metadata;
-        var rt = md.Runtimes.FirstOrDefault();
+        var rt = md.PrimaryRuntime();
         var summary = new DumpSummary(
             md.DumpPath,
             Path.GetFileName(md.DumpPath),

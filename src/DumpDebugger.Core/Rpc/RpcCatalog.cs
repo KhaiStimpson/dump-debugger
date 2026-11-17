@@ -63,8 +63,10 @@ public static class RpcCatalog
     public static readonly IReadOnlyList<RpcNotificationInfo> Notifications =
     [
         new("dump.progress", typeof(ProgressNotification)),
+        new("debug.event", typeof(DebugNotification)),
         new("worker.status", typeof(WorkerStatus)),
         new("analysis.updated", typeof(Diagnosis)),
+        new("analysis.failed", typeof(AnalysisFailure)),
         new("snapshot.ready", typeof(PathParams)),
     ];
 

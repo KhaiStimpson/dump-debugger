@@ -22,34 +22,67 @@ public sealed class LoadedDump : IDisposable
 /// </summary>
 public static class DumpLoader
 {
-    public static LoadedDump Load(string dumpPath, bool allowSymbolServer = false)
+    /// <summary>Opens with the app DAC cache, and the Microsoft symbol server only when <paramref name="allowSymbolServer"/> (user consent).</summary>
+    public static LoadedDump Load(string dumpPath, bool allowSymbolServer = false, Action<string, string>? progress = null, CancellationToken ct = default)
     {
-        var options = DacResolver.BuildOptions(allowSymbolServer);
-        var dataTarget = DataTarget.LoadDump(dumpPath, options);
+        using var downloader = allowSymbolServer ? new DacDownloader(DacDownloader.MicrosoftSymbolServer, DacDownloader.DefaultTimeout) : null;
+        return Load(dumpPath, new DacLookup(DacCache.GetCacheDirectory(), downloader, progress), ct);
+    }
 
+    public static LoadedDump Load(string dumpPath, DacLookup lookup, CancellationToken ct = default)
+    {
+        var progress = lookup.Progress;
+        var options = DacResolver.BuildOptions(lookup.CacheDirectory);
+        progress?.Invoke("Opening dump", $"Symbols: {(lookup.Downloader is { } d ? $"{d.Server.Host} allowed" : "offline only")}; cache: {lookup.CacheDirectory}");
+        var dataTarget = DataTarget.LoadDump(dumpPath, options);
+        try
+        {
+            return Describe(dumpPath, dataTarget, lookup, ct);
+        }
+        catch
+        {
+            dataTarget.Dispose();
+            throw;
+        }
+    }
+
+    private static LoadedDump Describe(string dumpPath, DataTarget dataTarget, DacLookup lookup, CancellationToken ct)
+    {
+        var progress = lookup.Progress;
         var architecture = MapArchitecture(dataTarget.DataReader.Architecture);
-        var runtimeInfos = new List<RuntimeInfo>();
-        var runtimes = new List<ClrRuntime>();
+        var found = new List<(RuntimeInfo Info, ClrRuntime? Runtime)>();
 
         foreach (var clrInfo in dataTarget.ClrVersions)
         {
-            var resolution = DacResolver.TryCreateRuntime(clrInfo, allowSymbolServer);
+            var label = $"{clrInfo.Flavor} {ProductVersion(clrInfo)} (build {clrInfo.Version})";
+            progress?.Invoke("Resolving DAC", label);
+            var resolution = DacResolver.TryCreateRuntime(clrInfo, lookup, ct);
+            var threads = resolution.Runtime is { } runtime ? CountThreads(runtime) : (int?)null;
+            progress?.Invoke(resolution.Runtime is not null ? "Runtime loaded" : "DAC resolution failed",
+                resolution.Runtime is not null
+                    ? $"{label}: {resolution.Tier} DAC {resolution.DacPath}; {threads} managed threads"
+                    : $"{label}: {resolution.Error?.Message}");
             var family = clrInfo.Flavor == ClrFlavor.Desktop ? RuntimeFamily.NetFramework : RuntimeFamily.NetCore;
-            var dacPath = clrInfo.DebuggingLibraries.FirstOrDefault(d => d.Kind == DebugLibraryKind.Dac)?.FileName;
 
-            runtimeInfos.Add(new RuntimeInfo(
+            found.Add((new RuntimeInfo(
                 family,
                 clrInfo.Version.ToString(),
                 ProductVersion(clrInfo),
-                dacPath,
+                resolution.DacPath,
                 resolution.Tier,
                 resolution.Runtime is not null,
-                resolution.Error?.Message));
+                resolution.Error?.Message,
+                threads), resolution.Runtime));
+        }
 
-            if (resolution.Runtime is not null)
-            {
-                runtimes.Add(resolution.Runtime);
-            }
+        // Primary first: everything that reads "the" runtime (analysis, labels, the DAC tier) uses it.
+        var primary = RuntimeSelection.ChoosePrimary(found.Select(f => (f.Info.Family, f.Info.ManagedThreadCount)).ToList());
+        var ordered = primary < 0 ? found : found.Skip(primary).Take(1).Concat(found.Where((_, i) => i != primary)).ToList();
+        var runtimeInfos = ordered.Select((f, i) => primary >= 0 && i == 0 ? f.Info with { IsPrimary = true } : f.Info).ToList();
+        var runtimes = ordered.Where(f => f.Runtime is not null).Select(f => f.Runtime!).ToList();
+        if (primary >= 0)
+        {
+            progress?.Invoke("Primary runtime", $"{runtimeInfos[0].Family} {runtimeInfos[0].ProductVersion} ({runtimeInfos[0].ManagedThreadCount} managed threads)");
         }
 
         var header = MinidumpHeader.Read(dumpPath);
@@ -65,7 +98,7 @@ public static class DumpLoader
             ProcessName: exe?.FileName is { } exePath ? Path.GetFileName(exePath) : null,
             ProcessId: dataTarget.DataReader.ProcessId,
             Runtimes: runtimeInfos,
-            ThreadCount: runtimes.Count > 0 ? runtimes[0].Threads.Count() : 0,
+            ThreadCount: primary >= 0 ? runtimeInfos[0].ManagedThreadCount ?? 0 : 0,
             ModuleCount: modules.Count,
             CrashThreadOsId: header.CrashThreadOsId,
             CrashExceptionCode: header.ExceptionCode);
@@ -76,6 +109,18 @@ public static class DumpLoader
             Metadata = metadata,
             Runtimes = runtimes,
         };
+    }
+
+    private static int CountThreads(ClrRuntime runtime)
+    {
+        try
+        {
+            return runtime.Threads.Length;
+        }
+        catch (Exception)
+        {
+            return 0; // a runtime whose thread list can't be read is never the better choice
+        }
     }
 
     /// <summary>
