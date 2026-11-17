@@ -36,6 +36,8 @@ interface AppState {
   clearError(): void;
 }
 
+let openRequest: AbortController | null = null;
+
 export const useApp = create<AppState>((set, get) => ({
   dump: null,
   diagnosis: null,
@@ -50,27 +52,44 @@ export const useApp = create<AppState>((set, get) => ({
   helpTab: 'keys',
 
   async openDump(path, files) {
-    set({ opening: path || files?.[0]?.name || 'dump', error: null, diagnosis: null, progress: null });
+    openRequest?.abort();
+    const request = new AbortController();
+    openRequest = request;
+    set({ dump: null, opening: path || files?.[0]?.name || 'dump', error: null, diagnosis: null, progress: null });
     navigate('analyzing');
     try {
-      const opened = await rpc.call('dump.open', { path }, { files });
+      const opened = await rpc.call('dump.open', { path, allowSymbolServer: false }, { files, signal: request.signal });
+      if (request.signal.aborted) return;
       queryClient.clear();
       set({ dump: opened, opening: null, inspector: { history: [], index: -1, open: false } });
       const state = await rpc.call('analysis.get', {});
+      if (request.signal.aborted) return;
       if (state.diagnosis) set({ diagnosis: state.diagnosis });
       if (opened.cachedAnalysis) navigate('diagnosis');
       rpc.call('pins.list', {}).then((pins) => set({ pins }));
     } catch (e) {
+      if (request.signal.aborted) return;
       set({ opening: null, error: e instanceof RpcError ? e.message : String(e) });
-      navigate('home');
+    } finally {
+      if (openRequest === request) openRequest = null;
     }
   },
 
   async closeDump() {
+    openRequest?.abort();
+    openRequest = null;
     await rpc.call('analysis.cancel', {}).catch(() => {});
     await rpc.call('dump.close', {}).catch(() => {});
     queryClient.clear();
-    set({ dump: null, diagnosis: null, pins: [], inspector: { history: [], index: -1, open: false } });
+    set({
+      dump: null,
+      diagnosis: null,
+      opening: null,
+      error: null,
+      progress: null,
+      pins: [],
+      inspector: { history: [], index: -1, open: false },
+    });
     navigate('home');
   },
 

@@ -130,6 +130,7 @@ export interface DumpOpened {
   metadata: DumpMetadata;
   workspacePath: string;
   cachedAnalysis: boolean;
+  analysisError: string | null;
 }
 
 export interface DumpSummary {
@@ -335,6 +336,7 @@ export interface ObjectView {
 
 export interface OpenDumpParams {
   path: string;
+  allowSymbolServer: boolean;
 }
 
 export interface PageOfInstanceRow {
@@ -481,6 +483,7 @@ export interface RuntimeInfo {
   dacPath: string | null;
   dacTier: DacResolutionTier;
   isManagedAnalysisAvailable: boolean;
+  dacError: string | null;
 }
 
 export interface SampleScenario {

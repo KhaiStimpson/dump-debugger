@@ -26,7 +26,7 @@ public sealed class WorkerHandlers : IDisposable
                 {
                     var request = Params<OpenDumpParams>(@params);
                     await context.NotifyAsync("dump.progress", new ProgressNotification("Loading dump", 0.1, request.Path));
-                    var index = await Task.Run(() => DumpIndex.Open(request.Path), ct);
+                    var index = await Task.Run(() => DumpIndex.Open(request.Path, request.AllowSymbolServer), ct);
                     _index?.Dispose();
                     _index = index;
                     return ContractJson.ToElement(index.Loaded.Metadata);

@@ -42,10 +42,10 @@ public sealed class DumpIndex : IDisposable
 
     public HeapModel? Heap { get; set; }
 
-    public static DumpIndex Open(string path)
+    public static DumpIndex Open(string path, bool allowSymbolServer = false)
     {
         var sw = Stopwatch.StartNew();
-        var loaded = DumpLoader.Load(path, allowSymbolServer: false);
+        var loaded = DumpLoader.Load(path, allowSymbolServer);
         return new DumpIndex(loaded, sw.Elapsed.TotalSeconds);
     }
 

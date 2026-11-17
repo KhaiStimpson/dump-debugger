@@ -23,10 +23,16 @@ public static class DacResolver
     /// </summary>
     public static DataTargetOptions BuildOptions(bool allowSymbolServer)
     {
-        return new DataTargetOptions
+        var options = new DataTargetOptions
         {
             SymbolCachePath = DacCache.GetCacheDirectory(),
             SymbolPaths = allowSymbolServer ? [MicrosoftSymbolServer] : [],
+        };
+        return new DataTargetOptions
+        {
+            SymbolCachePath = options.SymbolCachePath,
+            SymbolPaths = options.SymbolPaths,
+            FileLocator = new CachedFileLocator(options.SymbolCachePath, allowSymbolServer ? options.FileLocator : null),
         };
     }
 

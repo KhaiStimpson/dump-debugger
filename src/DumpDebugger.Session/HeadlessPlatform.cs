@@ -11,6 +11,8 @@ public sealed class HeadlessPlatform : IHostPlatform
 
     public Task<string?> PickDumpFileAsync() => Task.FromResult(NextPickedDump);
 
+    public Task<bool> RequestDacDownloadAsync(Core.Dump.DumpMetadata metadata, CancellationToken ct) => Task.FromResult(false);
+
     public Task<string?> PickSaveFileAsync(string suggestedName, string extension) => Task.FromResult(NextSavePath);
 
     public void SetTitlebarPassthrough(IReadOnlyList<Rect> rects)

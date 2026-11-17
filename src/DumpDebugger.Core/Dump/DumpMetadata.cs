@@ -30,7 +30,8 @@ public sealed record RuntimeInfo(
     string ProductVersion,
     string? DacPath,
     DacResolutionTier DacTier,
-    bool IsManagedAnalysisAvailable);
+    bool IsManagedAnalysisAvailable,
+    string? DacError = null);
 
 public sealed record DumpMetadata(
     string DumpPath,

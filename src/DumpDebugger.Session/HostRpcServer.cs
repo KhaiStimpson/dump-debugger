@@ -12,6 +12,8 @@ public interface IHostPlatform
 
     Task<string?> PickSaveFileAsync(string suggestedName, string extension);
 
+    Task<bool> RequestDacDownloadAsync(Core.Dump.DumpMetadata metadata, CancellationToken ct);
+
     void SetTitlebarPassthrough(IReadOnlyList<Rect> rects);
 }
 
@@ -232,7 +234,13 @@ public sealed partial class HostRpcServer : IAsyncDisposable
             _session = session;
             await NotifyWebAsync("worker.status", new WorkerStatus(WorkerState.Starting, session.Architecture.ToString(), session.ProcessId, null)).ConfigureAwait(false);
 
-            var metadata = await session.OpenDumpAsync(path, ct).ConfigureAwait(false);
+            var metadata = await DacConsent.OpenAsync(
+                async (online, token) =>
+                {
+                    if (online)
+                        await NotifyWebAsync("dump.progress", new ProgressNotification("Downloading matching DACs", 0.12, "Contacting the Microsoft symbol server…")).ConfigureAwait(false);
+                    return await session.OpenDumpAsync(path, token, online).ConfigureAwait(false);
+                }, _platform.RequestDacDownloadAsync, ct).ConfigureAwait(false);
             await NotifyWebAsync("worker.status", new WorkerStatus(WorkerState.Ready, session.Architecture.ToString(), session.ProcessId, null)).ConfigureAwait(false);
 
             var workspace = Workspace.For(path);
@@ -250,7 +258,7 @@ public sealed partial class HostRpcServer : IAsyncDisposable
             }
 
             await OnDumpOpenedAsync(metadata, workspace, _latest).ConfigureAwait(false);
-            return new DumpOpened(metadata, workspace.Directory, cached is not null);
+            return new DumpOpened(metadata, workspace.Directory, cached is not null, cached is null ? DacConsent.AnalysisError(metadata) : null);
         }
         finally
         {

@@ -161,6 +161,28 @@ public sealed partial class MainWindow : Window, IHostPlatform
         return file?.Path;
     });
 
+    public Task<bool> RequestDacDownloadAsync(Core.Dump.DumpMetadata metadata, CancellationToken ct) => OnUiThreadAsync(async () =>
+    {
+        ct.ThrowIfCancellationRequested();
+        var missing = metadata.Runtimes.Where(r => !r.IsManagedAnalysisAvailable)
+            .Select(r => $"{r.Family} {r.ProductVersion} (build {r.Version})");
+        var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+        {
+            XamlRoot = Content.XamlRoot,
+            RequestedTheme = ElementTheme.Dark,
+            Title = "Download matching debugging DLLs?",
+            Content = "These runtimes need a matching DAC to read .NET memory:\n\n" + string.Join("\n", missing)
+                + "\n\nDownload them from the Microsoft symbol server (msdl.microsoft.com)? Runtime identifiers are sent; the dump stays on this computer. Downloaded DACs are cached for offline use.",
+            PrimaryButtonText = "Download",
+            CloseButtonText = "Stay offline",
+            DefaultButton = Microsoft.UI.Xaml.Controls.ContentDialogButton.Close,
+        };
+        using var registration = ct.Register(() => DispatcherQueue.TryEnqueue(() => dialog.Hide()));
+        var result = await dialog.ShowAsync();
+        ct.ThrowIfCancellationRequested();
+        return result == Microsoft.UI.Xaml.Controls.ContentDialogResult.Primary;
+    });
+
     public void SetTitlebarPassthrough(IReadOnlyList<Rect> rects)
     {
         DispatcherQueue.TryEnqueue(() =>

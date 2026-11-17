@@ -14,7 +14,7 @@ public sealed record Rect(double X, double Y, double Width, double Height);
 /// <summary>Titlebar hit-testing: the strip is draggable except over these interactive rects.</summary>
 public sealed record TitlebarRegions(IReadOnlyList<Rect> Passthrough);
 
-public sealed record OpenDumpParams(string Path);
+public sealed record OpenDumpParams(string Path, bool AllowSymbolServer = false);
 
 public sealed record ProgressNotification(string Stage, double FractionComplete, string? Detail);
 
@@ -29,7 +29,7 @@ public sealed record WorkerStatus(WorkerState State, string Architecture, int? P
 
 public sealed record PickedFile(string? Path);
 
-public sealed record DumpOpened(Dump.DumpMetadata Metadata, string WorkspacePath, bool CachedAnalysis);
+public sealed record DumpOpened(Dump.DumpMetadata Metadata, string WorkspacePath, bool CachedAnalysis, string? AnalysisError = null);
 
 /// <summary>The latest diagnosis for the open dump, or null before analysis has produced one.</summary>
 public sealed record AnalysisState(Diagnosis? Diagnosis, bool Running);

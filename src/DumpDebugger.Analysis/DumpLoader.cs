@@ -43,7 +43,8 @@ public static class DumpLoader
                 ProductVersion(clrInfo),
                 dacPath,
                 resolution.Tier,
-                resolution.Runtime is not null));
+                resolution.Runtime is not null,
+                resolution.Error?.Message));
 
             if (resolution.Runtime is not null)
             {

@@ -1,8 +1,8 @@
 namespace DumpDebugger.Analysis.Dac;
 
 /// <summary>
-/// App-managed DAC cache directory (§2.3 tier 3). ClrMD's own SymbolCachePath does the
-/// actual population/lookup; this just centralizes where that directory lives so the
+/// App-managed DAC cache directory (§2.3 tier 3). ClrMD populates it on download and
+/// CachedFileLocator reads it offline; this centralizes where it lives so the
 /// cache survives across workspaces and app versions.
 /// </summary>
 public static class DacCache

@@ -20,13 +20,15 @@ export function StatusBar() {
       {diagnosis?.dump.dacSource && <span>DAC {diagnosis.dump.dacSource}</span>}
       {dump && <span title={dump.workspacePath}>Workspace {dump.workspacePath.split(/[\\/]/).pop()}</span>}
       <span style={{ marginLeft: 'auto' }} role="status" aria-live="polite">
-        {diagnosis
-          ? diagnosis.fromCache
-            ? 'Analysis restored from workspace'
-            : diagnosis.complete
-              ? `Analysis took ${seconds(diagnosis.seconds)}`
-              : `Analyzing: ${running?.label.toLowerCase() ?? '…'}${running?.fraction != null ? ` ${Math.round(running.fraction * 100)}%` : ''}`
-          : ''}
+        {dump?.analysisError
+          ? 'Analysis unavailable'
+          : diagnosis
+            ? diagnosis.fromCache
+              ? 'Analysis restored from workspace'
+              : diagnosis.complete
+                ? `Analysis took ${seconds(diagnosis.seconds)}`
+                : `Analyzing: ${running?.label.toLowerCase() ?? '…'}${running?.fraction != null ? ` ${Math.round(running.fraction * 100)}%` : ''}`
+            : ''}
       </span>
     </footer>
   );
