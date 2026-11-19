@@ -62,12 +62,41 @@ Deterministic analyzers, each with authored explanations and a test fixture:
 ![Home](docs/screenshots/home.png)
 ![Analyzing a 2 GB dump](docs/screenshots/analyzing.png)
 
+## Let an AI agent investigate (MCP)
+
+Dump Debugger can host an [MCP](https://modelcontextprotocol.io) server, so an agent such as Claude Code can analyze dumps through the app: the one you have open (same worker, nothing loaded twice), and others it opens by path.
+
+Click **MCP: off** in the status bar, tick **Run the MCP server**, and copy the configuration the panel shows. For Claude Code that is one command:
+
+```bash
+claude mcp add --transport http dump-debugger http://127.0.0.1:47600/mcp --header "Authorization: Bearer <token>"
+```
+
+Then ask, for example, *"Use dump-debugger to find out why this process hung"*.
+
+| Tool | Answers |
+|---|---|
+| `get_diagnosis` | The verdict, vitals and ranked findings, each with why, what it means, next steps and evidence. The place to start |
+| `list_thread_groups`, `get_thread`, `get_async_stacks` | What the threads are doing, one thread's stack and locks, pending async operations |
+| `get_wait_graph` | Deadlock cycles and every contended lock with its owner and waiters |
+| `get_heap_summary`, `list_heap_types`, `list_instances`, `list_large_objects` | Where the memory is |
+| `inspect_object`, `get_referrers`, `why_alive` | One object's fields, what points at it, and the path from a GC root that keeps it alive |
+| `compare_dumps` | Baseline vs. current: what grew, leak suspects and the root holding them |
+| `list_dumps`, `open_dump`, `close_dump` | The app's dump is `app`; an agent can open up to three more by path without changing what the app shows |
+
+- **Read-only.** Agents can't pin, export reports or generate samples. Dumps they open get the same `<dump>.dumpdebugger/` cache as the app's, and don't appear in recents.
+- **Off by default, local only.** Nothing listens until you turn it on (the choice is then remembered). The server binds to `127.0.0.1`, requires the bearer token on every request, and rejects anything a web page could send (an `Origin` header or a foreign `Host`). The token is stored encrypted for your Windows user; **Regenerate token** locks out whoever has the old one.
+- **Dump contents are data.** Tool output includes strings from the dumped process's memory, which can hold secrets and customer data, and which the server labels as untrusted so an agent reports them without acting on them. Only connect agents you'd let read the dump.
+- **DACs.** A dump an agent opens whose runtime has no matching DAC on the machine fails with an explanation. **Allow DAC downloads for dumps agents open** lets those be fetched from the Microsoft symbol server without a prompt.
+- The app must be running for the server to be reachable. The port is configurable in the panel if 47600 is taken.
+
 ## How it's built
 
 ```
 web/ (React + TS, Vite)  ── JSON-RPC over postMessage ──  DumpDebugger.Host (WinUI 3 + WebView2)
                                                              ── JSON-RPC over a named pipe ──  Worker x86 / x64
                                                                                                  └─ Analysis (ClrMD) + Core
+MCP client (Claude Code, …)  ── Streamable HTTP, 127.0.0.1 + token ──  DumpDebugger.Mcp (inside the Host)
 ```
 
 - **ClrMD, not WinDbg.** Field values come back typed instead of parsed from text. Supports .NET Framework 4.8, .NET 6 and .NET 8+, x86 and x64. ClrMD must match the dump's bitness, so the host sniffs the minidump header and launches an x86 or x64 worker.
@@ -138,11 +167,12 @@ The script creates a self-signed development certificate (`CN=Dump Debugger Dev`
 | `src/DumpDebugger.Core` | Contracts (findings, entities, threads, locks, memory, compare), the RPC catalog and framing. No ClrMD |
 | `src/DumpDebugger.Analysis` | ClrMD: dump loading and DAC resolution, thread/lock/heap models, the reference index and object explorer, every analyzer, the verdict |
 | `src/DumpDebugger.Worker` | JSON-RPC host around Analysis, built for x86 and x64 |
-| `src/DumpDebugger.Session` | Host-side services with no UI: worker lifecycle, the bridge dispatcher, workspaces, recents, pins, compare |
+| `src/DumpDebugger.Session` | Host-side services with no UI: an open dump (`DumpSession`: worker, workspace, analysis), the bridge dispatcher, recents, pins, compare |
+| `src/DumpDebugger.Mcp` | The MCP server the host runs on request: the agent tools, the registry of dumps they can see, and the loopback HTTP endpoint with its token |
 | `src/DumpDebugger.Host` | WinUI 3 window hosting WebView2; serves `web/dist` and bridges it to Session; MSIX manifest |
 | `web/` | The UI: React + TypeScript (Vite), TanStack Query/Virtual, React Flow + ELK |
 | `tools/DumpDebugger.TsGen` | Generates `web/src/contracts.gen.ts` from Core |
 | `src/DumpDebugger.DumpGen` | Fixture generator: real dumps of real problems |
-| `src/DumpDebugger.Tests` | Golden analyzer snapshots, bridge, compare, pins/report, perf |
+| `src/DumpDebugger.Tests` | Golden analyzer snapshots, bridge, compare, pins/report, MCP tools and endpoint, perf |
 
 See [docs/redesign/](docs/redesign/) for the design (`design.html`) and the roadmap with implementation notes, and [docs/PLAN.md](docs/PLAN.md) for the original architecture rationale.

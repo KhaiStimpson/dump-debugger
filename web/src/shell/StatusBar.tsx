@@ -3,6 +3,7 @@ import { seconds } from '../format';
 import { useApp } from '../state/store';
 import { useDiagnostics } from '../debug/diagnostics';
 import { systemTheme, themeLabels, useTheme, type ThemePreference } from '../state/theme';
+import { McpButton } from './McpPanel';
 
 /** Worker, DAC, workspace and analysis timing: the facts an expert wants to glance at. */
 export function StatusBar() {
@@ -22,6 +23,7 @@ export function StatusBar() {
         Debug
       </button>
       <ThemeMenu />
+      <McpButton />
       {worker && worker.state !== 'exited' ? (
         <span>
           Worker {worker.architecture.toLowerCase()}, pid {worker.processId}

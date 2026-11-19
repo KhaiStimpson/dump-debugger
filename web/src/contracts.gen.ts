@@ -324,6 +324,23 @@ export interface LockInfo {
   inCycle: boolean;
 }
 
+export interface McpSettingsParams {
+  enabled: boolean | null;
+  port: number | null;
+  allowDacDownload: boolean | null;
+}
+
+export interface McpStatus {
+  available: boolean;
+  enabled: boolean;
+  running: boolean;
+  port: number;
+  url: string;
+  token: string;
+  allowDacDownload: boolean;
+  error: string | null;
+}
+
 export type NoParams = Record<string, never>;
 
 export interface ObjectQuery {
@@ -776,6 +793,9 @@ export interface RpcMethods {
   'report.save': { params: SaveReportParams; result: SavedReport };
   'compare.candidates': { params: NoParams; result: CompareCandidate[] };
   'compare.run': { params: CompareParams; result: CompareResult };
+  'mcp.get': { params: NoParams; result: McpStatus };
+  'mcp.set': { params: McpSettingsParams; result: McpStatus };
+  'mcp.regenerateToken': { params: NoParams; result: McpStatus };
   'analysis.run': { params: AnalysisRunParams; result: Diagnosis };
   'threads.groups': { params: ThreadGroupsQuery; result: ThreadGroupsResult };
   'threads.get': { params: ThreadQuery; result: ThreadDetail };

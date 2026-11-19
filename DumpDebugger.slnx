@@ -4,6 +4,7 @@
     <Project Path="src/DumpDebugger.Core/DumpDebugger.Core.csproj" />
     <Project Path="src/DumpDebugger.DumpGen/DumpDebugger.DumpGen.csproj" />
     <Project Path="src/DumpDebugger.Host/DumpDebugger.Host.csproj" />
+    <Project Path="src/DumpDebugger.Mcp/DumpDebugger.Mcp.csproj" />
     <Project Path="src/DumpDebugger.Session/DumpDebugger.Session.csproj" />
     <Project Path="src/DumpDebugger.Tests/DumpDebugger.Tests.csproj" />
     <Project Path="src/DumpDebugger.Worker/DumpDebugger.Worker.csproj" />

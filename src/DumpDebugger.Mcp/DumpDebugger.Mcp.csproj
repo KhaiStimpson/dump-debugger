@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The MCP server the app can host: read-only analysis tools for AI agents over Streamable
+       HTTP on 127.0.0.1, behind a bearer token. Tools sit on DumpDebugger.Session and know
+       nothing about HTTP, so another transport could reuse them. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="2.4.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DumpDebugger.Core\DumpDebugger.Core.csproj" />
+    <ProjectReference Include="..\DumpDebugger.Session\DumpDebugger.Session.csproj" />
+  </ItemGroup>
+
+</Project>

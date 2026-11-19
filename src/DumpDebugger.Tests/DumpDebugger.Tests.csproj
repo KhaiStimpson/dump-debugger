@@ -22,6 +22,7 @@
     <ProjectReference Include="..\DumpDebugger.Core\DumpDebugger.Core.csproj" />
     <ProjectReference Include="..\DumpDebugger.Analysis\DumpDebugger.Analysis.csproj" />
     <ProjectReference Include="..\DumpDebugger.Session\DumpDebugger.Session.csproj" />
+    <ProjectReference Include="..\DumpDebugger.Mcp\DumpDebugger.Mcp.csproj" />
     <ProjectReference Include="..\..\tools\DumpDebugger.TsGen\DumpDebugger.TsGen.csproj" />
   </ItemGroup>
 
