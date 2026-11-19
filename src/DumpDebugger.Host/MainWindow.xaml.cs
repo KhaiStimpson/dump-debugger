@@ -1,4 +1,5 @@
 using DumpDebugger.Core.Contracts;
+using DumpDebugger.Mcp;
 using DumpDebugger.Session;
 using Microsoft.UI;
 using Microsoft.UI.Input;
@@ -21,6 +22,7 @@ public sealed partial class MainWindow : Window, IHostPlatform
 
     private readonly HostOptions _options;
     private readonly HostRpcServer _server;
+    private readonly McpHost _mcp;
     private ElementTheme _theme = ElementTheme.Dark;
 
     public MainWindow(HostOptions options)
@@ -42,7 +44,18 @@ public sealed partial class MainWindow : Window, IHostPlatform
         AppWindow.Resize(new SizeInt32(1480, 920));
 
         _server = new HostRpcServer(this, SendToWebAsync, new HostRpcServerOptions(options.StartupDumpPath));
-        Closed += async (_, _) => await _server.DisposeAsync();
+
+        // The MCP server shares the dump on screen with AI agents. It stays off until the user
+        // turns it on in the status bar; if they left it on, it comes back with the app.
+        _mcp = new McpHost(() => _server.CurrentDump);
+        _server.Mcp = _mcp;
+        _ = _mcp.StartIfEnabledAsync();
+
+        Closed += async (_, _) =>
+        {
+            await _mcp.DisposeAsync();
+            await _server.DisposeAsync();
+        };
         _ = InitializeWebViewAsync();
     }
 

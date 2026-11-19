@@ -8,18 +8,6 @@ public sealed partial class HostRpcServer
     private readonly RecentsStore _recents = new();
 
     public RecentsStore Recents => _recents;
-
-    private partial Task OnDumpOpenedAsync(DumpMetadata metadata, Workspace workspace, Diagnosis? diagnosis)
-    {
-        _recents.Touch(metadata, diagnosis);
-        return Task.CompletedTask;
-    }
-
-    private partial Task OnAnalysisCompletedAsync(Workspace workspace, Diagnosis diagnosis)
-    {
-        _recents.UpdateVerdict(workspace.DumpPath, diagnosis);
-        return Task.CompletedTask;
-    }
 }
 
 /// <summary>Recently opened dumps with their last verdict badge, in %LOCALAPPDATA%\DumpDebugger\recents.json.</summary>

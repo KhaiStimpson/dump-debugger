@@ -40,5 +40,5 @@ public sealed partial class HostRpcServer
     }
 
     private Workspace RequireWorkspace() =>
-        _workspace ?? throw new RpcException(new RpcError(RpcError.NoDumpOpen, "No dump is open."));
+        _dump?.Workspace ?? throw new RpcException(new RpcError(RpcError.NoDumpOpen, "No dump is open."));
 }

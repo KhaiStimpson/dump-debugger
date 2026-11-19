@@ -52,6 +52,7 @@
   <ItemGroup>
     <ProjectReference Include="..\DumpDebugger.Core\DumpDebugger.Core.csproj" />
     <ProjectReference Include="..\DumpDebugger.Session\DumpDebugger.Session.csproj" />
+    <ProjectReference Include="..\DumpDebugger.Mcp\DumpDebugger.Mcp.csproj" />
   </ItemGroup>
 
   <!--

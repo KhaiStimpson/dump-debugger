@@ -35,11 +35,7 @@ public sealed partial class HostRpcServer : IAsyncDisposable
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _inflight = new();
     private readonly SemaphoreSlim _sessionGate = new(1, 1);
     private readonly HostRpcServerOptions _options;
-    private WorkerSession? _session;
-    private Workspace? _workspace;
-    private Diagnosis? _latest;
-    private CancellationTokenSource? _analysisCts;
-    private Task? _analysisTask;
+    private DumpSession? _dump;
 
     public HostRpcServer(IHostPlatform platform, Func<string, Task> sendToWeb, HostRpcServerOptions? options = null)
     {
@@ -48,7 +44,13 @@ public sealed partial class HostRpcServer : IAsyncDisposable
         _options = options ?? new HostRpcServerOptions();
     }
 
-    public WorkerSession? Session => _session;
+    public WorkerSession? Session => _dump?.Worker;
+
+    /// <summary>The dump open in the app, if any. The MCP server reads it so an agent can work on what's on screen.</summary>
+    public DumpSession? CurrentDump => _dump;
+
+    /// <summary>Set by the host when it can run the MCP server; null in tests and headless use.</summary>
+    public IMcpControl? Mcp { get; set; }
 
     /// <summary>Handles one raw message from the web app. Never throws: failures become RPC errors.</summary>
     public async Task HandleWebMessageAsync(string json, IReadOnlyList<string>? attachedFiles = null)
@@ -129,8 +131,8 @@ public sealed partial class HostRpcServer : IAsyncDisposable
 
         if (info.Target == RpcTarget.Worker)
         {
-            var session = _session ?? throw new RpcException(new RpcError(RpcError.NoDumpOpen, "No dump is open."));
-            return await session.Connection.CallRawAsync(method, @params, ct).ConfigureAwait(false);
+            var dump = _dump ?? throw new RpcException(new RpcError(RpcError.NoDumpOpen, "No dump is open."));
+            return await dump.Connection.CallRawAsync(method, @params, ct).ConfigureAwait(false);
         }
 
         return await DispatchHostAsync(method, @params, attachedFiles, ct).ConfigureAwait(false);
@@ -172,7 +174,7 @@ public sealed partial class HostRpcServer : IAsyncDisposable
                 return ContractJson.ToElement(new Ack());
 
             case "analysis.get":
-                return ContractJson.ToElement(new AnalysisState(_latest, _analysisTask is { IsCompleted: false }));
+                return ContractJson.ToElement(new AnalysisState(_dump?.Latest, _dump?.AnalysisRunning ?? false));
 
             case "recents.list":
                 return ContractJson.ToElement(_recents.List());
@@ -216,18 +218,29 @@ public sealed partial class HostRpcServer : IAsyncDisposable
                 return ContractJson.ToElement(await CompareAsync(Params<CompareParams>(@params), ct).ConfigureAwait(false));
 
             case "analysis.cancel":
-                _analysisCts?.Cancel();
+                _dump?.CancelAnalysis();
                 return ContractJson.ToElement(new Ack());
+
+            case "mcp.get":
+                return ContractJson.ToElement(Mcp?.Status ?? McpUnavailable);
+
+            case "mcp.set":
+                return ContractJson.ToElement(Mcp is { } mcp ? await mcp.ConfigureAsync(Params<McpSettingsParams>(@params), ct).ConfigureAwait(false) : McpUnavailable);
+
+            case "mcp.regenerateToken":
+                return ContractJson.ToElement(Mcp is { } control ? await control.RegenerateTokenAsync(ct).ConfigureAwait(false) : McpUnavailable);
 
             default:
                 throw new RpcException(new RpcError(RpcError.MethodNotFound, $"Host method '{method}' is not implemented."));
         }
     }
 
+    private static readonly McpStatus McpUnavailable =
+        new(false, false, false, 0, "", "", false, "The MCP server isn't available in this build.");
+
     /// <summary>
-    /// Starts the matching worker, opens the dump, and either restores the cached diagnosis from
-    /// the workspace or starts streaming analysis in the background. Returns as soon as the dump
-    /// is open, so the UI can show the Analyzing screen while stages complete.
+    /// Opens the dump in a new <see cref="DumpSession"/> (closing the previous one). Returns as
+    /// soon as the dump is open, so the UI can show the Analyzing screen while stages complete.
     /// </summary>
     public async Task<DumpOpened> OpenDumpAsync(string path, CancellationToken ct)
     {
@@ -241,52 +254,13 @@ public sealed partial class HostRpcServer : IAsyncDisposable
         {
             await CloseDumpCoreAsync().ConfigureAwait(false);
 
-            await DebugAsync("open", path).ConfigureAwait(false);
-            await NotifyWebAsync("dump.progress", new ProgressNotification("Starting worker", 0.02, path)).ConfigureAwait(false);
-            var session = await WorkerSession.StartAsync(path, RelayWorkerNotification, ct).ConfigureAwait(false);
-            _session = session;
-            await DebugAsync("worker started", $"{session.Architecture}; pid {session.ProcessId}; {WorkerLauncher.FindWorkerExecutable(session.Architecture)}").ConfigureAwait(false);
-            await NotifyWebAsync("worker.status", new WorkerStatus(WorkerState.Starting, session.Architecture.ToString(), session.ProcessId, null)).ConfigureAwait(false);
-
-            var metadata = await DacConsent.OpenAsync(
-                async (online, token) =>
-                {
-                    await DebugAsync("runtime lookup", online ? "Online retry (consent granted)" : "Offline lookup").ConfigureAwait(false);
-                    if (online)
-                        await NotifyWebAsync("dump.progress", new ProgressNotification("Downloading matching DACs", 0.12, "Contacting the Microsoft symbol server…")).ConfigureAwait(false);
-                    return await session.OpenDumpAsync(path, token, online).ConfigureAwait(false);
-                }, async (metadata, token) =>
-                {
-                    await DebugAsync("consent", "Waiting for Download / Stay offline in the native dialog").ConfigureAwait(false);
-                    var allowed = await _platform.RequestDacDownloadAsync(metadata, token).ConfigureAwait(false);
-                    await DebugAsync("consent", allowed ? "Download approved" : "Staying offline").ConfigureAwait(false);
-                    return allowed;
-                }, ct).ConfigureAwait(false);
-            await NotifyWebAsync("worker.status", new WorkerStatus(WorkerState.Ready, session.Architecture.ToString(), session.ProcessId, null)).ConfigureAwait(false);
-
-            var workspace = Workspace.For(path);
-            _workspace = workspace;
-            var identity = metadata.RuntimeIdentity();
-            var cached = workspace.TryLoadDiagnosis(identity);
-            if (cached is not null)
-            {
-                await DebugAsync("analysis", $"Restoring cached diagnosis for {identity}").ConfigureAwait(false);
-                _latest = cached with { FromCache = true };
-                await NotifyWebAsync("analysis.updated", _latest).ConfigureAwait(false);
-                EnsureSnapshotInBackground(session, workspace, cached, identity);
-            }
-            else if (metadata.Runtimes.Any(r => r.IsManagedAnalysisAvailable))
-            {
-                await DebugAsync("analysis", $"Starting worker analysis (no cached diagnosis for {identity})").ConfigureAwait(false);
-                StartAnalysis(session, workspace, identity);
-            }
-            else
-            {
-                await DebugAsync("analysis unavailable", DacConsent.AnalysisError(metadata) ?? "No usable runtime", true).ConfigureAwait(false);
-            }
-
-            await OnDumpOpenedAsync(metadata, workspace, _latest).ConfigureAwait(false);
-            return new DumpOpened(metadata, workspace.Directory, cached is not null, cached is null ? DacConsent.AnalysisError(metadata) : null);
+            var dump = await DumpSession.OpenAsync(path, new DumpSessionHooks(
+                Notify: (method, payload) => SendAsync(RpcMessage.Notification(method, payload)),
+                RequestDacDownload: _platform.RequestDacDownloadAsync,
+                AnalysisCompleted: (workspace, diagnosis) => _recents.UpdateVerdict(workspace.DumpPath, diagnosis)), ct).ConfigureAwait(false);
+            _dump = dump;
+            _recents.Touch(dump.Metadata, dump.Latest);
+            return new DumpOpened(dump.Metadata, dump.Workspace.Directory, dump.CachedAnalysis, dump.AnalysisError);
         }
         finally
         {
@@ -294,45 +268,9 @@ public sealed partial class HostRpcServer : IAsyncDisposable
         }
     }
 
-    /// <summary>Hook for recents and other per-open bookkeeping (see HostRpcServer.Recents.cs).</summary>
-    private partial Task OnDumpOpenedAsync(Core.Dump.DumpMetadata metadata, Workspace workspace, Diagnosis? diagnosis);
+    public Task? AnalysisTask => _dump?.AnalysisTask;
 
-    private void StartAnalysis(WorkerSession session, Workspace workspace, string runtimeIdentity)
-    {
-        _analysisCts = new CancellationTokenSource();
-        var ct = _analysisCts.Token;
-        _latest = null;
-        _analysisTask = Task.Run(async () =>
-        {
-            try
-            {
-                var final = await session.Connection.CallAsync<Diagnosis>("analysis.run", new AnalysisRunParams(), ct).ConfigureAwait(false);
-                if (final is not null)
-                {
-                    _latest = final;
-                    workspace.SaveDiagnosis(final, runtimeIdentity);
-                    await OnAnalysisCompletedAsync(workspace, final).ConfigureAwait(false);
-                    EnsureSnapshotInBackground(session, workspace, final, runtimeIdentity);
-                }
-            }
-            catch (OperationCanceledException) when (ct.IsCancellationRequested)
-            {
-                await DebugAsync("analysis stopped", "Cancelled").ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                await DebugAsync("analysis failed", ex.Message, true).ConfigureAwait(false);
-                if (ReferenceEquals(_session, session) && !ct.IsCancellationRequested)
-                    await NotifyWebAsync("analysis.failed", new AnalysisFailure(ex.Message)).ConfigureAwait(false);
-            }
-        });
-    }
-
-    private partial Task OnAnalysisCompletedAsync(Workspace workspace, Diagnosis diagnosis);
-
-    public Task? AnalysisTask => _analysisTask;
-
-    public Diagnosis? LatestDiagnosis => _latest;
+    public Diagnosis? LatestDiagnosis => _dump?.Latest;
 
     public async Task CloseDumpAsync()
     {
@@ -349,26 +287,11 @@ public sealed partial class HostRpcServer : IAsyncDisposable
 
     private async Task CloseDumpCoreAsync()
     {
-        _analysisCts?.Cancel();
-        _analysisCts = null;
-        _latest = null;
-        _workspace = null;
-        if (_session is { } old)
+        if (_dump is { } old)
         {
-            _session = null;
+            _dump = null;
             await old.DisposeAsync().ConfigureAwait(false);
-            await NotifyWebAsync("worker.status", new WorkerStatus(WorkerState.Exited, old.Architecture.ToString(), null, null)).ConfigureAwait(false);
         }
-    }
-
-    private void RelayWorkerNotification(string method, JsonElement? payload)
-    {
-        if (method == "analysis.updated" && ContractJson.FromElement<Diagnosis>(payload) is { } d)
-        {
-            _latest = d;
-        }
-
-        _ = SendAsync(RpcMessage.Notification(method, payload));
     }
 
     private static T Params<T>(JsonElement? element) =>

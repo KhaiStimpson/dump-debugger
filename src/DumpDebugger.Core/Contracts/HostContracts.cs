@@ -89,3 +89,21 @@ public sealed record SaveReportParams(ReportFormat Format, string FileName, stri
 
 /// <summary>Where the report was written, or null if the user cancelled the save dialog.</summary>
 public sealed record SavedReport(string? Path);
+
+/// <summary>
+/// The app-hosted MCP server, as shown in the status bar panel. <see cref="Url"/> and
+/// <see cref="Token"/> are what an MCP client is configured with; the server only listens on
+/// 127.0.0.1 and only while <see cref="Running"/>.
+/// </summary>
+public sealed record McpStatus(
+    bool Available,
+    bool Enabled,
+    bool Running,
+    int Port,
+    string Url,
+    string Token,
+    bool AllowDacDownload,
+    string? Error);
+
+/// <summary>Only the members that are set change. <see cref="AllowDacDownload"/> covers dumps an agent opens itself.</summary>
+public sealed record McpSettingsParams(bool? Enabled = null, int? Port = null, bool? AllowDacDownload = null);

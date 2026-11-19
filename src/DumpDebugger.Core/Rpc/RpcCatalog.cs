@@ -45,6 +45,9 @@ public static class RpcCatalog
         Host<SaveReportParams, SavedReport>("report.save"),
         Host<NoParams, IReadOnlyList<CompareCandidate>>("compare.candidates"),
         Host<CompareParams, CompareResult>("compare.run"),
+        Host<NoParams, McpStatus>("mcp.get"),
+        Host<McpSettingsParams, McpStatus>("mcp.set"),
+        Host<NoParams, McpStatus>("mcp.regenerateToken"),
 
         Worker<AnalysisRunParams, Diagnosis>("analysis.run"),
         Worker<ThreadGroupsQuery, ThreadGroupsResult>("threads.groups"),
