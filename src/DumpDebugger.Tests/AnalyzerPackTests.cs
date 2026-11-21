@@ -19,6 +19,10 @@ public class AnalyzerPackTests
         { "httpclient", "http-sockets", Severity.Warning },
         { "timers", "timers", Severity.Warning },
         { "crash", "exceptions", Severity.Critical },
+        { "strings", "duplicate-strings", Severity.Warning },
+        { "events", "event-handlers", Severity.Warning },
+        { "pinned", "gc-handles", Severity.Warning },
+        { "threads", "thread-count", Severity.Warning },
     };
 
     private static readonly Dictionary<string, string[]> Subjects = new()
@@ -31,6 +35,10 @@ public class AnalyzerPackTests
         ["httpclient"] = ["http-sockets"],
         ["timers"] = ["timers"],
         ["crash"] = ["exceptions"],
+        ["strings"] = ["duplicate-strings"],
+        ["events"] = ["event-handlers"],
+        ["pinned"] = ["gc-handles"],
+        ["threads"] = ["thread-count"],
     };
 
     [Theory]
@@ -71,6 +79,7 @@ public class AnalyzerPackTests
     public async Task Healthy_scenarios_raise_none_of_the_pack()
     {
         var (d, _) = await Golden.AnalyzeAsync("deadlock");
-        Assert.DoesNotContain(d.Findings, f => f.Analyzer is "threadpool-starvation" or "finalizer" or "timers" or "loh-fragmentation" or "http-sockets");
+        Assert.DoesNotContain(d.Findings, f => f.Analyzer is "threadpool-starvation" or "finalizer" or "timers" or "loh-fragmentation" or "http-sockets"
+            or "duplicate-strings" or "event-handlers" or "gc-handles" or "thread-count");
     }
 }

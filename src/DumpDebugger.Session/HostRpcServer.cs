@@ -13,6 +13,8 @@ public interface IHostPlatform
 
     Task<string?> PickSaveFileAsync(string suggestedName, string extension);
 
+    Task<string?> PickFolderAsync();
+
     Task<bool> RequestDacDownloadAsync(Core.Dump.DumpMetadata metadata, CancellationToken ct);
 
     void SetTitlebarPassthrough(IReadOnlyList<Rect> rects);
@@ -20,7 +22,8 @@ public interface IHostPlatform
     void SetTheme(AppTheme theme);
 }
 
-public sealed record HostRpcServerOptions(string? StartupDumpPath = null);
+/// <param name="SymbolSettingsFile">Where symbol settings are kept; the per-user file when null (tests point it elsewhere).</param>
+public sealed record HostRpcServerOptions(string? StartupDumpPath = null, string? SymbolSettingsFile = null);
 
 /// <summary>
 /// The host end of the WebView2 bridge. Each message from the web app is routed by
@@ -42,6 +45,7 @@ public sealed partial class HostRpcServer : IAsyncDisposable
         _platform = platform;
         _sendToWeb = sendToWeb;
         _options = options ?? new HostRpcServerOptions();
+        _symbols = new SymbolSettingsStore(_options.SymbolSettingsFile);
     }
 
     public WorkerSession? Session => _dump?.Worker;
@@ -132,7 +136,20 @@ public sealed partial class HostRpcServer : IAsyncDisposable
         if (info.Target == RpcTarget.Worker)
         {
             var dump = _dump ?? throw new RpcException(new RpcError(RpcError.NoDumpOpen, "No dump is open."));
-            return await dump.Connection.CallRawAsync(method, @params, ct).ConfigureAwait(false);
+            if (dump.Worker.HasExited)
+            {
+                throw WorkerGone();
+            }
+
+            try
+            {
+                return await dump.Connection.CallRawAsync(method, @params, ct).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+            {
+                // The pipe closed under the call: the worker died (or the dump was closed) mid-request.
+                throw WorkerGone();
+            }
         }
 
         return await DispatchHostAsync(method, @params, attachedFiles, ct).ConfigureAwait(false);
@@ -221,6 +238,54 @@ public sealed partial class HostRpcServer : IAsyncDisposable
                 _dump?.CancelAnalysis();
                 return ContractJson.ToElement(new Ack());
 
+            case "analysis.restart":
+                {
+                    var dump = _dump ?? throw new RpcException(new RpcError(RpcError.NoDumpOpen, "No dump is open."));
+                    if (dump.Worker.HasExited)
+                    {
+                        throw WorkerGone();
+                    }
+
+                    var p = ContractJson.FromElement<AnalysisRestartParams>(@params) ?? new AnalysisRestartParams();
+                    if (dump.AnalysisTask is { IsCompleted: false } running)
+                    {
+                        // A cancelled run takes a moment to unwind in the worker; wait so one click is enough.
+                        dump.CancelAnalysis();
+                        await Task.WhenAny(running, Task.Delay(TimeSpan.FromSeconds(10), ct)).ConfigureAwait(false);
+                    }
+
+                    if (!dump.RestartAnalysis(p.Force))
+                    {
+                        throw new RpcException(new RpcError(RpcError.InvalidParams, dump.AnalysisError ?? "Analysis is already complete or still running."));
+                    }
+
+                    return ContractJson.ToElement(new Ack());
+                }
+
+            case "symbols.get":
+                return ContractJson.ToElement(_symbols.Load());
+
+            case "symbols.set":
+                {
+                    var saved = _symbols.Save(Params<SymbolSettings>(@params));
+                    if (_dump is { } dump)
+                    {
+                        try
+                        {
+                            await dump.ApplySymbolsAsync(saved, ct).ConfigureAwait(false);
+                        }
+                        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+                        {
+                            // The worker is gone; the folders are saved and apply to the next open.
+                        }
+                    }
+
+                    return ContractJson.ToElement(saved);
+                }
+
+            case "symbols.pickFolder":
+                return ContractJson.ToElement(new PickedFolder(await _platform.PickFolderAsync().ConfigureAwait(false)));
+
             case "mcp.get":
                 return ContractJson.ToElement(Mcp?.Status ?? McpUnavailable);
 
@@ -234,6 +299,11 @@ public sealed partial class HostRpcServer : IAsyncDisposable
                 throw new RpcException(new RpcError(RpcError.MethodNotFound, $"Host method '{method}' is not implemented."));
         }
     }
+
+    private readonly SymbolSettingsStore _symbols;
+
+    private static RpcException WorkerGone() => new(new RpcError(RpcError.WorkerUnavailable,
+        "The analysis worker for this dump has stopped. Reopen the dump to continue."));
 
     private static readonly McpStatus McpUnavailable =
         new(false, false, false, 0, "", "", false, "The MCP server isn't available in this build.");
@@ -257,7 +327,8 @@ public sealed partial class HostRpcServer : IAsyncDisposable
             var dump = await DumpSession.OpenAsync(path, new DumpSessionHooks(
                 Notify: (method, payload) => SendAsync(RpcMessage.Notification(method, payload)),
                 RequestDacDownload: _platform.RequestDacDownloadAsync,
-                AnalysisCompleted: (workspace, diagnosis) => _recents.UpdateVerdict(workspace.DumpPath, diagnosis)), ct).ConfigureAwait(false);
+                AnalysisCompleted: (workspace, diagnosis) => _recents.UpdateVerdict(workspace.DumpPath, diagnosis),
+                Symbols: _symbols.Load), ct).ConfigureAwait(false);
             _dump = dump;
             _recents.Touch(dump.Metadata, dump.Latest);
             return new DumpOpened(dump.Metadata, dump.Workspace.Directory, dump.CachedAnalysis, dump.AnalysisError);

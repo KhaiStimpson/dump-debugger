@@ -32,7 +32,8 @@ public sealed class ThreadRecord
     public required ulong ClrAddress { get; init; }
     public required ThreadRole Role { get; init; }
     public required WaitKind Wait { get; init; }
-    public required IReadOnlyList<StackFrame> Frames { get; init; }
+    /// <summary>Replaced as a whole when symbol folders change (<see cref="ThreadModelBuilder.Relocate"/>).</summary>
+    public required IReadOnlyList<StackFrame> Frames { get; set; }
     public required IReadOnlyList<ClrMethod?> Methods { get; init; }
     public required IReadOnlyList<StackRootObject> Roots { get; init; }
     public required string? Where { get; init; }
@@ -95,6 +96,39 @@ public static class ThreadModelBuilder
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Looks up file and line again for every application frame, after the symbol folders
+    /// changed. Frames keep their IL offset and method, so nothing is re-read from the stack.
+    /// </summary>
+    public static void Relocate(IReadOnlyList<ThreadRecord> threads, SourceLocator sources, CancellationToken ct)
+    {
+        foreach (var thread in threads)
+        {
+            ct.ThrowIfCancellationRequested();
+            StackFrame[]? updated = null;
+            for (var i = 0; i < thread.Frames.Count && i < thread.Methods.Count; i++)
+            {
+                var frame = thread.Frames[i];
+                if (frame.Kind != FrameKind.App || frame.IlOffset is not { } il || thread.Methods[i] is not { } method)
+                {
+                    continue;
+                }
+
+                var source = sources.Locate(method, il);
+                if (source.File != frame.SourceFile || source.Line != frame.Line || source.Path != frame.SourcePath)
+                {
+                    updated ??= [.. thread.Frames];
+                    updated[i] = frame with { SourceFile = source.File, Line = source.Line, SourcePath = source.Path };
+                }
+            }
+
+            if (updated is not null)
+            {
+                thread.Frames = updated;
+            }
+        }
     }
 
     private static ThreadRecord BuildOne(ClrThread thread, SourceLocator? sources)

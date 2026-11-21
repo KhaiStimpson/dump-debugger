@@ -12,9 +12,10 @@ internal sealed class BridgeHarness : IAsyncDisposable
     private readonly ConcurrentDictionary<string, TaskCompletionSource<RpcMessage>> _responses = new();
     private int _next;
 
-    public BridgeHarness()
+    public BridgeHarness(HostRpcServerOptions? options = null)
     {
-        Server = new HostRpcServer(new HeadlessPlatform(), json =>
+        Platform = new HeadlessPlatform();
+        Server = new HostRpcServer(Platform, json =>
         {
             var message = JsonSerializer.Deserialize<RpcMessage>(json, ContractJson.Options)!;
             if (message.IsResponse)
@@ -27,8 +28,10 @@ internal sealed class BridgeHarness : IAsyncDisposable
             }
 
             return Task.CompletedTask;
-        });
+        }, options);
     }
+
+    public HeadlessPlatform Platform { get; }
 
     public HostRpcServer Server { get; }
 

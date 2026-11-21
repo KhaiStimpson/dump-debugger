@@ -26,6 +26,10 @@ interface AppState {
 
   openDump(path: string, files?: File[]): Promise<void>;
   closeDump(): Promise<void>;
+  /** Opens the same dump again in a fresh worker (after the worker stopped). */
+  reopenDump(): Promise<void>;
+  /** Runs analysis again after it failed or was cancelled; `force` re-runs a finished one. */
+  retryAnalysis(force?: boolean): Promise<void>;
   inspect(uri: string): void;
   back(): void;
   forward(): void;
@@ -91,6 +95,23 @@ export const useApp = create<AppState>((set, get) => ({
       inspector: { history: [], index: -1, open: false },
     });
     navigate('home');
+  },
+
+  async reopenDump() {
+    const path = get().dump?.metadata.dumpPath;
+    if (path) await get().openDump(path);
+  },
+
+  async retryAnalysis(force = false) {
+    if (!get().dump) return;
+    try {
+      await rpc.call('analysis.restart', { force });
+      queryClient.clear();
+      set({ error: null, diagnosis: null, progress: null });
+      navigate('analyzing');
+    } catch (e) {
+      set({ error: e instanceof RpcError ? e.message : String(e) });
+    }
   },
 
   inspect(uri) {

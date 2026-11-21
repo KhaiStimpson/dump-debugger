@@ -1,0 +1,13 @@
+verdict: Warning/High
+  83.3 MB of duplicate strings (84% of the heap), mostly in ProductRow.Description.
+  The same text is stored over and over as separate string objects. Readers and deserializers create a new string for every value they read, so a column or property with few distinct values (a status, a category, a description) costs memory per row instead of once.
+finding strings.duplicates Warning/High [HighMemory]
+  title: 83.3 MB of duplicate strings (84% of the heap), mostly in `ProductRow.Description`
+  why: 37,501 copies of "Waterproof full-grain leather boot with a cushioned midsole…" · 125 distinct values repeated
+  means: The same text is stored over and over as separate string objects. Readers and deserializers create a new string for every value they read, so a column or property with few distinct values (a status, a category, a description) costs memory per row instead of once.
+  next: Share one instance per distinct value where `ProductRow.Description` is filled: look each value up in a small `Dictionary<string, string>` pool as it is read.
+  next: For a fixed set of values, store an enum or an ID instead of the text. `string.Intern` also works, but interned strings are never freed.
+  next: Open ["Waterproof full-grain leather boot with…"] and check its path to a GC root to see which collection holds the copies.
+  evidence: Object "Waterproof full-grain leather boot with…"
+  evidence: Type String
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()

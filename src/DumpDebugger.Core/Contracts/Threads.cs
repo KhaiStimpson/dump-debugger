@@ -37,7 +37,58 @@ public sealed record StackFrame(
     int? IlOffset,
     string? SourceFile,
     int? Line,
-    bool IsWait);
+    bool IsWait,
+    string? SourcePath = null);
+
+public enum SymbolState
+{
+    /// <summary>A matching portable PDB was found: frames in this module show file and line.</summary>
+    Loaded,
+
+    /// <summary>No PDB next to the module, in the PDB path recorded at build time, or in any symbol folder.</summary>
+    NotFound,
+
+    /// <summary>A PDB with the right name was found, but it belongs to a different build of the module.</summary>
+    Mismatched,
+
+    /// <summary>Only a Windows (native-format) PDB was found; portable PDBs are the ones that can be read.</summary>
+    Unsupported,
+}
+
+/// <summary>One application module in the dump and whether its PDB could be read.</summary>
+public sealed record SymbolModule(string Module, string? ModulePath, SymbolState State, string? PdbPath, string Detail);
+
+/// <summary><see cref="Path"/> is a frame's <see cref="StackFrame.SourcePath"/>.</summary>
+public sealed record SourceQuery(string Path, int Line, int Context = 6);
+
+public enum SourceOrigin
+{
+    None,
+
+    /// <summary>Embedded in the PDB by the build (<c>EmbedAllSources</c>).</summary>
+    Embedded,
+
+    /// <summary>The file at the path recorded in the PDB.</summary>
+    Disk,
+
+    /// <summary>The file found under one of the configured source folders.</summary>
+    SourceFolder,
+}
+
+public sealed record SourceLine(int Number, string Text);
+
+/// <summary>
+/// A few lines of source around a frame. <see cref="Modified"/> is true when the file on disk
+/// no longer matches the checksum the build recorded, so the highlighted line may be off.
+/// </summary>
+public sealed record SourceSnippet(
+    string Path,
+    string? ResolvedPath,
+    SourceOrigin Origin,
+    int Line,
+    IReadOnlyList<SourceLine> Lines,
+    bool Modified,
+    string? Unavailable);
 
 public sealed record ThreadSummary(
     int Id,

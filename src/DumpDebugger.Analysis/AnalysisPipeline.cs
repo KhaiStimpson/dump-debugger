@@ -283,5 +283,9 @@ public static class AnalyzerCatalog
         new LohFragmentationAnalyzer(),
         new HttpClientAnalyzer(),
         new TimerLeakAnalyzer(),
+        new DuplicateStringsAnalyzer(),
+        new EventHandlerLeakAnalyzer(),
+        new GcHandleAnalyzer(),
+        new ThreadCountAnalyzer(),
     ];
 }

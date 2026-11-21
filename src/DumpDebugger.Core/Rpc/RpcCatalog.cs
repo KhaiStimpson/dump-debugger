@@ -35,6 +35,10 @@ public static class RpcCatalog
         Host<NoParams, Ack>("dump.close"),
         Host<NoParams, AnalysisState>("analysis.get"),
         Host<NoParams, Ack>("analysis.cancel"),
+        Host<AnalysisRestartParams, Ack>("analysis.restart"),
+        Host<NoParams, SymbolSettings>("symbols.get"),
+        Host<SymbolSettings, SymbolSettings>("symbols.set"),
+        Host<NoParams, PickedFolder>("symbols.pickFolder"),
         Host<NoParams, IReadOnlyList<RecentDump>>("recents.list"),
         Host<PathParams, Ack>("recents.remove"),
         Host<NoParams, IReadOnlyList<SampleScenario>>("samples.list"),
@@ -62,6 +66,9 @@ public static class RpcCatalog
         Worker<RootsQuery, RootPathsResult>("objects.roots"),
         Worker<NoParams, AsyncStacksResult>("async.stacks"),
         Worker<SnapshotParams, HeapSnapshot>("snapshot.build"),
+        Worker<SymbolSettings, Ack>("symbols.configure"),
+        Worker<NoParams, IReadOnlyList<SymbolModule>>("symbols.modules"),
+        Worker<SourceQuery, SourceSnippet>("source.snippet"),
     ];
 
     public static readonly IReadOnlyList<RpcNotificationInfo> Notifications =

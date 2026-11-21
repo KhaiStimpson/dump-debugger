@@ -71,9 +71,9 @@ public sealed class WorkerSession : IAsyncDisposable
         }
     }
 
-    public async Task<DumpMetadata> OpenDumpAsync(string dumpPath, CancellationToken ct = default, bool allowSymbolServer = false)
+    public async Task<DumpMetadata> OpenDumpAsync(string dumpPath, CancellationToken ct = default, bool allowSymbolServer = false, SymbolSettings? symbols = null)
     {
-        Metadata = await Connection.CallAsync<DumpMetadata>("dump.open", new OpenDumpParams(dumpPath, allowSymbolServer), ct).ConfigureAwait(false)
+        Metadata = await Connection.CallAsync<DumpMetadata>("dump.open", new WorkerOpenParams(dumpPath, allowSymbolServer, symbols?.SymbolPaths, symbols?.SourcePaths), ct).ConfigureAwait(false)
             ?? throw new IOException("Worker returned no metadata for dump.open.");
         return Metadata;
     }

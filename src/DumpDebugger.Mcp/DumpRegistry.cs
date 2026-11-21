@@ -37,12 +37,44 @@ public sealed class DumpRegistry : IAsyncDisposable
             list.Add(new DumpHandle(AppId, app, true));
         }
 
+        List<DumpHandle>? dead = null;
         lock (_agent)
         {
+            // A worker that crashed (out of memory on a huge heap, a ClrMD fault) leaves a session
+            // nothing can query: drop it here so the id stops resolving and the path can be reopened.
+            for (var i = _agent.Count - 1; i >= 0; i--)
+            {
+                if (_agent[i].Session.Worker.HasExited)
+                {
+                    (dead ??= []).Add(_agent[i]);
+                    _agent.RemoveAt(i);
+                }
+            }
+
             list.AddRange(_agent);
         }
 
+        if (dead is not null)
+        {
+            _ = DisposeDeadAsync(dead);
+        }
+
         return list;
+    }
+
+    private static async Task DisposeDeadAsync(List<DumpHandle> dead)
+    {
+        foreach (var handle in dead)
+        {
+            try
+            {
+                await handle.Session.DisposeAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidOperationException or ObjectDisposedException)
+            {
+                // Already gone: there is nothing left to release.
+            }
+        }
     }
 
     /// <summary>Resolves a handle id or the path of an open dump. With no argument: the app's dump, else the only open one.</summary>

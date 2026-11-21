@@ -134,6 +134,7 @@ function PaletteBody({ close }: { close(): void }) {
       cmd('Go to Memory', go('memory'), 'G M');
       cmd('Go to Objects', go('objects'), 'G O');
       cmd('Export incident report', go('report'), 'Ctrl E');
+      cmd('Re-run analysis', () => void useApp.getState().retryAnalysis(true));
       cmd('Close dump', () => void closeDump());
     }
     cmd('Compare two dumps', go('compare'), 'G C');

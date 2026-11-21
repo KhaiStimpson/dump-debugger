@@ -25,7 +25,7 @@ public sealed class WorkerHandlers : IDisposable
         {
             case "dump.open":
                 {
-                    var request = Params<OpenDumpParams>(@params);
+                    var request = Params<WorkerOpenParams>(@params);
                     var assemblyPath = typeof(DumpIndex).Assembly.Location;
                     await context.NotifyAsync("debug.event", new DebugNotification("worker", "build",
                         $"{System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}; Analysis DLL: {assemblyPath}; modified {File.GetLastWriteTimeUtc(assemblyPath):O}"));
@@ -43,7 +43,7 @@ public sealed class WorkerHandlers : IDisposable
                             context.NotifyAsync("dump.progress", new ProgressNotification("Downloading matching DACs", 0.12, detail)).GetAwaiter().GetResult();
                         context.NotifyAsync("debug.event", new DebugNotification("worker", stage, detail,
                             stage is "DAC resolution failed" or "DAC candidate failed" or "DAC cache entry rejected")).GetAwaiter().GetResult();
-                    }, ct), ct);
+                    }, ct, new SymbolSettings(request.SymbolPaths ?? [], request.SourcePaths ?? [])), ct);
                     _index = index;
                     return ContractJson.ToElement(index.Loaded.Metadata);
                 }
@@ -154,6 +154,27 @@ public sealed class WorkerHandlers : IDisposable
                     await index.EnsureHeapAsync(ct);
                     var explorer = await index.EnsureExplorerAsync(null, ct);
                     return ContractJson.ToElement(await index.WithClrAsync(() => SnapshotBuilder.Build(index, p.Diagnosis, explorer, ct), ct));
+                }
+
+            case "symbols.configure":
+                {
+                    var p = Params<SymbolSettings>(@params);
+                    if (_index is { HasRuntime: true } index)
+                    {
+                        await index.ConfigureSymbolsAsync(p, ct);
+                    }
+
+                    return ContractJson.ToElement(new Ack());
+                }
+
+            case "symbols.modules":
+                return ContractJson.ToElement(await RequireRuntime().SymbolModulesAsync(ct));
+
+            case "source.snippet":
+                {
+                    var q = Params<SourceQuery>(@params);
+                    var index = RequireRuntime();
+                    return ContractJson.ToElement(await Task.Run(() => index.Sources.Snippet(q), ct));
                 }
 
             default:

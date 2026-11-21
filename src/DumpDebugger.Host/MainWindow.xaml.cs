@@ -158,6 +158,19 @@ public sealed partial class MainWindow : Window, IHostPlatform
         return file?.Path;
     });
 
+    public Task<string?> PickFolderAsync() => OnUiThreadAsync(async () =>
+    {
+        var picker = new Windows.Storage.Pickers.FolderPicker
+        {
+            SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.ComputerFolder,
+            ViewMode = Windows.Storage.Pickers.PickerViewMode.List,
+        };
+        picker.FileTypeFilter.Add("*");
+        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
+        var folder = await picker.PickSingleFolderAsync();
+        return folder?.Path;
+    });
+
     public Task<string?> PickSaveFileAsync(string suggestedName, string extension) => OnUiThreadAsync(async () =>
     {
         var picker = new Windows.Storage.Pickers.FileSavePicker

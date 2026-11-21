@@ -11,7 +11,7 @@ Dump Debugger is a Windows app for investigating .NET memory dumps, built for th
 - **A verdict, not a wall of hex.** "The app is hung: 2 requests are deadlocked, and 10 more threads are queued behind them." Each finding carries *what this means*, *what to do next* (templated from the evidence, never free-form), a confidence level, and the threads, locks, objects and requests it's about.
 - **"What were you seeing?"** Hang, high memory, crash or slow: the symptom chips re-rank findings toward what you noticed.
 - **Everything is a link.** Threads ◆, locks ▲, objects ●, types and requests are one chip style. Click any of them and it opens in the inspector (with back/forward), or jump anywhere with <kbd>Ctrl</kbd>+<kbd>K</kbd>.
-- **Names from your code.** Threads are grouped by their first *application* frame (`InventoryCache.TryReserve(Sku, int)`, not `.InlinedCallFrame`), locks by the field that holds them (`OrderLedger._gate`), requests by route (`POST /api/orders/{id}/notes`), with source lines when PDBs are next to the binaries.
+- **Names from your code.** Threads are grouped by their first *application* frame (`InventoryCache.TryReserve(Sku, int)`, not `.InlinedCallFrame`), locks by the field that holds them (`OrderLedger._gate`), requests by route (`POST /api/orders/{id}/notes`), with file, line and the source around it when the PDBs can be found (see [Symbols and source](#symbols-and-source)).
 - **Teaches in place.** Jargon like *GC root* or *Large Object Heap* has a dotted underline with a definition, and the glossary is one key away (<kbd>?</kbd>).
 
 ## What it finds
@@ -31,6 +31,10 @@ Deterministic analyzers, each with authored explanations and a test fixture:
 | LOH fragmentation | Free space trapped between large objects |
 | HttpClient per call | Hundreds of clients, handlers and sockets, and the method creating them |
 | Timer leaks | Thousands of timers, grouped by the callback they'll run and who holds them |
+| Duplicate strings | The same text held in thousands of separate strings, how much it wastes, and the field that holds the copies |
+| Event-handler leaks | One event with hundreds or thousands of subscribers, the handler they share, and the publisher keeping them alive |
+| Pinned objects and GC handles | Thousands of pinned objects fragmenting the heap, or strong handles that are never freed, and the static that holds them |
+| Thread per job | Dozens or hundreds of dedicated threads parked at the same method |
 
 ![Thread-pool starvation](docs/screenshots/threadpool.png)
 
@@ -61,6 +65,14 @@ Deterministic analyzers, each with authored explanations and a test fixture:
 
 ![Home](docs/screenshots/home.png)
 ![Analyzing a 2 GB dump](docs/screenshots/analyzing.png)
+
+## Symbols and source
+
+Frames in your own code show `File.cs:line` when the module's portable PDB can be read; click it to see the source around that line. A PDB is looked for next to the module, embedded in the module, at the path the build recorded, and then in the folders you add under **Symbols** in the status bar (directly, in symbol-store layout, and in subfolders, so a build output or checkout root can be added as it is). Changes apply to the open dump straight away.
+
+- **Only the matching build is used.** A PDB whose id differs from the one in the module is rejected and shown as *Wrong build*: line numbers from another build would be wrong, which is worse than none. The panel lists each application module and why its PDB was or wasn't used.
+- **Source text** comes from the PDB when the build embedded it, from the path the build recorded, or from a **source folder** you add (a checkout matched by the tail of the recorded path). A file that no longer matches the build's checksum is shown with a warning.
+- **Portable PDBs only.** Windows (native-format) PDBs are recognised and reported, not read; build with `<DebugType>portable</DebugType>` or `embedded`. Nothing is downloaded: there is no symbol-server or Source Link fetch.
 
 ## Let an AI agent investigate (MCP)
 

@@ -1,0 +1,16 @@
+verdict: Warning/High
+  300 dedicated threads are in DeviceListener.Listen, almost all waiting (SemaphoreSlim.Wait).
+  Every thread reserves its own stack (1 MB by default) and has to be scheduled by the operating system, whether it's working or waiting. Hundreds of threads parked at the same line usually mean a thread per connection, device or job: it works at small scale, then memory and context switching climb with every one added.
+finding threads.dedicated.DeviceListener.Listen Warning/High [SlowCpu,HighMemory]
+  title: 300 dedicated threads are in `DeviceListener.Listen`, almost all waiting (SemaphoreSlim.Wait)
+  why: 303 threads in the process · 300 started by the app for the same job
+  means: Every thread reserves its own stack (1 MB by default) and has to be scheduled by the operating system, whether it's working or waiting. Hundreds of threads parked at the same line usually mean a thread per connection, device or job: it works at small scale, then memory and context switching climb with every one added.
+  next: Make the wait in `DeviceListener.Listen` asynchronous (`await channel.Reader.ReadAsync()`, `await semaphore.WaitAsync()`, async I/O), so waiting doesn't hold a thread.
+  next: If the work is CPU-bound, use a small fixed set of workers reading from a shared queue (`Channel<T>`, `Parallel.ForEachAsync`) instead of a thread per item.
+  next: Open one of the threads and read the bottom of its stack to find where they are started.
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Thread #N
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()
+group: 300 × DeviceListener.Listen() |  | SemaphoreSlim.Wait

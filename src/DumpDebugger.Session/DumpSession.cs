@@ -9,10 +9,12 @@ namespace DumpDebugger.Session;
 /// <param name="Notify">Receives every host and worker notification for this dump (progress, debug events, streamed diagnoses).</param>
 /// <param name="RequestDacDownload">Asked once when a runtime's DAC isn't available offline; false stays offline.</param>
 /// <param name="AnalysisCompleted">Called after a fresh analysis has been cached in the workspace.</param>
+/// <param name="Symbols">The symbol and source folders to open with; the saved settings when not given.</param>
 public sealed record DumpSessionHooks(
     Func<string, JsonElement?, Task>? Notify = null,
     Func<DumpMetadata, CancellationToken, Task<bool>>? RequestDacDownload = null,
-    Action<Workspace, Diagnosis>? AnalysisCompleted = null);
+    Action<Workspace, Diagnosis>? AnalysisCompleted = null,
+    Func<SymbolSettings>? Symbols = null);
 
 /// <summary>
 /// One open dump: its architecture-matched worker, its workspace sidecar, and the analysis that
@@ -96,13 +98,14 @@ public sealed class DumpSession : IAsyncDisposable
         await DebugAsync("worker started", $"{Worker.Architecture}; pid {Worker.ProcessId}; {WorkerLauncher.FindWorkerExecutable(Worker.Architecture)}").ConfigureAwait(false);
         await NotifyAsync("worker.status", new WorkerStatus(WorkerState.Starting, arch, Worker.ProcessId, null)).ConfigureAwait(false);
 
+        var symbols = _hooks.Symbols?.Invoke() ?? new SymbolSettingsStore().Load();
         Metadata = await DacConsent.OpenAsync(
             async (online, token) =>
             {
                 await DebugAsync("runtime lookup", online ? "Online retry (consent granted)" : "Offline lookup").ConfigureAwait(false);
                 if (online)
                     await NotifyAsync("dump.progress", new ProgressNotification("Downloading matching DACs", 0.12, "Contacting the Microsoft symbol server…")).ConfigureAwait(false);
-                return await Worker.OpenDumpAsync(path, token, online).ConfigureAwait(false);
+                return await Worker.OpenDumpAsync(path, token, online, symbols).ConfigureAwait(false);
             },
             async (metadata, token) =>
             {
@@ -154,8 +157,7 @@ public sealed class DumpSession : IAsyncDisposable
                 if (final is not null)
                 {
                     Latest = final;
-                    Workspace.SaveDiagnosis(final, RuntimeIdentity);
-                    _hooks.AnalysisCompleted?.Invoke(Workspace, final);
+                    await CacheAsync(final).ConfigureAwait(false);
                     EnsureSnapshotInBackground(final);
                 }
             }
@@ -175,7 +177,55 @@ public sealed class DumpSession : IAsyncDisposable
         });
     }
 
+    /// <summary>
+    /// Writes the finished diagnosis to the workspace. A full disk or a locked sidecar only costs
+    /// the cache (the next open re-analyzes); the diagnosis itself is good and stays on screen.
+    /// </summary>
+    private async Task CacheAsync(Diagnosis final)
+    {
+        try
+        {
+            Workspace.SaveDiagnosis(final, RuntimeIdentity);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            await DebugAsync("workspace", $"Couldn't cache the diagnosis: {ex.Message}", true).ConfigureAwait(false);
+        }
+
+        try
+        {
+            _hooks.AnalysisCompleted?.Invoke(Workspace, final);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            await DebugAsync("workspace", $"Couldn't update recents: {ex.Message}", true).ConfigureAwait(false);
+        }
+    }
+
     public void CancelAnalysis() => _analysisCts?.Cancel();
+
+    /// <summary>
+    /// Runs analysis again after it was cancelled or failed, or with <paramref name="force"/>
+    /// even when a result exists. Returns false when a run is already in progress, the worker
+    /// is gone, or the dump has no loadable runtime.
+    /// </summary>
+    public bool RestartAnalysis(bool force = false)
+    {
+        if (_disposed || AnalysisRunning || Worker.HasExited || !Metadata.Runtimes.Any(r => r.IsManagedAnalysisAvailable))
+        {
+            return false;
+        }
+
+        if (!force && Latest is { Complete: true } && AnalysisFailure is null)
+        {
+            return false;
+        }
+
+        AnalysisFailure = null;
+        CachedAnalysis = false;
+        StartAnalysis();
+        return true;
+    }
 
     /// <summary>After analysis, capture the compare snapshot in the background (once per dump and engine version).</summary>
     private void EnsureSnapshotInBackground(Diagnosis diagnosis)
@@ -185,22 +235,62 @@ public sealed class DumpSession : IAsyncDisposable
             return;
         }
 
+        var build = BuildSnapshotOnceAsync(diagnosis);
         SnapshotTask = Task.Run(async () =>
         {
             try
             {
-                var snapshot = await Connection.CallAsync<HeapSnapshot>("snapshot.build", new SnapshotParams(diagnosis)).ConfigureAwait(false);
-                if (snapshot is not null)
-                {
-                    Workspace.SaveSnapshot(snapshot, RuntimeIdentity);
-                    await NotifyAsync("snapshot.ready", new PathParams(Workspace.DumpPath)).ConfigureAwait(false);
-                }
+                await build.ConfigureAwait(false);
+                await NotifyAsync("snapshot.ready", new PathParams(Workspace.DumpPath)).ConfigureAwait(false);
             }
-            catch (Exception ex) when (ex is RpcException or IOException or OperationCanceledException)
+            catch (Exception ex) when (ex is RpcException or IOException or OperationCanceledException or ObjectDisposedException)
             {
                 // The dump was closed mid-way; the next open tries again.
             }
         });
+    }
+
+    private readonly object _snapshotLock = new();
+    private Task<HeapSnapshot>? _snapshotBuild;
+
+    /// <summary>
+    /// One <c>snapshot.build</c> at a time: the background capture after analysis and a compare
+    /// that asks meanwhile share the same run instead of walking a multi-GB heap twice.
+    /// </summary>
+    private Task<HeapSnapshot> BuildSnapshotOnceAsync(Diagnosis diagnosis)
+    {
+        lock (_snapshotLock)
+        {
+            return _snapshotBuild ??= Task.Run(BuildAsync);
+        }
+
+        async Task<HeapSnapshot> BuildAsync()
+        {
+            try
+            {
+                await DebugAsync("snapshot", "Capturing the compare snapshot").ConfigureAwait(false);
+                var snapshot = await Connection.CallAsync<HeapSnapshot>("snapshot.build", new SnapshotParams(diagnosis)).ConfigureAwait(false)
+                    ?? throw new IOException("Worker returned no snapshot.");
+                try
+                {
+                    Workspace.SaveSnapshot(snapshot, RuntimeIdentity);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    await DebugAsync("workspace", $"Couldn't cache the compare snapshot: {ex.Message}", true).ConfigureAwait(false);
+                }
+
+                return snapshot;
+            }
+            finally
+            {
+                // A later request after a failure tries again; after a success it reads the cached file.
+                lock (_snapshotLock)
+                {
+                    _snapshotBuild = null;
+                }
+            }
+        }
     }
 
     /// <summary>This dump's compare snapshot: cached, being built after analysis, or built now.</summary>
@@ -216,20 +306,24 @@ public sealed class DumpSession : IAsyncDisposable
             await analysis.WaitAsync(ct).ConfigureAwait(false);
         }
 
-        if (SnapshotTask is { } snap)
-        {
-            await snap.WaitAsync(ct).ConfigureAwait(false);
-        }
-
         if (Workspace.TryLoadSnapshot(RuntimeIdentity) is { } built)
         {
             return built;
         }
 
         var diagnosis = Latest ?? throw new RpcException(new RpcError(RpcError.InternalError, "The open dump hasn't been analyzed yet."));
-        var fresh = await Connection.CallAsync<HeapSnapshot>("snapshot.build", new SnapshotParams(diagnosis), ct).ConfigureAwait(false);
-        Workspace.SaveSnapshot(fresh!, RuntimeIdentity);
-        return fresh!;
+        return await BuildSnapshotOnceAsync(diagnosis).WaitAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Hands new symbol and source folders to the worker, which refreshes file and line on the frames it already read.</summary>
+    public async Task ApplySymbolsAsync(SymbolSettings symbols, CancellationToken ct)
+    {
+        if (_disposed || Worker.HasExited)
+        {
+            return;
+        }
+
+        await Connection.CallAsync<Ack>("symbols.configure", symbols, ct).ConfigureAwait(false);
     }
 
     public bool IsFor(string? path) => SamePath(path, DumpPath);

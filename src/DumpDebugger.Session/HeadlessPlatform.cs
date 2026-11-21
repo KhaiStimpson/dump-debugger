@@ -9,7 +9,11 @@ public sealed class HeadlessPlatform : IHostPlatform
 
     public string? NextSavePath { get; set; }
 
+    public string? NextPickedFolder { get; set; }
+
     public Task<string?> PickDumpFileAsync() => Task.FromResult(NextPickedDump);
+
+    public Task<string?> PickFolderAsync() => Task.FromResult(NextPickedFolder);
 
     public Task<bool> RequestDacDownloadAsync(Core.Dump.DumpMetadata metadata, CancellationToken ct) => Task.FromResult(false);
 

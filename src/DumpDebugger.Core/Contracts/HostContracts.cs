@@ -25,6 +25,28 @@ public sealed record ThemeParams(AppTheme Theme);
 
 public sealed record OpenDumpParams(string Path, bool AllowSymbolServer = false);
 
+/// <summary>
+/// What the host sends the worker for <c>dump.open</c>: the page's <see cref="OpenDumpParams"/>
+/// plus the folders from the saved <see cref="SymbolSettings"/>.
+/// </summary>
+public sealed record WorkerOpenParams(
+    string Path,
+    bool AllowSymbolServer = false,
+    IReadOnlyList<string>? SymbolPaths = null,
+    IReadOnlyList<string>? SourcePaths = null);
+
+/// <summary>
+/// Where to look for the app's own debugging files. <see cref="SymbolPaths"/> are folders
+/// searched for portable PDBs (directly, in symbol-store layout, and in subfolders);
+/// <see cref="SourcePaths"/> are checkouts searched for a source file when the path recorded
+/// at build time doesn't exist on this computer.
+/// </summary>
+public sealed record SymbolSettings(IReadOnlyList<string> SymbolPaths, IReadOnlyList<string> SourcePaths);
+
+public sealed record PickedFolder(string? Path);
+
+public sealed record AnalysisRestartParams(bool Force = false);
+
 public sealed record ProgressNotification(string Stage, double FractionComplete, string? Detail);
 
 /// <summary>Small diagnostic events only: never dump contents or heap/query payloads.</summary>

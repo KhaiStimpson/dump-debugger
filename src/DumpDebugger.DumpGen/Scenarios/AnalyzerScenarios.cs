@@ -1,5 +1,9 @@
 using Contoso.Catalog;
 using Contoso.Data;
+using Contoso.Devices;
+using Contoso.Imaging;
+using Contoso.Notifications;
+using Contoso.Products;
 using Contoso.Media;
 using Contoso.Rates;
 using Contoso.Payments;
@@ -185,5 +189,59 @@ public static class CrashScenario
         worker.Start();
         worker.Join();
         return Task.CompletedTask;
+    }
+}
+
+/// <summary>Duplicate strings: every product row holds its own copy of text that repeats across rows.</summary>
+public static class DuplicateStringsScenario
+{
+    public static Task RunAsync()
+    {
+        ProductCatalog.Load(300_000);
+        GC.Collect();
+        return ScenarioCatalog.ReadyAndParkAsync();
+    }
+}
+
+/// <summary>Event-handler leak: tickers subscribe to a static event in their constructor and are then dropped, but the event still holds them.</summary>
+public static class EventLeakScenario
+{
+    public static Task RunAsync()
+    {
+        for (var i = 0; i < 5_000; i++)
+        {
+            _ = new PriceTicker($"SKU-{i:D5}");
+        }
+
+        PriceFeed.Publish(19.99m);
+        GC.Collect();
+        return ScenarioCatalog.ReadyAndParkAsync();
+    }
+}
+
+/// <summary>Pinned buffers: each frame buffer is pinned with a GCHandle that is never freed, with short-lived allocations in between so they end up scattered.</summary>
+public static class PinnedScenario
+{
+    public static Task RunAsync()
+    {
+        for (var i = 0; i < 4_000; i++)
+        {
+            FrameBufferPool.Rent(8 * 1024);
+            _ = new byte[2 * 1024];
+        }
+
+        GC.Collect();
+        return ScenarioCatalog.ReadyAndParkAsync();
+    }
+}
+
+/// <summary>A thread per device: 300 dedicated threads, each parked waiting for its device to send something.</summary>
+public static class ThreadPerDeviceScenario
+{
+    public static Task RunAsync()
+    {
+        DeviceHub.Connect(300);
+        Thread.Sleep(3000);
+        return ScenarioCatalog.ReadyAndParkAsync();
     }
 }

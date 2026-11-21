@@ -43,12 +43,56 @@ public sealed class DumpIndex : IDisposable
 
     public HeapModel? Heap { get; set; }
 
-    public static DumpIndex Open(string path, bool allowSymbolServer = false, Action<string, string>? progress = null, CancellationToken ct = default)
+    public static DumpIndex Open(
+        string path,
+        bool allowSymbolServer = false,
+        Action<string, string>? progress = null,
+        CancellationToken ct = default,
+        Core.Contracts.SymbolSettings? symbols = null)
     {
         var sw = Stopwatch.StartNew();
         var loaded = DumpLoader.Load(path, allowSymbolServer, progress, ct);
-        return new DumpIndex(loaded, sw.Elapsed.TotalSeconds);
+        var index = new DumpIndex(loaded, sw.Elapsed.TotalSeconds);
+        index.Sources.Configure(symbols?.SymbolPaths, symbols?.SourcePaths);
+        return index;
     }
+
+    /// <summary>
+    /// Applies new symbol and source folders to the open dump: PDBs are looked up again and the
+    /// frames already read get their file and line refreshed, so nothing needs reopening.
+    /// </summary>
+    public async Task ConfigureSymbolsAsync(Core.Contracts.SymbolSettings symbols, CancellationToken ct)
+    {
+        await _modelGate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            await WithClrAsync(() =>
+            {
+                Sources.Configure(symbols.SymbolPaths, symbols.SourcePaths);
+                if (Threads is { } threads)
+                {
+                    ThreadModelBuilder.Relocate(threads, Sources, ct);
+                }
+
+                return 0;
+            }, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            _modelGate.Release();
+        }
+    }
+
+    /// <summary>The application's own modules and whether a PDB was found for each (framework modules are left out).</summary>
+    public Task<IReadOnlyList<Core.Contracts.SymbolModule>> SymbolModulesAsync(CancellationToken ct) =>
+        WithClrAsync<IReadOnlyList<Core.Contracts.SymbolModule>>(() => Runtime.EnumerateModules()
+            .Where(m => !string.IsNullOrEmpty(m.Name) && FrameClassifier.KindOf("App.Type", FrameClassifier.ModuleName(m)) == Core.Contracts.FrameKind.App)
+            .GroupBy(m => m.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(g => Sources.Describe(g.First()))
+            .OrderBy(m => m.State == Core.Contracts.SymbolState.Loaded)
+            .ThenBy(m => m.Module, StringComparer.OrdinalIgnoreCase)
+            .Take(300)
+            .ToList(), ct);
 
     public async Task<T> WithClrAsync<T>(Func<T> work, CancellationToken ct)
     {

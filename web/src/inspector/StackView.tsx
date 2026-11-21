@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import type { StackFrame } from '../contracts.gen';
+import type { SourceSnippet, StackFrame } from '../contracts.gen';
+import { useRpc } from '../state/queries';
 
 /**
  * A thread's stack, app-first: the frame it's blocked in (highlighted), your code, and runs
  * of framework frames folded into "▸ N framework frames". "All" shows every frame, including
- * runtime helpers, for the expert who wants the raw view.
+ * runtime helpers, for the expert who wants the raw view. A frame with a file and line opens
+ * the source around it.
  */
 export function StackView({ frames }: { frames: StackFrame[] }) {
   const [mode, setMode] = useState<'app' | 'all'>('app');
@@ -77,18 +79,75 @@ export function StackView({ frames }: { frames: StackFrame[] }) {
   );
 }
 
-function FrameRow({ f, hot }: { f: StackFrame; hot?: boolean }) {
-  const cls = hot ? 'hot' : f.kind === 'app' ? 'app' : 'fw';
-  const where = f.sourceFile
-    ? `${f.sourceFile}:${f.line}`
+/** "Ledger.cs:42" when the PDB was found, else the IL offset for app frames. */
+export const frameLocation = (f: StackFrame) =>
+  f.sourceFile
+    ? `${f.sourceFile}${f.line != null ? `:${f.line}` : ''}`
     : f.ilOffset != null && f.kind === 'app'
       ? `IL +0x${f.ilOffset.toString(16)}`
       : '';
+
+function FrameRow({ f, hot }: { f: StackFrame; hot?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const cls = hot ? 'hot' : f.kind === 'app' ? 'app' : 'fw';
+  const where = frameLocation(f);
+  const hasSource = !!f.sourcePath && f.line != null;
   return (
-    <div className={cls} title={f.fullName ?? f.display}>
-      {f.display}
-      {hot && <span className="wait">waiting here</span>}
-      {where && <span className="src">{where}</span>}
+    <>
+      <div className={cls} title={f.fullName ?? f.display}>
+        {f.display}
+        {hot && <span className="wait">waiting here</span>}
+        {where &&
+          (hasSource ? (
+            <button
+              className="src src-link"
+              onClick={() => setOpen(!open)}
+              aria-expanded={open}
+              title={open ? 'Hide the source' : `Show the source around line ${f.line}`}
+            >
+              {where}
+            </button>
+          ) : (
+            <span className="src">{where}</span>
+          ))}
+      </div>
+      {open && hasSource && <Source path={f.sourcePath!} line={f.line!} />}
+    </>
+  );
+}
+
+function Source({ path, line }: { path: string; line: number }) {
+  const { data, error, isLoading } = useRpc('source.snippet', { path, line, context: 6 });
+  if (isLoading) return <div className="snippet-note">Reading source…</div>;
+  if (error || !data) return <div className="snippet-note">{String((error as Error)?.message ?? 'No source.')}</div>;
+  return <SourceLines snippet={data} />;
+}
+
+export const originLabel: Record<SourceSnippet['origin'], string> = {
+  none: '',
+  embedded: 'embedded in the PDB',
+  disk: 'from disk',
+  sourceFolder: 'from a source folder',
+};
+
+export function SourceLines({ snippet }: { snippet: SourceSnippet }) {
+  if (snippet.unavailable) return <div className="snippet-note">{snippet.unavailable}</div>;
+  const width = String(snippet.lines[snippet.lines.length - 1]?.number ?? 0).length;
+  return (
+    <div className="snippet" role="group" aria-label={`Source around line ${snippet.line}`}>
+      <div className="snippet-h" title={snippet.resolvedPath ?? snippet.path}>
+        {(snippet.resolvedPath ?? snippet.path).split(/[\\/]/).pop()} · {originLabel[snippet.origin]}
+        {snippet.modified && <span className="snippet-warn"> · changed since this build, so the line may be off</span>}
+      </div>
+      <pre>
+        {snippet.lines.map((l) => (
+          <span key={l.number} className={l.number === snippet.line ? 'cur' : undefined}>
+            <i>{String(l.number).padStart(width)}</i>
+            {l.text || ' '}
+            {'\n'}
+          </span>
+        ))}
+      </pre>
     </div>
   );
 }

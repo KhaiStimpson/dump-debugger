@@ -1,0 +1,14 @@
+verdict: Warning/High
+  5,000 handlers are subscribed to PriceFeed.PriceChanged, mostly PriceTicker.OnPriceChanged.
+  An event holds a reference to every subscriber, so a subscriber can't be collected until it unsubscribes or the publisher goes away. Objects that subscribe in their constructor and never unsubscribe pile up, and every time the event is raised all of them run, one after another.
+finding events.subscribers.PriceFeed.PriceChanged Warning/High [HighMemory,SlowCpu]
+  title: 5,000 handlers are subscribed to `PriceFeed.PriceChanged`, mostly `PriceTicker.OnPriceChanged`
+  why: Subscribers are `PriceTicker` objects · each one is kept alive by the event
+  means: An event holds a reference to every subscriber, so a subscriber can't be collected until it unsubscribes or the publisher goes away. Objects that subscribe in their constructor and never unsubscribe pile up, and every time the event is raised all of them run, one after another.
+  next: Unsubscribe (`-=`) when a `PriceTicker` is finished, typically in `Dispose`, and make sure it is disposed.
+  next: If subscribers can't know when they are done, use a weak-event pattern, or have one long-lived object subscribe and route to the current ones.
+  next: Open [PriceTicker] to see what each subscriber keeps alive.
+  evidence: Object PriceFeed.PriceChanged
+  evidence: Object PriceTicker
+  evidence: Type PriceTicker
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()

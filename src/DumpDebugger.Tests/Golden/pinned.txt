@@ -1,0 +1,13 @@
+verdict: Warning/High
+  4,001 objects are pinned, mostly byte[] held by FrameBufferPool.s_buffers.
+  A pinned object can't be moved by the garbage collector. Thousands of them scattered through the ordinary heap stop the GC compacting around them, so free space is stranded between them and the process grows even though little is live. A pinning handle that is never freed also keeps its object alive forever.
+finding gc.pinned Warning/High [HighMemory]
+  title: 4,001 objects are pinned, mostly `byte[]` held by `FrameBufferPool.s_buffers`
+  why: 31.3 MB pinned in total · 4,001 of them in the compacting generations (0-2)
+  means: A pinned object can't be moved by the garbage collector. Thousands of them scattered through the ordinary heap stop the GC compacting around them, so free space is stranded between them and the process grows even though little is live. A pinning handle that is never freed also keeps its object alive forever.
+  next: Free the handles created for `FrameBufferPool.s_buffers`: call `handle.Free()` in a `finally` or in `Dispose` when a buffer is returned.
+  next: For buffers that must stay pinned for a long time, allocate them on the Pinned Object Heap (`GC.AllocateArray<byte>(size, pinned: true)`), where pinning costs nothing.
+  next: For a short native call, pin with `fixed` or pass a `Span<T>` instead of holding a handle.
+  evidence: Object byte[]
+  evidence: Type byte[]
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()

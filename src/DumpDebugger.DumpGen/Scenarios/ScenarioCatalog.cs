@@ -18,6 +18,10 @@ public static class ScenarioCatalog
         new("httpclient", "ASP.NET Core app: a new HttpClient per request; 200 in-flight calls each own a handler and a socket.", HttpClientScenario.RunAsync),
         new("timers", "Console app: a timer per session in a dictionary that is never cleaned (5,000 timers).", TimersScenario.RunAsync),
         new("crash", "Console app: an unhandled exception on a background thread crashes the process; the runtime writes the dump.", CrashScenario.RunAsync),
+        new("strings", "Console app: 300,000 product rows, each with its own copy of a description and category that repeat across rows.", DuplicateStringsScenario.RunAsync),
+        new("events", "Console app: 5,000 price tickers subscribe to a static event and never unsubscribe.", EventLeakScenario.RunAsync),
+        new("pinned", "Console app: 4,000 frame buffers pinned with GCHandle.Alloc and never freed, scattered through the heap.", PinnedScenario.RunAsync),
+        new("threads", "Console app: a dedicated thread per connected device, 300 of them parked waiting for a message.", ThreadPerDeviceScenario.RunAsync),
         new("syncoverasync", "ASP.NET Core app: 200 pricing requests block pool threads on .Result of a downstream call that never answers.", SyncOverAsyncScenario.RunAsync),
     ];
 

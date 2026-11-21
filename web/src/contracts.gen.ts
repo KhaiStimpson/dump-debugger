@@ -12,6 +12,10 @@ export interface AnalysisFailure {
   message: string;
 }
 
+export interface AnalysisRestartParams {
+  force: boolean;
+}
+
 export interface AnalysisRunParams {
   includeHeap: boolean;
 }
@@ -396,6 +400,10 @@ export interface PickedFile {
   path: string | null;
 }
 
+export interface PickedFolder {
+  path: string | null;
+}
+
 export interface Pin {
   uri: string;
   kind: EntityKind;
@@ -556,6 +564,30 @@ export interface SnapshotThreadGroup {
   count: number;
 }
 
+export interface SourceLine {
+  number: number;
+  text: string;
+}
+
+export type SourceOrigin = 'none' | 'embedded' | 'disk' | 'sourceFolder';
+export const SourceOriginValues: readonly SourceOrigin[] = ['none', 'embedded', 'disk', 'sourceFolder'];
+
+export interface SourceQuery {
+  path: string;
+  line: number;
+  context: number;
+}
+
+export interface SourceSnippet {
+  path: string;
+  resolvedPath: string | null;
+  origin: SourceOrigin;
+  line: number;
+  lines: SourceLine[];
+  modified: boolean;
+  unavailable: string | null;
+}
+
 export interface StackFrame {
   display: string;
   fullName: string | null;
@@ -565,10 +597,27 @@ export interface StackFrame {
   sourceFile: string | null;
   line: number | null;
   isWait: boolean;
+  sourcePath: string | null;
 }
 
 export type StageStatus = 'pending' | 'running' | 'done' | 'skipped' | 'failed';
 export const StageStatusValues: readonly StageStatus[] = ['pending', 'running', 'done', 'skipped', 'failed'];
+
+export interface SymbolModule {
+  module: string;
+  modulePath: string | null;
+  state: SymbolState;
+  pdbPath: string | null;
+  detail: string;
+}
+
+export interface SymbolSettings {
+  symbolPaths: string[];
+  sourcePaths: string[];
+}
+
+export type SymbolState = 'loaded' | 'notFound' | 'mismatched' | 'unsupported';
+export const SymbolStateValues: readonly SymbolState[] = ['loaded', 'notFound', 'mismatched', 'unsupported'];
 
 export type Symptom = 'hang' | 'highMemory' | 'crash' | 'slowCpu';
 export const SymptomValues: readonly Symptom[] = ['hang', 'highMemory', 'crash', 'slowCpu'];
@@ -783,6 +832,10 @@ export interface RpcMethods {
   'dump.close': { params: NoParams; result: Ack };
   'analysis.get': { params: NoParams; result: AnalysisState };
   'analysis.cancel': { params: NoParams; result: Ack };
+  'analysis.restart': { params: AnalysisRestartParams; result: Ack };
+  'symbols.get': { params: NoParams; result: SymbolSettings };
+  'symbols.set': { params: SymbolSettings; result: SymbolSettings };
+  'symbols.pickFolder': { params: NoParams; result: PickedFolder };
   'recents.list': { params: NoParams; result: RecentDump[] };
   'recents.remove': { params: PathParams; result: Ack };
   'samples.list': { params: NoParams; result: SampleScenario[] };
@@ -809,6 +862,9 @@ export interface RpcMethods {
   'objects.roots': { params: RootsQuery; result: RootPathsResult };
   'async.stacks': { params: NoParams; result: AsyncStacksResult };
   'snapshot.build': { params: SnapshotParams; result: HeapSnapshot };
+  'symbols.configure': { params: SymbolSettings; result: Ack };
+  'symbols.modules': { params: NoParams; result: SymbolModule[] };
+  'source.snippet': { params: SourceQuery; result: SourceSnippet };
 }
 
 export type RpcMethod = keyof RpcMethods;

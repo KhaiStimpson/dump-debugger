@@ -10,6 +10,9 @@ export function Analyzing() {
   const progress = useApp((s) => s.progress);
   const diagnosis = useApp((s) => s.diagnosis);
   const closeDump = useApp((s) => s.closeDump);
+  const reopenDump = useApp((s) => s.reopenDump);
+  const retryAnalysis = useApp((s) => s.retryAnalysis);
+  const workerGone = useApp((s) => s.worker?.state === 'exited');
   const error = useApp((s) => s.error) ?? dump?.analysisError;
 
   const stages = diagnosis?.stages ?? [];
@@ -82,6 +85,11 @@ export function Analyzing() {
           {!error && (
             <button className="btn pri" disabled={!threadsReady} onClick={() => navigate('diagnosis')}>
               See early findings
+            </button>
+          )}
+          {error && dump && !dump.analysisError && (
+            <button className="btn pri" onClick={() => void (workerGone ? reopenDump() : retryAnalysis())}>
+              {workerGone ? 'Reopen dump' : 'Retry analysis'}
             </button>
           )}
           <button className="btn ghost" onClick={() => void closeDump()}>

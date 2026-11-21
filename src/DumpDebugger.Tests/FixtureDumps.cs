@@ -23,6 +23,17 @@ internal static class FixtureDumps
             return path;
         }
 
+        await GenerateAsync(scenario, path);
+        return path;
+    }
+
+    /// <summary>
+    /// Captures <paramref name="scenario"/> into <paramref name="path"/> now, from the current
+    /// DumpGen build. Tests about PDBs use this rather than a kept fixture: a fixture outlives
+    /// the build it was captured from, and its PDB with it.
+    /// </summary>
+    public static async Task GenerateAsync(string scenario, string path)
+    {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var psi = new ProcessStartInfo("dotnet", $"run --project \"{Repo.Path("src", "DumpDebugger.DumpGen")}\" -- \"{path}\" --scenario {scenario}")
         {
@@ -38,8 +49,6 @@ internal static class FixtureDumps
         {
             throw new InvalidOperationException($"DumpGen failed for '{scenario}': {await stdout}\n{await stderr}");
         }
-
-        return path;
     }
 }
 

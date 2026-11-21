@@ -4,6 +4,7 @@ import { useApp } from '../state/store';
 import { useDiagnostics } from '../debug/diagnostics';
 import { systemTheme, themeLabels, useTheme, type ThemePreference } from '../state/theme';
 import { McpButton } from './McpPanel';
+import { SymbolsButton } from './SymbolsPanel';
 
 /** Worker, DAC, workspace and analysis timing: the facts an expert wants to glance at. */
 export function StatusBar() {
@@ -11,6 +12,8 @@ export function StatusBar() {
   const dump = useApp((s) => s.dump);
   const diagnosis = useApp((s) => s.diagnosis);
   const error = useApp((s) => s.error);
+  const reopenDump = useApp((s) => s.reopenDump);
+  const workerLost = !!dump && worker?.state === 'exited' && !!worker.message;
   const running = diagnosis?.stages.find((s) => s.status === 'running');
 
   return (
@@ -24,7 +27,15 @@ export function StatusBar() {
       </button>
       <ThemeMenu />
       <McpButton />
-      {worker && worker.state !== 'exited' ? (
+      <SymbolsButton />
+      {workerLost ? (
+        <span role="alert" className="worker-lost" title={worker?.message ?? undefined}>
+          Worker stopped{' '}
+          <button className="btn" onClick={() => void reopenDump()}>
+            Reopen dump
+          </button>
+        </span>
+      ) : worker && worker.state !== 'exited' ? (
         <span>
           Worker {worker.architecture.toLowerCase()}, pid {worker.processId}
         </span>

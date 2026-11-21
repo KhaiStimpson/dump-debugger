@@ -32,8 +32,7 @@ public static partial class FrameClassifier
         var display = Display(method);
 
         int? il = null;
-        string? file = null;
-        int? line = null;
+        var source = default(SourceLocation);
         try
         {
             // Below the top frame the IP is a return address; step back into the call instruction.
@@ -44,7 +43,7 @@ public static partial class FrameClassifier
                 il = offset;
                 if (kind == FrameKind.App && sources is not null)
                 {
-                    (file, line) = sources.Locate(method, offset);
+                    source = sources.Locate(method, offset);
                 }
             }
         }
@@ -53,7 +52,7 @@ public static partial class FrameClassifier
             // IL offsets are best-effort; a frame without one still renders.
         }
 
-        return new StackFrame(display, $"{typeName}.{method.Name}", kind, module, il, file, line, IsWaitFrame(typeName, method.Name));
+        return new StackFrame(display, $"{typeName}.{method.Name}", kind, module, il, source.File, source.Line, IsWaitFrame(typeName, method.Name), source.Path);
     }
 
     public static FrameKind KindOf(string? typeName, string? module, string? signature = null)

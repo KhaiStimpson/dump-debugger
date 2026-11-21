@@ -51,6 +51,10 @@ public static class SampleGenerator
         new("loh", "LOH fragmentation", "Large buffers kept and dropped alternately: half the Large Object Heap is free space."),
         new("httpclient", "HttpClient per call", "A new HttpClient for every request: hundreds of handlers and sockets."),
         new("timers", "Timer leak", "A timer per session in a dictionary nobody cleans."),
+        new("strings", "Duplicate strings", "300,000 rows that each hold their own copy of the same few descriptions."),
+        new("events", "Event-handler leak", "5,000 objects subscribed to a static event and never unsubscribed."),
+        new("pinned", "Pinned buffers", "4,000 buffers pinned with GCHandle.Alloc and never freed."),
+        new("threads", "Thread per device", "300 dedicated threads, each parked waiting for one device."),
         new("crash", "Crash", "An unhandled exception on a background thread; the runtime writes the dump as the process dies."),
     ];
 

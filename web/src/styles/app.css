@@ -1955,3 +1955,126 @@ button {
   overflow-wrap: anywhere;
   user-select: text;
 }
+
+/* Symbols & source panel (reuses the MCP panel's layout). */
+.palette.mcp.sym .mcp-body {
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+}
+.palette.mcp.sym input.sym-input {
+  flex: 1;
+  min-width: 180px;
+  width: auto;
+}
+.sym-paths,
+.sym-mods {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+}
+.sym-paths li,
+.sym-mods li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 4px 10px;
+  font-size: 12px;
+}
+.sym-paths li + li,
+.sym-mods li + li {
+  border-top: 1px solid var(--line);
+}
+.sym-paths .mono {
+  flex: 1;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+.sym-mods li {
+  padding: 5px 10px;
+  align-items: baseline;
+}
+.sym-mods .mono {
+  flex: 0 0 34%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sym-state {
+  flex: 0 0 84px;
+  color: var(--fg-2);
+}
+.sym-state.good {
+  color: var(--ok);
+}
+.sym-state.bad {
+  color: var(--warn);
+}
+.sym-detail {
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+/* Source lines under a stack frame. */
+.stack .src-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.stack .src-link:hover {
+  color: var(--accent);
+}
+.stack .src-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.stack .snippet,
+.stack .snippet-note {
+  margin: 2px 0 6px;
+  padding: 6px 8px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-2);
+  white-space: normal;
+  overflow: visible;
+}
+.stack .snippet-note {
+  color: var(--fg-2);
+  font-family: var(--sans, inherit);
+}
+.stack .snippet-h {
+  padding: 0 0 4px;
+  color: var(--fg-3);
+  font-size: 11px;
+}
+.stack .snippet-warn {
+  color: var(--warn);
+}
+.stack .snippet pre {
+  margin: 0;
+  font: inherit;
+  color: var(--fg-2);
+  overflow-x: auto;
+  user-select: text;
+}
+.stack .snippet pre span {
+  display: block;
+}
+.stack .snippet pre i {
+  font-style: normal;
+  color: var(--fg-3);
+  margin-right: 12px;
+  user-select: none;
+}
+.stack .snippet pre .cur {
+  color: var(--fg-0);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.worker-lost {
+  color: var(--crit);
+}
