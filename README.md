@@ -35,6 +35,10 @@ Deterministic analyzers, each with authored explanations and a test fixture:
 | Event-handler leaks | One event with hundreds or thousands of subscribers, the handler they share, and the publisher keeping them alive |
 | Pinned objects and GC handles | Thousands of pinned objects fragmenting the heap, or strong handles that are never freed, and the static that holds them |
 | Thread per job | Dozens or hundreds of dedicated threads parked at the same method |
+| Async locks | Async operations queued on a `SemaphoreSlim` with no free slot, the method that holds it and awaits it again, and tasks whose `TaskCompletionSource` nothing can complete any more |
+| Runaway CPU | Threads that have spent their lives on the CPU (from the per-thread times in the dump), and the usual culprit on top: a backtracking regex with its pattern and input, a corrupted dictionary, a spin-wait |
+| Crash cause | Stack overflows named by the methods that recurse (read from raw stack memory when the stack can't be walked), `Environment.FailFast` with its message, native exceptions such as access violations |
+| Assembly leaks | Hundreds of assemblies generated at run time (an `XmlSerializer` per call, and what it serializes), and one assembly loaded over and over into load contexts that never unload |
 
 ![Thread-pool starvation](docs/screenshots/threadpool.png)
 
@@ -139,14 +143,22 @@ For hot reload while working on the UI, run `npm run dev` in `web/` and start th
 
 ### Test dumps
 
-`DumpDebugger.DumpGen` captures real dumps of real problems (most are an ASP.NET Core app under HTTP load):
+`DumpDebugger.DumpGen` captures real dumps of real problems (the request-shaped ones are an ASP.NET Core app under HTTP load):
 
 ```bash
 dotnet run --project src/DumpDebugger.DumpGen -- --list
 dotnet run --project src/DumpDebugger.DumpGen -- ./fixtures/deadlock.dmp --scenario deadlock
 ```
 
-Scenarios: `deadlock`, `threadpool`, `syncoverasync`, `exceptions`, `crash`, `finalizer`, `leak` and `leak-baseline` (compare them), `loh`, `httpclient`, `timers`, `bigheap` (2 GB performance fixture), `simple`. The same list is behind **Generate a sample** on Home.
+Scenarios:
+
+- **Hangs**: `deadlock`, `threadpool`, `syncoverasync`, `asynclock` (an async lock awaited by its own holder, plus tasks nothing can complete), `exceptions`
+- **CPU and threads**: `hotcpu` (a backtracking regex and a loop that never exits), `threads`
+- **Crashes**: `crash` (unhandled exception), `stackoverflow`, `failfast`. These end the process themselves, so the runtime writes the dump as it dies, the way a real crash dump is captured.
+- **Memory**: `leak` and `leak-baseline` (compare them), `finalizer`, `loh`, `httpclient`, `timers`, `strings`, `events`, `pinned`, `assemblies` (an `XmlSerializer` per call and a plugin reloaded into new load contexts)
+- **Other**: `bigheap` (2 GB performance fixture), `simple`
+
+All but `leak-baseline`, `bigheap` and `simple` are also behind **Generate a sample** on Home.
 
 ## Tests
 

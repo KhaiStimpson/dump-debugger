@@ -1,0 +1,22 @@
+verdict: Critical/High
+  The app is hung on an async lock: InventoryService.ReserveAsync holds it and is waiting for it again, with 40 more operations queued behind.
+  `InventoryService._gate` has no free slot. `InventoryService.ReserveAsync` took it and then called `InventoryService.RestockAsync`, which awaits the same semaphore, so it waits for itself. No thread is blocked: the waiters are suspended async operations, which is why the process looks idle.
+finding async-lock.reentrant.InventoryService._gate Critical/High [Hang]
+  title: Async deadlock on `InventoryService._gate`: `InventoryService.ReserveAsync` holds it and waits for it again in `InventoryService.RestockAsync`
+  why: `SemaphoreSlim` with 0 of 1 slot free · 41 async waiters · no thread is blocked on it
+  means: `SemaphoreSlim` isn't re-entrant: it doesn't know who holds it, so code that holds it and then awaits it again is waiting for itself. No thread shows the problem, because an awaiting method doesn't use one. The operation never finishes, every later caller queues behind it, and the process doesn't recover without a restart.
+  next: Don't take the semaphore again inside the section it protects. Split `InventoryService.RestockAsync` into a public method that takes it and a private one that assumes it is held, and call the private one from `InventoryService.ReserveAsync`.
+  next: Restart the process to recover now: the semaphore will never be released.
+  next: Pass a timeout or `CancellationToken` to `WaitAsync`, so a mistake like this fails with an exception instead of hanging silently.
+  evidence: Object InventoryService.RestockAsync
+  evidence: Object InventoryService._gate
+finding async-lock.orphaned.ShipmentTracker.PrintLabelAsync Warning/High [Hang]
+  title: 12 async operations in `ShipmentTracker.PrintLabelAsync` await a task that nothing can complete
+  why: Awaiting a `Task<string>` from a `TaskCompletionSource` · the source has already been collected
+  means: A task handed out by a `TaskCompletionSource` finishes only when someone calls `SetResult`, `SetException` or `SetCanceled` on that source. Nothing that could make that call holds the source any more: the callback or handler that was meant to complete it was never stored, or has since been dropped. These operations will wait forever, and so will everything awaiting them.
+  next: Find where `ShipmentTracker.PrintLabelAsync` (or what it calls) creates the `TaskCompletionSource`, and follow how it is supposed to be completed: a callback that is never registered, a registration that is removed, or an error path that returns without calling `SetException`.
+  next: Complete the source on every path, including failure and cancellation (`token.Register(() => tcs.TrySetCanceled())`).
+  next: Bound the wait so a lost completion surfaces as an error: `await task.WaitAsync(TimeSpan.FromSeconds(30))`.
+  evidence: Object ShipmentTracker.PrintLabelAsync
+  evidence: Object Task<string>
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()

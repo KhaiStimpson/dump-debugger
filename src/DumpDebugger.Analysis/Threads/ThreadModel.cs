@@ -52,6 +52,15 @@ public sealed class ThreadRecord
     public string? ExceptionThrownIn { get; init; }
     public required string StackSignature { get; init; }
 
+    /// <summary>Bytes of stack between the thread's top frame and the base of its stack; null when the dump doesn't give the bounds.</summary>
+    public long? StackUsedBytes { get; init; }
+
+    /// <summary>Bytes of stack the thread has ever touched (base to limit); the whole reservation once it has overflowed.</summary>
+    public long? StackCommittedBytes { get; init; }
+
+    /// <summary>The stack was deeper than the frames kept in <see cref="Frames"/>.</summary>
+    public bool FramesTruncated { get; init; }
+
     public ThreadState State { get; set; }
     public string StateLabel { get; set; } = "";
 
@@ -187,6 +196,27 @@ public static class ThreadModelBuilder
         {
         }
 
+        long? stackUsed = null;
+        long? stackCommitted = null;
+        try
+        {
+            // The stack grows down from StackBase towards StackLimit.
+            var (stackBase, stackLimit) = (thread.StackBase, thread.StackLimit);
+            var top = stackPointers.FirstOrDefault(sp => sp != 0);
+            if (stackBase > stackLimit && stackLimit != 0)
+            {
+                stackCommitted = (long)(stackBase - stackLimit);
+                if (top >= stackLimit && top <= stackBase)
+                {
+                    stackUsed = (long)(stackBase - top);
+                }
+            }
+        }
+        catch
+        {
+            // Stack bounds are best-effort.
+        }
+
         return new ThreadRecord
         {
             Id = thread.ManagedThreadId,
@@ -209,6 +239,9 @@ public static class ThreadModelBuilder
                 f.FullName?.StartsWith("System.Runtime.EH.", StringComparison.Ordinal) == true
                 || f.Display is "[SoftwareExceptionFrame]" or "[FaultingExceptionFrame]" or "[HelperMethodFrame]"),
             StackSignature = signature,
+            StackUsedBytes = stackUsed,
+            StackCommittedBytes = stackCommitted,
+            FramesTruncated = frames.Count >= MaxFrames,
             State = state,
             StateLabel = stateLabel,
         };

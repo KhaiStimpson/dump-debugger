@@ -25,6 +25,9 @@ public sealed class AnalysisContext
 
     public AsyncStacksResult? AsyncStacks { get; init; }
 
+    /// <summary>CPU time per OS thread id, as the operating system recorded it in the dump; empty when the dump has none.</summary>
+    public IReadOnlyDictionary<int, MinidumpHeader.ThreadTime> ThreadTimes { get; init; } = new Dictionary<int, MinidumpHeader.ThreadTime>();
+
     public IReadOnlyDictionary<int, ThreadRecord> ThreadsById => _byId ??= Threads.ToDictionary(t => t.Id);
 
     private IReadOnlyDictionary<int, ThreadRecord>? _byId;
@@ -37,7 +40,7 @@ public sealed record AnalyzerResult(Finding Finding, string? VerdictHeadline = n
 
 public enum AnalyzerStage
 {
-    /// <summary>Needs threads and locks only: runs within seconds.</summary>
+    /// <summary>Needs threads, locks and the module list only: runs within seconds.</summary>
     Threads,
 
     /// <summary>Needs the heap walk.</summary>

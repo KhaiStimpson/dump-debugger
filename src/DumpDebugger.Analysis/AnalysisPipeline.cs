@@ -62,8 +62,13 @@ public sealed class AnalysisPipeline
 
         _overview = await _index.WithClrAsync(() => HeapWalker.QuickOverview(_index.Runtime.Heap), ct).ConfigureAwait(false);
         _pool = await _index.WithClrAsync(() => ThreadPoolInspector.Read(_index.Runtime), ct).ConfigureAwait(false);
-        _context = new AnalysisContext { Runtime = _index.Runtime, Threads = threads, Locks = locks, Metadata = _index.Loaded.Metadata, Pool = _pool };
-        RunAnalyzers(AnalyzerStage.Threads);
+        var threadTimes = MinidumpHeader.ReadThreadTimes(_index.Loaded.Metadata.DumpPath);
+        _context = new AnalysisContext { Runtime = _index.Runtime, Threads = threads, Locks = locks, Metadata = _index.Loaded.Metadata, Pool = _pool, ThreadTimes = threadTimes };
+        await _index.WithClrAsync(() =>
+        {
+            RunAnalyzers(AnalyzerStage.Threads);
+            return 0;
+        }, ct).ConfigureAwait(false);
         await PublishAsync(false).ConfigureAwait(false);
 
         if (includeHeap)
@@ -83,6 +88,7 @@ public sealed class AnalysisPipeline
                 Metadata = _index.Loaded.Metadata,
                 Pool = _pool,
                 AsyncStacks = _index.AsyncStacks,
+                ThreadTimes = threadTimes,
             };
 
             var ta = _clock.Elapsed.TotalSeconds;
@@ -273,7 +279,10 @@ public static class AnalyzerCatalog
     public static IReadOnlyList<IFindingAnalyzer> All =>
     [
         new DeadlockAnalyzer(),
+        new CrashCauseAnalyzer(),
         new ContentionAnalyzer(),
+        new HotThreadAnalyzer(),
+        new AsyncLockAnalyzer(),
         new ThreadPoolStarvationAnalyzer(),
         new SyncOverAsyncAnalyzer(),
         new AsyncStacksAnalyzer(),
@@ -287,5 +296,6 @@ public static class AnalyzerCatalog
         new EventHandlerLeakAnalyzer(),
         new GcHandleAnalyzer(),
         new ThreadCountAnalyzer(),
+        new DynamicAssemblyAnalyzer(),
     ];
 }

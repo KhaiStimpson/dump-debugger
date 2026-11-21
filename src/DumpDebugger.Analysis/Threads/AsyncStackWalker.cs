@@ -17,6 +17,9 @@ public static class AsyncStackWalker
     private const int CompletedMask = 0x1000000 | 0x200000 | 0x400000; // RAN_TO_COMPLETION | FAULTED | CANCELED
     private const int MaxDepth = 40;
 
+    /// <summary>How <see cref="AsyncStackGroup.Awaiting"/> reads when the awaited task is a bare promise: only a TaskCompletionSource can complete it.</summary>
+    public const string UncompletedTask = "a Task nobody has completed (e.g. a TaskCompletionSource)";
+
     public static AsyncStacksResult Walk(ClrRuntime runtime, HeapIndex index, CancellationToken ct)
     {
         var heap = runtime.Heap;
@@ -180,7 +183,29 @@ public static class AsyncStackWalker
         }
     }
 
-    private static bool IsApp(ClrObject box)
+    /// <summary>The async state-machine boxes that resume when <paramref name="task"/> completes: the methods awaiting it.</summary>
+    public static IEnumerable<ClrObject> Awaiters(ClrObject task)
+    {
+        var heap = task.Type?.Heap;
+        if (heap is null)
+        {
+            yield break;
+        }
+
+        foreach (var address in Continuations(task))
+        {
+            if (address != task.Address)
+            {
+                yield return heap.GetObject(address);
+            }
+        }
+    }
+
+    /// <summary>A task that hasn't completed, faulted or been canceled.</summary>
+    public static bool IsPending(ClrObject task) =>
+        task.TryReadField<int>("m_stateFlags", out var flags) && (flags & CompletedMask) == 0;
+
+    public static bool IsApp(ClrObject box)
     {
         var smType = StateMachineType(box);
         return smType is not null && FrameClassifier.IsAppType(smType.Name, smType.Module);
@@ -211,7 +236,10 @@ public static class AsyncStackWalker
     }
 
     /// <summary>What the innermost box is awaiting, from the awaiter fields of its state machine.</summary>
-    private static string Awaiting(ClrObject box)
+    private static string Awaiting(ClrObject box) => AwaitedObject(box) is { } awaited ? Describe(awaited) : "something";
+
+    /// <summary>The object (usually a task) a suspended state-machine box is awaiting, read from its awaiter fields.</summary>
+    public static ClrObject? AwaitedObject(ClrObject box)
     {
         try
         {
@@ -219,7 +247,7 @@ public static class AsyncStackWalker
             var smType = StateMachineType(box);
             if (smField is null || smType is null)
             {
-                return "something";
+                return null;
             }
 
             var isStruct = smField.ElementType == ClrElementType.Struct;
@@ -241,7 +269,7 @@ public static class AsyncStackWalker
                 var task = FindObject(box.Type!.Heap, f, smAddress, interior, 0);
                 if (task is { } t)
                 {
-                    return Describe(t);
+                    return t;
                 }
             }
         }
@@ -249,7 +277,7 @@ public static class AsyncStackWalker
         {
         }
 
-        return "something";
+        return null;
     }
 
     private static ClrObject? FindObject(ClrHeap heap, ClrInstanceField f, ulong address, bool interior, int depth)
@@ -300,7 +328,7 @@ public static class AsyncStackWalker
 
         if (name.StartsWith("System.Threading.Tasks.Task", StringComparison.Ordinal))
         {
-            return "a Task nobody has completed (e.g. a TaskCompletionSource)";
+            return UncompletedTask;
         }
 
         return FrameClassifier.ShortTypeName(name);

@@ -1,0 +1,20 @@
+verdict: Warning/High
+  300 assemblies were generated at run time, mostly by XmlSerializer for OrderFeed.
+  An `XmlSerializer` for `OrderFeed` is being created per call through a constructor that doesn't cache, and each one generates an assembly that is never unloaded. That memory is outside the managed heap, so the heap looks healthy while the process keeps growing.
+finding assemblies.dynamic Warning/High [HighMemory,SlowCpu]
+  title: 300 assemblies were generated at run time, mostly by `XmlSerializer` for `OrderFeed`
+  why: 300 of the 384 loaded modules were generated at run time · each one a serializer for `OrderFeed`
+  means: Code generated at run time lives in a dynamic assembly, and an ordinary dynamic assembly is never unloaded: its types, metadata and compiled code stay for the life of the process. That memory is outside the managed heap, so the heap looks healthy while the process keeps growing. `XmlSerializer` generates a new serialization assembly every time it is constructed, except through its two simplest constructors, `XmlSerializer(Type)` and `XmlSerializer(Type, string)`, which are cached. The overloads that take an `XmlRootAttribute`, extra types or overrides are not, so creating one per call leaks an assembly per call and pays to generate and compile it each time.
+  next: Create the serializer for `OrderFeed` once and reuse it: a `static readonly` field, or a `ConcurrentDictionary` keyed by type and root name.
+  next: Search for `new XmlSerializer(` with more than one argument: those are the constructors that don't cache.
+  next: To confirm the fix, watch the assembly count (`dotnet-counters`, "Number of Assemblies Loaded"): it should stop climbing.
+  evidence: Type XmlSerializer
+finding assemblies.copies.Microsoft.Diagnostics.NETCore.Client Warning/High [HighMemory]
+  title: `Microsoft.Diagnostics.NETCore.Client.dll` is loaded 61 times
+  why: 61 copies in separate load contexts · 9.53 MB of images
+  means: Every `AssemblyLoadContext` (and, on .NET Framework, every AppDomain) gets its own copy of each assembly loaded into it: its own types, statics and compiled code. A context is only unloaded if it was created collectible, `Unload()` was called, and nothing outside still references anything from it: an instance, a `Type`, a delegate, an event subscription, a running thread. When any of those is missing, each reload of a plugin, script or tenant adds a copy that stays for good.
+  next: Create the context with `isCollectible: true` and call `Unload()` when its plugin is replaced.
+  next: Find what still references the old copies: search the heap for types from `Microsoft.Diagnostics.NETCore.Client`. Each copy shows up as its own type, and the root path of an instance names the holder.
+  next: If plugins never need reloading, load the assembly once and reuse it.
+  evidence: Type AssemblyLoadContext
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()

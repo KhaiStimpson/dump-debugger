@@ -31,7 +31,7 @@ if (args.Length < 1)
 
 var outputPath = Path.GetFullPath(args[0]);
 var scenario = args.Length >= 3 && args[1] == "--scenario" ? args[2] : "simple";
-_ = ScenarioCatalog.Get(scenario); // validate before launching anything
+var crash = ScenarioCatalog.Get(scenario).Crashes; // also validates the name before launching anything
 
 var psi = new ProcessStartInfo(Environment.ProcessPath!, $"--victim \"{scenario}\"")
 {
@@ -41,7 +41,6 @@ var psi = new ProcessStartInfo(Environment.ProcessPath!, $"--victim \"{scenario}
 
 // Crash scenarios are dumped by the runtime itself as the process dies (createdump), the way
 // a real crash dump is captured, rather than by us while it's alive.
-var crash = scenario == "crash";
 if (crash)
 {
     Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);

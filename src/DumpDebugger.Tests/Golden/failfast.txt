@@ -1,0 +1,13 @@
+verdict: Critical/High
+  The process ended itself with Environment.FailFast, called from LedgerGuard.EnsureBalanced.
+  "Ledger out of balance: debits 1200.00, credits 1150.00. Refusing to post." It was called on [#N]; nothing after that point ran.
+finding crash.fail-fast Critical/High [Crash]
+  title: The process ended itself: `Environment.FailFast` called from `LedgerGuard.EnsureBalanced`
+  why: "Ledger out of balance: debits 1200.00, credits 1150.00. Refusing to post." · thread #N
+  means: `Environment.FailFast` stops the process immediately and on purpose: no `finally` blocks, no finalizers, no unhandled-exception handlers. Code calls it when it decides that carrying on would be worse than stopping, such as a broken invariant or corrupted state. This dump was written as the process went down.
+  next: Open [#N]: the frames below `FailFast` show what led to the call, and the message says why.
+  next: Decide whether the condition in `LedgerGuard.EnsureBalanced` should really be fatal. If the caller can recover, throw an exception instead; if it can't, fix what broke the invariant.
+  next: The same message is written to stderr and to the Windows Application event log (source ".NET Runtime"), so earlier occurrences can be found there.
+  evidence: Thread #N
+group: 1 × FailFastScenario.RunAsync() |  | Thread.Join
+group: 1 × LedgerGuard.EnsureBalanced(decimal, decimal) |  | Running

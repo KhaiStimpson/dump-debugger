@@ -17,6 +17,8 @@ public sealed class ExceptionsAnalyzer : IFindingAnalyzer
     // The runtime preallocates one of each of these at startup; they're not the app's.
     private static readonly HashSet<string> Preallocated = ["System.OutOfMemoryException", "System.StackOverflowException", "System.ExecutionEngineException", "System.Threading.ThreadAbortException"];
 
+    private static readonly HashSet<string> FatalMarkers = ["System.StackOverflowException", "System.ExecutionEngineException"];
+
     public string Name => "exceptions";
 
     public AnalyzerStage Stage => AnalyzerStage.Heap;
@@ -35,7 +37,7 @@ public sealed class ExceptionsAnalyzer : IFindingAnalyzer
             confidence = Confidence.Medium;
         }
 
-        if (crashThread?.Exception is { } crashType)
+        if (crashThread?.Exception is { } crashType && !FatalMarkers.Contains(crashType))
         {
             var msg = crashThread.ExceptionMessage;
             var crashed = confidence == Confidence.High ? "The process crashed" : "The process was crashing";
@@ -55,7 +57,9 @@ public sealed class ExceptionsAnalyzer : IFindingAnalyzer
                 VerdictBody: msg is null ? $"It was thrown on {Chip(EntityUri.Thread(crashThread.Id))}." : $"\"{Clip(msg, 200)}\" on {Chip(EntityUri.Thread(crashThread.Id))}.");
         }
 
-        foreach (var group in context.Threads.Where(t => t.Exception is not null && t != crashThread)
+        // StackOverflowException and ExecutionEngineException on a thread are the runtime's own
+        // markers for a fatal error (a stack overflow, a FailFast): the crash analyzer explains those.
+        foreach (var group in context.Threads.Where(t => t.Exception is not null && t != crashThread && !FatalMarkers.Contains(t.Exception))
                      .GroupBy(t => (t.Exception, t.WhereName)).OrderByDescending(g => g.Count()))
         {
             var n = group.Count();

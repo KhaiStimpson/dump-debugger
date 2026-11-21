@@ -92,6 +92,7 @@ internal static partial class Golden
         s = ThreadUri().Replace(s, "thread/N");
         s = ThreadNumber().Replace(s, "#N");
         s = WorkItems().Replace(s, "N work items");
+        s = CpuTime().Replace(s, "N of CPU used$1");
         return s;
     }
 
@@ -100,6 +101,10 @@ internal static partial class Golden
 
     [GeneratedRegex(@"\d[\d,]* work items?")]
     private static partial Regex WorkItems();
+
+    // CPU time depends on how long the capture took: "6.1 s of CPU used (98% of its lifetime)".
+    [GeneratedRegex(@"[\d.,]+ (?:s|min|h) of CPU used( between them)?(?: \(\d+% of (?:its lifetime|their lifetimes)\))?")]
+    private static partial Regex CpuTime();
 
     [GeneratedRegex("0x[0-9a-f]{6,}")]
     private static partial Regex Address();

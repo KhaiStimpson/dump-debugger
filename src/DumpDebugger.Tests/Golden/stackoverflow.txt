@@ -1,0 +1,12 @@
+verdict: Critical/High
+  The process crashed with a stack overflow: OrgChart.PathOf called itself until the thread ran out of stack.
+  It happened on [#N], which had 1.50 MB of stack used up. A stack overflow can't be caught, so the process ended immediately.
+finding crash.stack-overflow Critical/High [Crash]
+  title: Stack overflow: `OrgChart.PathOf` calls itself without end
+  why: Thread #N · 1.50 MB of stack used up · the same frame repeats all the way down
+  means: Every call takes stack space, and a thread has a fixed amount (typically 1 to 1.5 MB on Windows, less under IIS). Recursion with no reachable end fills it. A stack overflow can't be caught in .NET: the runtime ends the process on the spot, without running `catch` or `finally` blocks.
+  next: Find why `OrgChart.PathOf` never reaches its end: a method or property that calls itself by mistake, a base case that is never hit, or a cycle in the data (an item that is its own ancestor).
+  next: If the depth is legitimate (a deep tree, a long linked structure), replace the recursion with a loop and an explicit `Stack<T>`.
+  next: As a guard, call `RuntimeHelpers.EnsureSufficientExecutionStack()` at the top of the recursive method: it throws a catchable `InsufficientExecutionStackException` instead of taking the process down.
+  evidence: Thread #N
+group: 1 × StackOverflowScenario.RunAsync() |  | Thread.Join

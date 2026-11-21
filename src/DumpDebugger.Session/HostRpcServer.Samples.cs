@@ -56,6 +56,11 @@ public static class SampleGenerator
         new("pinned", "Pinned buffers", "4,000 buffers pinned with GCHandle.Alloc and never freed."),
         new("threads", "Thread per device", "300 dedicated threads, each parked waiting for one device."),
         new("crash", "Crash", "An unhandled exception on a background thread; the runtime writes the dump as the process dies."),
+        new("asynclock", "Async deadlock", "A reservation awaits a SemaphoreSlim it already holds; 40 more queue behind it and no thread is blocked."),
+        new("hotcpu", "Runaway CPU", "Four threads stuck in a backtracking regular expression, and a loop that never exits."),
+        new("stackoverflow", "Stack overflow", "Unbounded recursion over cyclic data; the runtime writes the dump as the process dies."),
+        new("failfast", "FailFast", "An invariant check calls Environment.FailFast; the runtime writes the dump as the process dies."),
+        new("assemblies", "Assembly leak", "An XmlSerializer assembly generated per call, and a plugin loaded into 60 load contexts."),
     ];
 
     public static string? FindDumpGen()

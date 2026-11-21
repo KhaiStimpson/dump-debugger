@@ -1,0 +1,25 @@
+verdict: Warning/High
+  4 threads are stuck at full CPU in a regular expression called from SkuValidator.IsValid.
+  The pattern `^([A-Z0-9]+-?)+$` is backtracking catastrophically on its input. Until the match gives up, each thread keeps a core busy and whatever it was serving never finishes.
+finding cpu.regex.SkuValidator.IsValid Warning/High [SlowCpu,Hang]
+  title: 4 threads are burning CPU in a regular expression called from `SkuValidator.IsValid`
+  why: Pattern `^([A-Z0-9]+-?)+$` · matching "WAREHOUSE7AISLE14SHELF3BIN22LOT2026X!" · N of CPU used between them
+  means: A regular expression with a quantifier inside a quantifier (like `(a+)+`), or alternatives that overlap, can take exponential time on input that almost matches: before it gives up, the engine tries every way of dividing the text between the repeats. This is catastrophic backtracking. The thread stays at 100% CPU for minutes or hours, and input a user controls can trigger it on purpose.
+  next: Give the regex a timeout so bad input fails instead of spinning: `new Regex(pattern, options, TimeSpan.FromSeconds(1))`, or set the `REGEX_DEFAULT_MATCH_TIMEOUT` AppContext value for the whole app.
+  next: Rewrite the pattern so repeats don't nest or overlap, or use `RegexOptions.NonBacktracking` (.NET 7 and later), which always runs in linear time.
+  next: Open [#N] to see the whole input. Text that matches right up to its last character is the worst case.
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Thread #N
+finding cpu.busy.SalesRollup.Recompute Info/Medium [SlowCpu]
+  title: 1 thread has been running `SalesRollup.Recompute` flat out
+  why: N of CPU used · still running when the dump was taken
+  means: The operating system records how much CPU each thread has used since it started. This thread has spent most of that time executing rather than waiting, and was still running application code at the moment of the dump: this is where the CPU goes. It can be legitimate work, such as a batch job, or a loop that never ends.
+  next: Open [#N]: the top frame is where it was at that instant, and the loop is in one of the first application frames.
+  next: Take a second dump a few seconds later. The same method with more CPU used means the loop isn't finishing.
+  next: If the work is legitimate but starves everything else, limit how many threads do it at once or run it at a lower priority.
+  evidence: Thread #N
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()
+group: 1 × SalesRollup.Recompute(int[]) |  | Running
+group: 4 × SkuValidator.IsValid(string) |  | Running
