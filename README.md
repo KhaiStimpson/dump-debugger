@@ -126,6 +126,8 @@ MCP client (Claude Code, …)  ── Streamable HTTP, 127.0.0.1 + token ── 
 
 Requires Windows, the .NET 10 SDK, Node 20+, and the WebView2 runtime (part of Windows 11).
 
+`./run.ps1` does all of the steps below, skipping the web build when nothing changed, and starts the app: `./run.ps1 fixtures/deadlock.dmp` opens a dump, `./run.ps1 -Dev` runs the UI with hot reload, `./run.ps1 -NoBuild` starts the last build. The manual steps:
+
 ```bash
 # 1. The web app (served to the host's WebView2).
 cd web && npm install && npm run build && cd ..
