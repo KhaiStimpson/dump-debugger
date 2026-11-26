@@ -1,0 +1,19 @@
+verdict: Critical/High
+  The app is waiting for database connections: all 20 pooled connections to Orders on 127.0.0.1 are taken, and 30 callers are queued for one.
+  The connection pool is at `Max Pool Size` (20), so `Open()` waits until a connection is closed. 14 are held by `InvoiceExporter.ExportAsync` and 6 were leaked (never closed).
+finding connection-pool.orders-on-127.0.0.1 Critical/High [Hang,SlowCpu]
+  title: Connection pool exhausted: all 20 connections to Orders on 127.0.0.1 are in use and 30 callers are waiting for one
+  why: `Max Pool Size` 20 · 20 open, 0 idle · 30 threads blocked in `Open()`, mostly `CustomerDirectory.CountOrders` · 14 held by `InvoiceExporter.ExportAsync` · 6 leaked
+  means: ADO.NET keeps a pool of open connections per connection string, up to `Max Pool Size` (100 unless the connection string says otherwise). Every one of them is checked out, so `Open()` can't hand out a connection until someone closes theirs, and callers queue. After the connect timeout (600 s) each waiter fails with "Timeout expired. The timeout period elapsed prior to obtaining a connection from the pool". The database itself may be idle: the limit is in this process, and the cause is code that keeps connections open too long or never closes them.
+  next: `InvoiceExporter.ExportAsync` holds 14 connections while it is suspended, awaiting a Task nobody has completed (e.g. a TaskCompletionSource). Open the connection after that call, or close it before: don't keep a pooled connection across a slow call that doesn't use it.
+  next: 6 connections were opened and never closed, and nothing references them any more (last command: `SELECT Points FROM Loyalty WHERE CustomerId = @id`). The pool gets a leaked connection back only after a garbage collection. Wrap every connection in `using`, so an early return or exception still closes it.
+  next: Don't raise `Max Pool Size` to make this go away: it delays the same failure and moves the load to the database.
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Thread #N
+  evidence: Object InvoiceExporter.ExportAsync
+  evidence: Object SqlConnection
+  evidence: Object pool: Orders on 127.0.0.1
+group: 1 × Program.Main(string[]) |  | GetAwaiter().GetResult()
+group: 30 × CustomerDirectory.CountOrders(string) | GET /api/customers/{id}/orders | Connection pool

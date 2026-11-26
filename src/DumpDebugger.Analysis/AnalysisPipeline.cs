@@ -283,6 +283,7 @@ public static class AnalyzerCatalog
         new ContentionAnalyzer(),
         new HotThreadAnalyzer(),
         new AsyncLockAnalyzer(),
+        new ConnectionPoolAnalyzer(),
         new ThreadPoolStarvationAnalyzer(),
         new SyncOverAsyncAnalyzer(),
         new AsyncStacksAnalyzer(),

@@ -104,7 +104,8 @@ public static class ThreadPoolInspector
         return total;
     }
 
-    private static int ConcurrentQueueCount(ClrObject queue)
+    /// <summary>Items in a <c>ConcurrentQueue&lt;T&gt;</c>, from each segment's head and tail.</summary>
+    internal static int ConcurrentQueueCount(ClrObject queue)
     {
         var count = 0;
         if (!queue.TryReadObjectField("_head", out var segment))
