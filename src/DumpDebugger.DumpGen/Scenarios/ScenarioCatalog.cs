@@ -1,7 +1,8 @@
 namespace Contoso.Scenarios;
 
 /// <param name="Crashes">The scenario ends the process itself, so the runtime writes the dump as it dies (the driver doesn't).</param>
-public sealed record Scenario(string Name, string Description, Func<Task> RunAsync, bool Crashes = false);
+/// <param name="NeedsSqlServer">The driver hosts a <see cref="FakeSqlServer"/> and passes its port in <see cref="FakeSqlServer.PortVariable"/>, so the database stays out of the victim's dump.</param>
+public sealed record Scenario(string Name, string Description, Func<Task> RunAsync, bool Crashes = false, bool NeedsSqlServer = false);
 
 public static class ScenarioCatalog
 {
@@ -28,6 +29,7 @@ public static class ScenarioCatalog
         new("hotcpu", "Console app: four import threads stuck in a backtracking regular expression, and a rollup loop that never exits.", HotCpuScenario.RunAsync),
         new("stackoverflow", "Console app: unbounded recursion over cyclic data overflows the stack; the runtime writes the dump.", StackOverflowScenario.RunAsync, Crashes: true),
         new("failfast", "Console app: an invariant check calls Environment.FailFast; the runtime writes the dump.", FailFastScenario.RunAsync, Crashes: true),
+        new("connpool", "ASP.NET Core app: all 20 SQL connections are taken (14 held by exports awaiting a stuck PDF renderer, 6 leaked on an early return), and 30 customer requests block in SqlConnection.Open.", ConnectionPoolScenario.RunAsync, NeedsSqlServer: true),
         new("assemblies", "Console app: 300 XmlSerializer assemblies generated one per call, and a plugin loaded into 60 load contexts that never unload.", AssembliesScenario.RunAsync),
     ];
 

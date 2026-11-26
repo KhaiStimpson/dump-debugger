@@ -60,6 +60,7 @@ public static class SampleGenerator
         new("hotcpu", "Runaway CPU", "Four threads stuck in a backtracking regular expression, and a loop that never exits."),
         new("stackoverflow", "Stack overflow", "Unbounded recursion over cyclic data; the runtime writes the dump as the process dies."),
         new("failfast", "FailFast", "An invariant check calls Environment.FailFast; the runtime writes the dump as the process dies."),
+        new("connpool", "Connection pool exhausted", "All 20 SQL connections are taken: 14 held by exports awaiting a stuck renderer, 6 leaked; 30 requests wait in Open()."),
         new("assemblies", "Assembly leak", "An XmlSerializer assembly generated per call, and a plugin loaded into 60 load contexts."),
     ];
 

@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Builder;
 using Contoso.Feeds;
 using Contoso.Import;
+using Contoso.Invoicing;
 using Contoso.Ledger;
 using Contoso.Org;
 using Contoso.Plugins;
@@ -96,5 +98,54 @@ public static class AssembliesScenario
         }
 
         return ScenarioCatalog.ReadyAndParkAsync();
+    }
+}
+
+/// <summary>
+/// SQL connection-pool exhaustion: export requests keep their connection open while they await a
+/// PDF renderer that has stopped answering, a loyalty lookup leaks one on an early return, and
+/// with all 20 pooled connections gone, customer requests block in <c>SqlConnection.Open</c>.
+/// </summary>
+public static class ConnectionPoolScenario
+{
+    public const int MaxPoolSize = 20;
+    public const int Exports = 14;
+    public const int Leaks = MaxPoolSize - Exports;
+    public const int Waiting = 30;
+
+    public static async Task RunAsync()
+    {
+        ThreadPool.SetMinThreads(64, 64);
+        // The driver hosts the database; started directly (no driver), host it here.
+        var port = int.TryParse(Environment.GetEnvironmentVariable(FakeSqlServer.PortVariable), out var p) ? p : FakeSqlServer.Start().Port;
+        Db.ConnectionString =
+            $"Server=tcp:127.0.0.1,{port};Database=Orders;User ID=billing;Password=not-a-secret;Encrypt=False;Max Pool Size={MaxPoolSize};Connect Timeout=600;Application Name=Contoso.Invoicing";
+
+        for (var i = 0; i < Leaks; i++)
+        {
+            LoyaltyPoints.Balance($"CLOSED-{i:D3}");
+        }
+
+        var exporter = new InvoiceExporter();
+        var customers = new CustomerDirectory();
+        var (_, client) = await WebHost.StartAsync(app =>
+        {
+            app.MapPost("/api/invoices/{id}/export", (string id) => exporter.ExportAsync(id));
+            app.MapGet("/api/customers/{id}/orders", (string id) => customers.CountOrders(id));
+        });
+
+        for (var i = 0; i < Exports; i++)
+        {
+            WebHost.Fire(client, HttpMethod.Post, $"/api/invoices/INV-{i:D4}/export");
+        }
+
+        await Task.Delay(1500);
+        for (var i = 0; i < Waiting; i++)
+        {
+            WebHost.Fire(client, HttpMethod.Get, $"/api/customers/C-{i:D3}/orders");
+        }
+
+        await Task.Delay(2500);
+        await ScenarioCatalog.ReadyAndParkAsync();
     }
 }

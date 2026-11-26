@@ -371,6 +371,12 @@ public static class ThreadModelBuilder
                     return (WaitKind.Timer, "Timer");
                 }
 
+                // ADO.NET's pool waits on raw handles: say what the thread is queued for.
+                if (label == "Waiting · handle" && deeper.Any(x => x.Name == "TryGetConnection" && (x.Type?.Name?.EndsWith("DbConnectionPool", StringComparison.Ordinal) ?? false)))
+                {
+                    return (WaitKind.Event, "Connection pool");
+                }
+
                 return (WaitKind.Event, label);
             }
 

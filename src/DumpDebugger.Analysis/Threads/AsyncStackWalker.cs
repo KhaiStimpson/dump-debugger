@@ -238,6 +238,9 @@ public static class AsyncStackWalker
     /// <summary>What the innermost box is awaiting, from the awaiter fields of its state machine.</summary>
     private static string Awaiting(ClrObject box) => AwaitedObject(box) is { } awaited ? Describe(awaited) : "something";
 
+    /// <summary>What a suspended state-machine box is awaiting, phrased as in the async stacks view.</summary>
+    public static string DescribeAwaited(ClrObject box) => Awaiting(box);
+
     /// <summary>The object (usually a task) a suspended state-machine box is awaiting, read from its awaiter fields.</summary>
     public static ClrObject? AwaitedObject(ClrObject box)
     {

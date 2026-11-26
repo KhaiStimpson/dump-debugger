@@ -35,6 +35,7 @@ Deterministic analyzers, each with authored explanations and a test fixture:
 | Event-handler leaks | One event with hundreds or thousands of subscribers, the handler they share, and the publisher keeping them alive |
 | Pinned objects and GC handles | Thousands of pinned objects fragmenting the heap, or strong handles that are never freed, and the static that holds them |
 | Thread per job | Dozens or hundreds of dedicated threads parked at the same method |
+| Connection-pool exhaustion | Every connection a SqlClient pool may open is checked out and callers wait in `Open()`: the pool's limit, who waits, and who holds each connection (a thread, a suspended `async` method, a field) or that nothing does (leaked, with the last command it ran) |
 | Async locks | Async operations queued on a `SemaphoreSlim` with no free slot, the method that holds it and awaits it again, and tasks whose `TaskCompletionSource` nothing can complete any more |
 | Runaway CPU | Threads that have spent their lives on the CPU (from the per-thread times in the dump), and the usual culprit on top: a backtracking regex with its pattern and input, a corrupted dictionary, a spin-wait |
 | Crash cause | Stack overflows named by the methods that recurse (read from raw stack memory when the stack can't be walked), `Environment.FailFast` with its message, native exceptions such as access violations |

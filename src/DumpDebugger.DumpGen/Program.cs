@@ -31,13 +31,20 @@ if (args.Length < 1)
 
 var outputPath = Path.GetFullPath(args[0]);
 var scenario = args.Length >= 3 && args[1] == "--scenario" ? args[2] : "simple";
-var crash = ScenarioCatalog.Get(scenario).Crashes; // also validates the name before launching anything
+var definition = ScenarioCatalog.Get(scenario); // also validates the name before launching anything
+var crash = definition.Crashes;
 
 var psi = new ProcessStartInfo(Environment.ProcessPath!, $"--victim \"{scenario}\"")
 {
     UseShellExecute = false,
     RedirectStandardOutput = true,
 };
+
+// A database the victim talks to lives here, in another process, as a real one would.
+if (definition.NeedsSqlServer)
+{
+    psi.Environment[FakeSqlServer.PortVariable] = FakeSqlServer.Start().Port.ToString(System.Globalization.CultureInfo.InvariantCulture);
+}
 
 // Crash scenarios are dumped by the runtime itself as the process dies (createdump), the way
 // a real crash dump is captured, rather than by us while it's alive.

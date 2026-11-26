@@ -28,6 +28,7 @@ public class AnalyzerPackTests
         { "stackoverflow", "crash", Severity.Critical },
         { "failfast", "crash", Severity.Critical },
         { "assemblies", "assemblies", Severity.Warning },
+        { "connpool", "connection-pool", Severity.Critical },
     };
 
     private static readonly Dictionary<string, string[]> Subjects = new()
@@ -49,6 +50,7 @@ public class AnalyzerPackTests
         ["stackoverflow"] = ["crash"],
         ["failfast"] = ["crash"],
         ["assemblies"] = ["assemblies"],
+        ["connpool"] = ["connection-pool"],
     };
 
     [Theory]
