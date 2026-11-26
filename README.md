@@ -183,6 +183,8 @@ For live troubleshooting, click **Debug** in the status bar or press **Ctrl+Shif
 ./build/package.ps1 -Install   # also installs it (elevated: trusts the dev certificate; otherwise Developer Mode)
 ```
 
+Every push to `main` runs the tests and publishes a GitHub Release (`.github/workflows/release.yml`), versioned `<major>.<minor>.<run number>` from `Directory.Build.props`. It signs with the `SIGNING_CERT_PFX_BASE64` / `SIGNING_CERT_PASSWORD` repository secrets. Pass `-Version 2.0.5` to the script to stamp a version locally.
+
 The script creates a self-signed development certificate (`CN=Dump Debugger Dev`) on first run. To ship to other machines, pass a real code-signing certificate with `-CertificatePath` and match its subject in `src/DumpDebugger.Host/Package.appxmanifest`.
 
 ## Project layout
